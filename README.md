@@ -6,4 +6,4 @@ A daily Wallpaper image app.
 
 This project is simple wallpaper app. Every day the app give you a maximum of 4 wallpaper to choose from. 
 
-[![Watch the video]](example.mp4)
+![](example.gif)
