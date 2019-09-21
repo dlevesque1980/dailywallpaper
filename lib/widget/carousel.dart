@@ -22,8 +22,9 @@ class Carousel extends StatefulWidget {
   State createState() => new _CarouselState();
 }
 
-class _CarouselState extends State<Carousel> with SingleTickerProviderStateMixin {
+class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
   TabController _controller;
+  int _numOfTab = 0;
 
   ///Actual index of the displaying Widget
   int get actualIndex => _controller.index;
@@ -44,9 +45,11 @@ class _CarouselState extends State<Carousel> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
+  }
 
-    _controller = new TabController(length: widget.childrenCount, vsync: this);
-    _controller.addListener(this._onChange);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
   }
 
   void _onChange() {
@@ -73,9 +76,14 @@ class _CarouselState extends State<Carousel> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    if (widget.childrenCount != _numOfTab) {
+      _numOfTab = widget.childrenCount;
+      _controller = new TabController(length: widget.childrenCount, vsync: this);
+      _controller.addListener(this._onChange);
+    }
     return Stack(children: <Widget>[
       TabBarView(
-        children: widget.list.map((image) => tabViewChild(image)).toList(),
+        children: List<Widget>.generate(widget.list.length, (i) => tabViewChild(widget.list[i])),
         controller: this._controller,
       ),
       ValueListenableBuilder(
