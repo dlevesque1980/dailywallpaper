@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:dailywallpaper/api/image_repository.dart';
 import 'package:dailywallpaper/bloc_state/bing_region_state.dart';
 import 'package:dailywallpaper/models/bing/bing_region_enum.dart';
-import 'package:dailywallpaper/prefs/prefs.dart';
+import 'package:dailywallpaper/prefs/pref_consts.dart';
+import 'package:dailywallpaper/prefs/pref_helper.dart';
 import 'package:rxdart/rxdart.dart';
 
 class SettingsBloc {
@@ -24,30 +25,36 @@ class SettingsBloc {
 
   SettingsBloc() {
     _regions = _regionQuery.asyncMap(_handlerBingRegion).asBroadcastStream();
-    _includeLock = _lockQuery.distinct().asyncMap(_getIncludeLockSetting).asBroadcastStream();
-    _thumbnail = _thumbnailQuery.asyncMap(_handlerThumbnail).asBroadcastStream();
+    _includeLock = _lockQuery
+        .distinct()
+        .asyncMap(_getIncludeLockSetting)
+        .asBroadcastStream();
+    _thumbnail =
+        _thumbnailQuery.asyncMap(_handlerThumbnail).asBroadcastStream();
   }
 
   Future<bool> _getIncludeLockSetting(String value) async {
-    if (value != "") Prefs.includeLockWallpaper = value == "true";
-    return await Prefs.includeLockWallpaper;
+    if (value != "")
+      await PrefHelper.setBool(sp_IncludeLockWallpaper, (value == "true"));
+    return await PrefHelper.getBool(sp_IncludeLockWallpaper);
   }
 
   Stream<RegionItem> _getRegions() async* {
     for (BingRegionEnum region in BingRegionEnum.values) {
-      var image = await ImageRepository.fetchThumbnailFromBing(BingRegionEnum.definitionOf(region));
+      var image = await ImageRepository.fetchThumbnailFromBing(
+          BingRegionEnum.definitionOf(region));
       yield RegionItem(region, image.url);
     }
   }
 
   Future<BingRegionState> _handlerBingRegion(String rg) async {
-    if (rg != "") Prefs.bingRegion = rg;
+    if (rg != "") PrefHelper.setString(sp_BingRegion, rg);
     var choice = await _getChoice();
     return new BingRegionState(choice);
   }
 
   Future<List<RegionItem>> _handlerThumbnail(String query) async {
-    var regions = List<RegionItem>();
+    var regions = <RegionItem>[];
     await for (var region in _getRegions()) {
       regions.add(region);
     }
@@ -56,7 +63,7 @@ class SettingsBloc {
   }
 
   Future<BingRegionEnum> _getChoice() async {
-    var val = await Prefs.bingRegion;
+    var val = await PrefHelper.getString(sp_BingRegion);
     return BingRegionEnum.valueFromDefinition(val);
   }
 

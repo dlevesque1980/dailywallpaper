@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_tabs/flutter_custom_tabs.dart';
 
 class TextWithHyperLink extends StatelessWidget {
   final String text;
@@ -9,9 +8,15 @@ class TextWithHyperLink extends StatelessWidget {
   TextWithHyperLink({this.text, this.color, this.hyperlinkColor});
 
   List<TextSpan> extractUrl(String text) {
-    List<TextSpan> textParts = List<TextSpan>();
-    final linkStyle = TextStyle(fontSize: 15.0, color: hyperlinkColor, decoration: TextDecoration.underline, fontWeight: FontWeight.bold, package: "dailywallpaper");
-    final style = TextStyle(fontSize: 15.0, color: color, package: "dailywallpaper");
+    List<TextSpan> textParts = <TextSpan>[];
+    final linkStyle = TextStyle(
+        fontSize: 15.0,
+        color: hyperlinkColor,
+        decoration: TextDecoration.underline,
+        fontWeight: FontWeight.bold,
+        package: "dailywallpaper");
+    final style =
+        TextStyle(fontSize: 15.0, color: color, package: "dailywallpaper");
     int begin, end;
     do {
       begin = text.indexOf(" <a");
@@ -28,17 +33,17 @@ class TextWithHyperLink extends StatelessWidget {
           style: linkStyle,
           recognizer: new TapGestureRecognizer()
             ..onTap = () {
-              launch(
-                url.group(1).replaceAll("href=\"", "").replaceAll("\"", ""),
-                option: new CustomTabsOption(
-                    toolbarColor: Colors.white,
-                    enableDefaultShare: true,
-                    enableUrlBarHiding: true,
-                    showPageTitle: true,
-                    animation: new CustomTabsAnimation.slideIn()),
-              ).catchError((e) {
-                debugPrint(e.toString());
-              });
+              // launch(
+              //   url.group(1).replaceAll("href=\"", "").replaceAll("\"", ""),
+              //   option: new CustomTabsOption(
+              //       toolbarColor: Colors.white,
+              //       enableDefaultShare: true,
+              //       enableUrlBarHiding: true,
+              //       showPageTitle: true,
+              //       animation: new CustomTabsAnimation.slideIn()),
+              // ).catchError((e) {
+              //   debugPrint(e.toString());
+              // });
             },
         );
         textParts.add(link);

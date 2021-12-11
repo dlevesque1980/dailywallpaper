@@ -5,7 +5,11 @@ import 'package:flutter/widgets.dart';
 class SettingsProvider extends InheritedWidget {
   final SettingsBloc settingsBloc;
   final CategoriesBloc categoriesBloc;
-  SettingsProvider({Key key, SettingsBloc settingsBloc, CategoriesBloc categoriesBloc, Widget child})
+  SettingsProvider(
+      {Key key,
+      SettingsBloc settingsBloc,
+      CategoriesBloc categoriesBloc,
+      Widget child})
       : this.settingsBloc = settingsBloc ?? SettingsBloc(),
         this.categoriesBloc = categoriesBloc ?? CategoriesBloc(),
         super(child: child, key: key);
@@ -13,5 +17,6 @@ class SettingsProvider extends InheritedWidget {
   @override
   bool updateShouldNotify(InheritedWidget oldWidget) => true;
 
-  static SettingsProvider of(BuildContext context) => (context.inheritFromWidgetOfExactType(SettingsProvider) as SettingsProvider);
+  static SettingsProvider of(BuildContext context) =>
+      (context.dependOnInheritedWidgetOfExactType<SettingsProvider>());
 }

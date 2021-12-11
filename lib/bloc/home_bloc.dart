@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:dailywallpaper/bloc_state/home_state.dart';
 import 'package:dailywallpaper/helper/datetime_helper.dart';
-import 'package:dailywallpaper/prefs/prefs.dart';
+import 'package:dailywallpaper/prefs/pref_consts.dart';
+import 'package:dailywallpaper/prefs/pref_helper.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:dailywallpaper/models/image_item.dart';
 import 'package:dailywallpaper/api/image_repository.dart';
@@ -31,8 +32,9 @@ class HomeBloc {
     var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
     if (!fetchingInitialData) {
       fetchingInitialData = true;
-      Prefs.bingRegion.then((region) {
-        Prefs.unsplashCategories.then((categories) {
+      PrefHelper.getStringWithDefault(sp_BingRegion, "en-US").then((region) {
+        PrefHelper.getStringListWithDefault(sp_Unspaslh_Categories, ["nature"])
+            .then((categories) {
           var catStr = categories.join(";");
 
           print("query:$dateStr.$region;$catStr");
@@ -45,7 +47,7 @@ class HomeBloc {
   }
 
   Future<HomeState> _imageHandler(String query) async {
-    var list = new List<ImageItem>();
+    var list = <ImageItem>[];
     list.add(await _bingHandler(query));
     await for (ImageItem i in _unsplashHandler(query)) {
       list.add(i);
@@ -56,7 +58,7 @@ class HomeBloc {
 
   Stream<ImageItem> _unsplashHandler(String query) async* {
     var dbHelper = new DatabaseHelper();
-    var categories = await Prefs.unsplashCategories;
+    var categories = await PrefHelper.getStringList(sp_Unspaslh_Categories);
     for (var cat in categories) {
       ImageItem unsplashImage = await dbHelper.getCurrentImage('unsplash.$cat');
       if (unsplashImage == null) {
@@ -69,7 +71,7 @@ class HomeBloc {
 
   Future<ImageItem> _bingHandler(String query) async {
     ImageItem image;
-    var region = await Prefs.bingRegion;
+    var region = await PrefHelper.getString(sp_BingRegion);
     var dbHelper = new DatabaseHelper();
     image = await dbHelper.getCurrentImage("bing.$region");
     if (image == null) {
@@ -81,7 +83,8 @@ class HomeBloc {
   }
 
   Future<String> _updateWallpaper(int index) async {
-    var setLocked = await Prefs.includeLockWallpaper;
+    var setLocked =
+        await PrefHelper.getBoolWithDefault(sp_IncludeLockWallpaper, true);
     String message;
     var image = state.list[index];
 

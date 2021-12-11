@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:dailywallpaper/bloc_state/categories_state.dart';
-import 'package:dailywallpaper/prefs/prefs.dart';
+import 'package:dailywallpaper/prefs/pref_consts.dart';
+import 'package:dailywallpaper/prefs/pref_helper.dart';
 import 'package:rxdart/rxdart.dart';
 
 class CategoriesBloc {
@@ -12,13 +13,27 @@ class CategoriesBloc {
   Sink<List<String>> get categoriesQuery => _categoriesQuery;
 
   CategoriesBloc() {
-    _categories = _categoriesQuery.asyncMap(_categoriesHandler).asBroadcastStream();
+    _categories =
+        _categoriesQuery.asyncMap(_categoriesHandler).asBroadcastStream();
   }
 
   Future<CategoriesState> _categoriesHandler(List<String> categories) async {
-    final List<String> allCategories = ["landscape", "nature", "fantasy", "urban", "flower", "love", "wallpaper", "city", "ocean", "island", "food"];
-    if (categories.length > 0) Prefs.unsplashCategories = categories;
-    var cat = await Prefs.unsplashCategories;
+    final List<String> allCategories = [
+      "landscape",
+      "nature",
+      "fantasy",
+      "urban",
+      "flower",
+      "love",
+      "wallpaper",
+      "city",
+      "ocean",
+      "island",
+      "food"
+    ];
+    if (categories.length > 0)
+      await PrefHelper.setStringList(sp_Unspaslh_Categories, categories);
+    var cat = await PrefHelper.getStringList(sp_Unspaslh_Categories);
     return CategoriesState(allCategories, cat);
   }
 

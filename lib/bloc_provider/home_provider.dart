@@ -10,5 +10,6 @@ class HomeProvider extends InheritedWidget {
   @override
   bool updateShouldNotify(InheritedWidget oldWidget) => true;
 
-  static HomeBloc of(BuildContext context) => (context.inheritFromWidgetOfExactType(HomeProvider) as HomeProvider).homeBloc;
+  static HomeBloc of(BuildContext context) =>
+      (context.dependOnInheritedWidgetOfExactType<HomeProvider>()).homeBloc;
 }

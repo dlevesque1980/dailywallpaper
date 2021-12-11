@@ -34,7 +34,7 @@ class _SettingScreenState extends State<SettingScreen> {
   }
 
   CategoriesState initialCategories(Sink<List<String>> categoriesQuery) {
-    categoriesQuery.add(List<String>());
+    categoriesQuery.add(<String>[]);
     return null;
   }
 
@@ -47,7 +47,8 @@ class _SettingScreenState extends State<SettingScreen> {
 
   Widget handleSnapshotState<T>(AsyncSnapshot<T> snapshot) {
     if (snapshot.hasError) return Text('Error: ${snapshot.error}');
-    if (snapshot.connectionState == ConnectionState.none || snapshot.connectionState == ConnectionState.waiting) {
+    if (snapshot.connectionState == ConnectionState.none ||
+        snapshot.connectionState == ConnectionState.waiting) {
       return Center(child: CircularProgressIndicator());
     }
     return null;
@@ -66,8 +67,12 @@ class _SettingScreenState extends State<SettingScreen> {
                       child: Padding(
                     padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
                     child: ListView(
-                        children: snapshot.data.listOfCategories.map<Widget>((item) {
-                      return CheckboxCategoriesSetting(categoriesBloc: categoriesBloc, item: item, choices: snapshot.data.choices);
+                        children:
+                            snapshot.data.listOfCategories.map<Widget>((item) {
+                      return CheckboxCategoriesSetting(
+                          categoriesBloc: categoriesBloc,
+                          item: item,
+                          choices: snapshot.data.choices);
                     }).toList()),
                   ));
             },
@@ -90,7 +95,10 @@ class _SettingScreenState extends State<SettingScreen> {
                     child: GridView.count(
                         crossAxisCount: 3,
                         children: snapshot.data.map<Widget>((item) {
-                          return BingImageRegionSetting(settingsBloc: settingsBloc, item: item, choice: state.choice);
+                          return BingImageRegionSetting(
+                              settingsBloc: settingsBloc,
+                              item: item,
+                              choice: state.choice);
                         }).toList()),
                   ));
             },
@@ -124,7 +132,10 @@ class _SettingScreenState extends State<SettingScreen> {
                             fontSize: 19.0,
                             fontWeight: FontWeight.normal,
                           )),
-                      Switch(value: snapshot.data, onChanged: (value) => settingsBloc.lockQuery.add(value.toString()))
+                      Switch(
+                          value: snapshot.data,
+                          onChanged: (value) =>
+                              settingsBloc.lockQuery.add(value.toString()))
                     ],
                   );
             },
@@ -151,7 +162,8 @@ class _SettingScreenState extends State<SettingScreen> {
                             Container(
                               width: 150.0,
                               padding: EdgeInsets.only(right: 13.0),
-                              child: Text(BingRegionEnum.labelOf(snapshot.data.choice),
+                              child: Text(
+                                  BingRegionEnum.labelOf(snapshot.data.choice),
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.right,
                                   style: TextStyle(
@@ -168,34 +180,37 @@ class _SettingScreenState extends State<SettingScreen> {
                   );
             },
           ),
-          Row(crossAxisAlignment: CrossAxisAlignment.center, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: <Widget>[
-            Text("Unsplash themes",
-                style: TextStyle(
-                  fontSize: 19.0,
-                  fontWeight: FontWeight.normal,
-                )),
-            FlatButton(
-              child: new Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Container(
-                    width: 150.0,
-                    padding: EdgeInsets.only(right: 13.0),
-                    child: Text("Select categories...",
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 19.0,
-                          fontWeight: FontWeight.normal,
-                        )),
+          Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Text("Unsplash themes",
+                    style: TextStyle(
+                      fontSize: 19.0,
+                      fontWeight: FontWeight.normal,
+                    )),
+                FlatButton(
+                  child: new Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Container(
+                        width: 150.0,
+                        padding: EdgeInsets.only(right: 13.0),
+                        child: Text("Select categories...",
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 19.0,
+                              fontWeight: FontWeight.normal,
+                            )),
+                      ),
+                      Icon(Icons.arrow_drop_down),
+                    ],
                   ),
-                  Icon(Icons.arrow_drop_down),
-                ],
-              ),
-              onPressed: () => showUnsplashCategories(context),
-            )
-          ])
+                  onPressed: () => showUnsplashCategories(context),
+                )
+              ])
         ]));
   }
 }

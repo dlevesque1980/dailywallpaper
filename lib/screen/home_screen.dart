@@ -2,7 +2,6 @@ import 'package:dailywallpaper/bloc/home_bloc.dart';
 import 'package:dailywallpaper/bloc_provider/home_provider.dart';
 import 'package:dailywallpaper/widget/carousel.dart';
 import 'package:flutter/material.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,7 +14,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   AppLifecycleState _lastLifecycleState;
   ValueNotifier<int> notifierIndex = new ValueNotifier(0);
   HomeBloc homeBloc;
-  Observable<String> wallpaperMessage;
+  Stream<String> wallpaperMessage;
 
   @override
   void initState() {
@@ -27,8 +26,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeDependencies() {
     if (homeBloc == null) {
       homeBloc = HomeProvider.of(context);
-      final message = Observable(homeBloc.wallpaper);
-      message.listen((value) => Fluttertoast.showToast(msg: value, toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.BOTTOM, timeInSecForIos: 1));
+      final message = homeBloc.wallpaper;
+      message.listen((value) => Fluttertoast.showToast(
+          msg: value,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM));
     }
     super.didChangeDependencies();
   }
