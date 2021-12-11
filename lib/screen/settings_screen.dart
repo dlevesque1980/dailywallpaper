@@ -108,6 +108,14 @@ class _SettingScreenState extends State<SettingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final ButtonStyle flatButtonStyle = TextButton.styleFrom(
+      primary: Colors.black87,
+      minimumSize: Size(88, 36),
+      padding: EdgeInsets.symmetric(horizontal: 16.0),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(2.0)),
+      ),
+    );
     settingsBloc = SettingsProvider.of(context).settingsBloc;
     categoriesBloc = SettingsProvider.of(context).categoriesBloc;
     return Scaffold(
@@ -154,7 +162,8 @@ class _SettingScreenState extends State<SettingScreen> {
                             fontSize: 19.0,
                             fontWeight: FontWeight.normal,
                           )),
-                      FlatButton(
+                      TextButton(
+                        style: flatButtonStyle,
                         child: new Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           mainAxisSize: MainAxisSize.min,
@@ -189,7 +198,8 @@ class _SettingScreenState extends State<SettingScreen> {
                       fontSize: 19.0,
                       fontWeight: FontWeight.normal,
                     )),
-                FlatButton(
+                TextButton(
+                  style: flatButtonStyle,
                   child: new Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     mainAxisSize: MainAxisSize.min,
