@@ -52,9 +52,14 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
     super.didChangeDependencies();
   }
 
+  void onCallBack() {
+    notifierIndex.value = 0;
+    this.widget.onChange(0, true);
+  }
+
   void _onChange() {
     notifierIndex.value = _controller.index;
-    this.widget.onChange(_controller.index);
+    this.widget.onChange(_controller.index, false);
   }
 
   @override
@@ -78,12 +83,14 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     if (widget.childrenCount != _numOfTab) {
       _numOfTab = widget.childrenCount;
-      _controller = new TabController(length: widget.childrenCount, vsync: this);
+      _controller =
+          new TabController(length: widget.childrenCount, vsync: this);
       _controller.addListener(this._onChange);
     }
     return Stack(children: <Widget>[
       TabBarView(
-        children: List<Widget>.generate(widget.list.length, (i) => tabViewChild(widget.list[i])),
+        children: List<Widget>.generate(
+            widget.list.length, (i) => tabViewChild(widget.list[i])),
         controller: this._controller,
       ),
       ValueListenableBuilder(
@@ -94,9 +101,10 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
                     color: Colors.black.withOpacity(0.2),
                     padding: EdgeInsets.only(left: 16.0),
                     child: new Row(children: <Widget>[
-                      MenuTitle(images: widget.list, imageIndex: notifierIndex.value),
+                      MenuTitle(
+                          images: widget.list, imageIndex: notifierIndex.value),
                       InfoImage(image: widget.list[notifierIndex.value]),
-                      Menu()
+                      Menu(callback: this.onCallBack)
                     ])));
           })
     ]);

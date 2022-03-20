@@ -1,9 +1,13 @@
 import 'package:dailywallpaper/bloc/categories_bloc.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class CheckboxCategoriesSetting extends StatelessWidget {
-  const CheckboxCategoriesSetting({Key key, @required this.categoriesBloc, @required this.item, @required this.choices}) : super(key: key);
+  const CheckboxCategoriesSetting(
+      {Key key,
+      @required this.categoriesBloc,
+      @required this.item,
+      @required this.choices})
+      : super(key: key);
 
   final CategoriesBloc categoriesBloc;
   final String item;

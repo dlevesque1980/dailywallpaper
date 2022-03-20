@@ -118,109 +118,117 @@ class _SettingScreenState extends State<SettingScreen> {
     );
     settingsBloc = SettingsProvider.of(context).settingsBloc;
     categoriesBloc = SettingsProvider.of(context).categoriesBloc;
-    return Scaffold(
-        appBar: AppBar(
-          title: Text("Settings", style: TextStyle(color: Colors.black)),
-          backgroundColor: Colors.white,
-          elevation: 0.0,
-          iconTheme: IconThemeData(color: Colors.black),
-        ),
-        body: ListView(padding: EdgeInsets.all(10.0), children: <Widget>[
-          StreamBuilder<bool>(
-            initialData: initialLockData(settingsBloc.lockQuery),
-            stream: settingsBloc.includeLock,
-            builder: (context, snapshot) {
-              return handleSnapshotState(snapshot) ??
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Text("Set lock screen wallpaper",
-                          style: TextStyle(
-                            fontSize: 19.0,
-                            fontWeight: FontWeight.normal,
-                          )),
-                      Switch(
-                          value: snapshot.data,
-                          onChanged: (value) =>
-                              settingsBloc.lockQuery.add(value.toString()))
-                    ],
-                  );
-            },
+    return WillPopScope(
+      onWillPop: () {
+        Navigator.pop(context, true);
+        return new Future(() => true);
+      },
+      child: Scaffold(
+          appBar: AppBar(
+            title: Text("Settings", style: TextStyle(color: Colors.black)),
+            backgroundColor: Colors.white,
+            elevation: 0.0,
+            iconTheme: IconThemeData(color: Colors.black),
           ),
-          StreamBuilder<BingRegionState>(
-            stream: settingsBloc.regions,
-            initialData: initialBingData(settingsBloc.regionQuery),
-            builder: (context, snapshot) {
-              return handleSnapshotState(snapshot) ??
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Text("Bing region",
-                          style: TextStyle(
-                            fontSize: 19.0,
-                            fontWeight: FontWeight.normal,
-                          )),
-                      TextButton(
-                        style: flatButtonStyle,
-                        child: new Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Container(
-                              width: 150.0,
-                              padding: EdgeInsets.only(right: 13.0),
-                              child: Text(
-                                  BingRegionEnum.labelOf(snapshot.data.choice),
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 19.0,
-                                    fontWeight: FontWeight.normal,
-                                  )),
-                            ),
-                            Icon(Icons.arrow_drop_down),
-                          ],
-                        ),
-                        onPressed: () => showBingRegion(context, snapshot.data),
-                      )
-                    ],
-                  );
-            },
-          ),
-          Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Text("Unsplash themes",
-                    style: TextStyle(
-                      fontSize: 19.0,
-                      fontWeight: FontWeight.normal,
-                    )),
-                TextButton(
-                  style: flatButtonStyle,
-                  child: new Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Container(
-                        width: 150.0,
-                        padding: EdgeInsets.only(right: 13.0),
-                        child: Text("Select categories...",
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.right,
+          body: ListView(padding: EdgeInsets.all(10.0), children: <Widget>[
+            StreamBuilder<bool>(
+              initialData: initialLockData(settingsBloc.lockQuery),
+              stream: settingsBloc.includeLock,
+              builder: (context, snapshot) {
+                return handleSnapshotState(snapshot) ??
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text("Set lock screen wallpaper",
                             style: TextStyle(
                               fontSize: 19.0,
                               fontWeight: FontWeight.normal,
                             )),
-                      ),
-                      Icon(Icons.arrow_drop_down),
-                    ],
-                  ),
-                  onPressed: () => showUnsplashCategories(context),
-                )
-              ])
-        ]));
+                        Switch(
+                            value: snapshot.data,
+                            onChanged: (value) =>
+                                settingsBloc.lockQuery.add(value.toString()))
+                      ],
+                    );
+              },
+            ),
+            StreamBuilder<BingRegionState>(
+              stream: settingsBloc.regions,
+              initialData: initialBingData(settingsBloc.regionQuery),
+              builder: (context, snapshot) {
+                return handleSnapshotState(snapshot) ??
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text("Bing region",
+                            style: TextStyle(
+                              fontSize: 19.0,
+                              fontWeight: FontWeight.normal,
+                            )),
+                        TextButton(
+                          style: flatButtonStyle,
+                          child: new Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Container(
+                                width: 150.0,
+                                padding: EdgeInsets.only(right: 13.0),
+                                child: Text(
+                                    BingRegionEnum.labelOf(
+                                        snapshot.data.choice),
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontSize: 19.0,
+                                      fontWeight: FontWeight.normal,
+                                    )),
+                              ),
+                              Icon(Icons.arrow_drop_down),
+                            ],
+                          ),
+                          onPressed: () =>
+                              showBingRegion(context, snapshot.data),
+                        )
+                      ],
+                    );
+              },
+            ),
+            Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text("Unsplash themes",
+                      style: TextStyle(
+                        fontSize: 19.0,
+                        fontWeight: FontWeight.normal,
+                      )),
+                  TextButton(
+                    style: flatButtonStyle,
+                    child: new Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Container(
+                          width: 150.0,
+                          padding: EdgeInsets.only(right: 13.0),
+                          child: Text("Select categories...",
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: 19.0,
+                                fontWeight: FontWeight.normal,
+                              )),
+                        ),
+                        Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                    onPressed: () => showUnsplashCategories(context),
+                  )
+                ])
+          ])),
+    );
   }
 }

@@ -51,9 +51,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _onChange(int index) {
+  void _onChange(int index, bool refresh) {
     if (notifierIndex.value != index) {
       notifierIndex.value = index;
+    }
+    if (refresh) {
+      setState(() {
+        _lastLifecycleState = AppLifecycleState.resumed;
+      });
     }
   }
 
