@@ -7,6 +7,9 @@ import 'package:dailywallpaper/models/bing/bing_region_enum.dart';
 import 'package:dailywallpaper/widget/bing_region_image_setting.dart';
 import 'package:dailywallpaper/widget/checkbox_categories_setting.dart';
 import 'package:flutter/material.dart';
+import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
+import 'package:multi_select_flutter/util/multi_select_item.dart';
+import 'package:multi_select_flutter/util/multi_select_list_type.dart';
 
 class SettingScreen extends StatefulWidget {
   SettingScreen() : super(key: const Key('__settingScreen__'));
@@ -17,6 +20,7 @@ class SettingScreen extends StatefulWidget {
 class _SettingScreenState extends State<SettingScreen> {
   SettingsBloc settingsBloc;
   CategoriesBloc categoriesBloc;
+  final formKey = new GlobalKey<FormState>();
 
   BingRegionState initialBingData(Sink<String> regionQuery) {
     regionQuery.add("");
@@ -52,32 +56,6 @@ class _SettingScreenState extends State<SettingScreen> {
       return Center(child: CircularProgressIndicator());
     }
     return null;
-  }
-
-  void showUnsplashCategories(BuildContext context) {
-    showModalBottomSheet<void>(
-        context: context,
-        builder: (BuildContext context) {
-          return StreamBuilder<CategoriesState>(
-            initialData: initialCategories(categoriesBloc.categoriesQuery),
-            stream: categoriesBloc.categories,
-            builder: (context, snapshot) {
-              return handleSnapshotState(snapshot) ??
-                  Container(
-                      child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
-                    child: ListView(
-                        children:
-                            snapshot.data.listOfCategories.map<Widget>((item) {
-                      return CheckboxCategoriesSetting(
-                          categoriesBloc: categoriesBloc,
-                          item: item,
-                          choices: snapshot.data.choices);
-                    }).toList()),
-                  ));
-            },
-          );
-        });
   }
 
   void showBingRegion(BuildContext context, BingRegionState state) {
@@ -119,116 +97,134 @@ class _SettingScreenState extends State<SettingScreen> {
     settingsBloc = SettingsProvider.of(context).settingsBloc;
     categoriesBloc = SettingsProvider.of(context).categoriesBloc;
     return WillPopScope(
-      onWillPop: () {
-        Navigator.pop(context, true);
-        return new Future(() => true);
-      },
-      child: Scaffold(
-          appBar: AppBar(
-            title: Text("Settings", style: TextStyle(color: Colors.black)),
-            backgroundColor: Colors.white,
-            elevation: 0.0,
-            iconTheme: IconThemeData(color: Colors.black),
-          ),
-          body: ListView(padding: EdgeInsets.all(10.0), children: <Widget>[
-            StreamBuilder<bool>(
-              initialData: initialLockData(settingsBloc.lockQuery),
-              stream: settingsBloc.includeLock,
-              builder: (context, snapshot) {
-                return handleSnapshotState(snapshot) ??
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        Text("Set lock screen wallpaper",
-                            style: TextStyle(
-                              fontSize: 19.0,
-                              fontWeight: FontWeight.normal,
-                            )),
-                        Switch(
-                            value: snapshot.data,
-                            onChanged: (value) =>
-                                settingsBloc.lockQuery.add(value.toString()))
-                      ],
-                    );
-              },
+        onWillPop: () {
+          Navigator.pop(context, true);
+          return new Future(() => true);
+        },
+        child: Scaffold(
+            appBar: AppBar(
+              title: Text("Settings", style: TextStyle(color: Colors.black)),
+              backgroundColor: Colors.white,
+              elevation: 0.0,
+              iconTheme: IconThemeData(color: Colors.black),
             ),
-            StreamBuilder<BingRegionState>(
-              stream: settingsBloc.regions,
-              initialData: initialBingData(settingsBloc.regionQuery),
-              builder: (context, snapshot) {
-                return handleSnapshotState(snapshot) ??
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        Text("Bing region",
-                            style: TextStyle(
-                              fontSize: 19.0,
-                              fontWeight: FontWeight.normal,
-                            )),
-                        TextButton(
-                          style: flatButtonStyle,
-                          child: new Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              Container(
-                                width: 150.0,
-                                padding: EdgeInsets.only(right: 13.0),
-                                child: Text(
-                                    BingRegionEnum.labelOf(
-                                        snapshot.data.choice),
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontSize: 19.0,
-                                      fontWeight: FontWeight.normal,
-                                    )),
+            body: Form(
+              key: formKey,
+              child: ListView(padding: EdgeInsets.all(10.0), children: <Widget>[
+                StreamBuilder<bool>(
+                  initialData: initialLockData(settingsBloc.lockQuery),
+                  stream: settingsBloc.includeLock,
+                  builder: (context, snapshot) {
+                    return handleSnapshotState(snapshot) ??
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisSize: MainAxisSize.max,
+                          children: <Widget>[
+                            Container(
+                              padding: EdgeInsets.only(left: 10.0),
+                              child: Text("Set lock screen wallpaper",
+                                  style: TextStyle(
+                                    fontSize: 19.0,
+                                    fontWeight: FontWeight.normal,
+                                  )),
+                            ),
+                            Switch(
+                                value: snapshot.data,
+                                onChanged: (value) => settingsBloc.lockQuery
+                                    .add(value.toString()))
+                          ],
+                        );
+                  },
+                ),
+                Container(padding: EdgeInsets.all(5.0)),
+                StreamBuilder<BingRegionState>(
+                  stream: settingsBloc.regions,
+                  initialData: initialBingData(settingsBloc.regionQuery),
+                  builder: (context, snapshot) {
+                    return handleSnapshotState(snapshot) ??
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            Container(
+                              padding: EdgeInsets.only(left: 10.0),
+                              child: Text("Bing region",
+                                  style: TextStyle(
+                                    fontSize: 19.0,
+                                    fontWeight: FontWeight.normal,
+                                  )),
+                            ),
+                            TextButton(
+                              style: flatButtonStyle,
+                              child: new Wrap(
+                                children: <Widget>[
+                                  Container(
+                                    child: Text(
+                                        BingRegionEnum.labelOf(
+                                            snapshot.data.choice),
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontSize: 19.0,
+                                          fontWeight: FontWeight.normal,
+                                        )),
+                                  ),
+                                  Icon(Icons.arrow_downward),
+                                ],
                               ),
-                              Icon(Icons.arrow_drop_down),
-                            ],
-                          ),
-                          onPressed: () =>
-                              showBingRegion(context, snapshot.data),
-                        )
-                      ],
-                    );
-              },
-            ),
-            Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Text("Unsplash themes",
-                      style: TextStyle(
-                        fontSize: 19.0,
-                        fontWeight: FontWeight.normal,
-                      )),
-                  TextButton(
-                    style: flatButtonStyle,
-                    child: new Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Container(
-                          width: 150.0,
-                          padding: EdgeInsets.only(right: 13.0),
-                          child: Text("Select categories...",
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
+                              onPressed: () =>
+                                  showBingRegion(context, snapshot.data),
+                            ),
+                          ],
+                        );
+                  },
+                ),
+                Container(
+                    decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blueAccent))),
+                Container(padding: EdgeInsets.all(5.0)),
+                StreamBuilder<CategoriesState>(
+                  initialData:
+                      initialCategories(categoriesBloc.categoriesQuery),
+                  stream: categoriesBloc.categories,
+                  builder: (context, snapshot) {
+                    return handleSnapshotState(snapshot) ??
+                        MultiSelectDialogField(
+                          autovalidateMode: AutovalidateMode.disabled,
+                          title: Text('Categories'),
+                          buttonText: Text('Categories',
                               style: TextStyle(
-                                fontSize: 19.0,
-                                fontWeight: FontWeight.normal,
-                              )),
-                        ),
-                        Icon(Icons.arrow_drop_down),
-                      ],
-                    ),
-                    onPressed: () => showUnsplashCategories(context),
-                  )
-                ])
-          ])),
-    );
+                                  fontSize: 19.0,
+                                  fontWeight: FontWeight.normal)),
+                          initialValue: snapshot.data.choices,
+                          items: snapshot.data.listOfCategories
+                              .map((e) => MultiSelectItem(e, e))
+                              .toList(),
+                          listType: MultiSelectListType.CHIP,
+                          validator: (values) {
+                            if (values.length <= 3)
+                              return null;
+                            else
+                              return "No more than 3 categories";
+                          },
+                          onSaved: (values) {
+                            categoriesBloc.categoriesQuery.add(values);
+                          },
+                          onConfirm: (values) {
+                            if (!formKey.currentState.validate()) {
+                              values.removeLast();
+                              setState(() {
+                                var test = values;
+                              });
+                              return false;
+                            }
+                            formKey.currentState.save();
+                          },
+                        );
+                  },
+                )
+              ]),
+            )));
   }
 }

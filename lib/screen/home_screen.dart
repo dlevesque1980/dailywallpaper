@@ -2,7 +2,8 @@ import 'package:dailywallpaper/bloc/home_bloc.dart';
 import 'package:dailywallpaper/bloc_provider/home_provider.dart';
 import 'package:dailywallpaper/widget/carousel.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+
+import '../widget/buttonstate.dart';
 
 class HomeScreen extends StatefulWidget {
   HomeScreen() : super(key: const Key('__homeScreen__'));
@@ -26,11 +27,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeDependencies() {
     if (homeBloc == null) {
       homeBloc = HomeProvider.of(context);
-      final message = homeBloc.wallpaper;
-      message.listen((value) => Fluttertoast.showToast(
-          msg: value,
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM));
     }
     super.didChangeDependencies();
   }
@@ -68,12 +64,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         floatingActionButton: ValueListenableBuilder(
             valueListenable: notifierIndex,
             builder: (context, value, child) {
-              return FloatingActionButton(
-                elevation: 0.0,
-                child: new Icon(Icons.wallpaper),
-                backgroundColor: Colors.lightBlue,
+              return ButtonStates(
                 onPressed: () => homeBloc.setWallpaper.add(notifierIndex.value),
+                homeBloc: homeBloc,
               );
+              // return FloatingActionButton(
+              //   elevation: 0.0,
+              //   child: new Icon(Icons.wallpaper),
+              //   backgroundColor: Colors.lightBlue,
+              //   onPressed: () => homeBloc.setWallpaper.add(notifierIndex.value),
+              // );
             }),
         body: StreamBuilder(
             stream: homeBloc.results,
