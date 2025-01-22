@@ -9,7 +9,7 @@ enum ButtonState { init, submitting, completed }
 
 class ButtonStates extends StatefulWidget {
   const ButtonStates(
-      {Key key, @required this.onPressed, @required this.homeBloc})
+      {Key? key, required this.onPressed, required this.homeBloc})
       : super(key: key);
   final void Function() onPressed;
   final HomeBloc homeBloc;

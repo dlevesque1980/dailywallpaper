@@ -8,11 +8,9 @@ class DatabaseHelper {
   static final DatabaseHelper _instance = new DatabaseHelper.internal();
   factory DatabaseHelper() => _instance;
 
-  static Database _db;
+  static Database? _db;
 
-  Future<Database> get db async {
-    if (_db != null) return _db;
-
+  Future<Database?> get db async {
     _db = await initDb();
     return _db;
   }
@@ -37,6 +35,8 @@ class DatabaseHelper {
 
   Future<bool> insertImage(ImageItem image) async {
     var theDb = await db;
+    if (theDb == null) return false;
+
     var id = await theDb.transaction((txn) async {
       var id = await txn.rawInsert(
           'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright) VALUES(?,?,?,?,?,?,?,?)',
@@ -46,8 +46,12 @@ class DatabaseHelper {
     return id > 0;
   }
 
-  Future<ImageItem> getCurrentImage(String imageIdent) async {
+  Future<ImageItem?> getCurrentImage(String imageIdent) async {
     var theDb = await db;
+    if (theDb == null){
+      return null;
+    }
+
     List<Map> list = await theDb.rawQuery("SELECT * FROM DailyImages where datetime('now')>=startTime and datetime('now')<=endTime and ImageIdent='$imageIdent'");
     if (list.isEmpty) return null;
 

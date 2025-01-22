@@ -1,12 +1,11 @@
 import 'package:dailywallpaper/models/image_item.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class MenuTitle extends StatelessWidget {
   const MenuTitle({
-    Key key,
-    @required List<ImageItem> images,
-    @required int imageIndex,
+    required Key key,
+    required List<ImageItem> images,
+    required int imageIndex,
   })  : _imageIndex = imageIndex,
         _images = images,
         super(key: key);

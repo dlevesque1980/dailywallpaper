@@ -24,8 +24,7 @@ class ImageRepository {
     strs[1] = strs[1].substring(0, strs[1].length - 2);
     return new ImageItem(
         "Bing image of the day",
-        'https://www.bing.com' +
-            bingImage.url.replaceAll("1920x1080", "1080x1920"),
+        'https://www.bing.com' + bingImage.url.replaceAll("1920x1080", "1080x1920"),
         strs[0],
         bingImage.startDate.toUtc(),
         bingImage.endDate.toUtc(),
@@ -88,7 +87,7 @@ class ImageRepository {
         copyright);
   }
 
-  static Future<bool> triggerUnsplashDownload(String url) async {
+  static Future<bool> triggerUnsplashDownload(String? url) async {
     final response =
         await http.get(Uri.parse("$url?client_id=$unsplashClientKey"));
     if (response.statusCode == 200) {

@@ -64,7 +64,7 @@ class SettingsBloc {
 
   Future<BingRegionEnum> _getChoice() async {
     var val = await PrefHelper.getString(sp_BingRegion);
-    return BingRegionEnum.valueFromDefinition(val);
+    return BingRegionEnum.valueFromDefinition(val!);
   }
 
   void dispose() {

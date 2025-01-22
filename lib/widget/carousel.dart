@@ -14,27 +14,26 @@ class Carousel extends StatefulWidget {
   ///Returns [children]`s [lenght].
   int get childrenCount => list.length;
 
-  Carousel({this.list, this.onChange})
-      : assert(list != null),
-        assert(list.length > 1);
+  Carousel({required this.list, required this.onChange})
+      : assert(list.length > 1);
 
   @override
   State createState() => new _CarouselState();
 }
 
 class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
-  TabController _controller;
+  TabController? _controller;
   int _numOfTab = 0;
 
   ///Actual index of the displaying Widget
-  int get actualIndex => _controller.index;
+  int get actualIndex => _controller!.index;
   ValueNotifier<int> notifierIndex = new ValueNotifier(0);
 
   ///Returns the calculated value of the next index.
   int get nextIndex {
     var nextIndexValue = actualIndex;
 
-    if (nextIndexValue < _controller.length - 1)
+    if (nextIndexValue < _controller!.length - 1)
       nextIndexValue++;
     else
       nextIndexValue = 0;
@@ -58,13 +57,14 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
   }
 
   void _onChange() {
-    notifierIndex.value = _controller.index;
-    this.widget.onChange(_controller.index, false);
+    notifierIndex.value = _controller!.index;
+    this.widget.onChange(_controller!.index, false);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+
+    if (_controller !=null) _controller!.dispose();
     super.dispose();
   }
 
@@ -85,7 +85,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
       _numOfTab = widget.childrenCount;
       _controller =
           new TabController(length: widget.childrenCount, vsync: this);
-      _controller.addListener(this._onChange);
+      _controller!.addListener(this._onChange);
     }
     return Stack(children: <Widget>[
       TabBarView(
@@ -102,9 +102,9 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
                     padding: EdgeInsets.only(left: 16.0),
                     child: new Row(children: <Widget>[
                       MenuTitle(
-                          images: widget.list, imageIndex: notifierIndex.value),
+                          images: widget.list, imageIndex: notifierIndex.value, key: Key('menuTitle'),),
                       InfoImage(image: widget.list[notifierIndex.value]),
-                      Menu(callback: this.onCallBack)
+                      Menu(callback: this.onCallBack, key: Key('menu'),)
                     ])));
           })
     ]);

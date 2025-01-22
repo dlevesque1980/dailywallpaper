@@ -6,15 +6,14 @@ part of 'unsplash_exif.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-UnsplashExif _$UnsplashExifFromJson(Map<String, dynamic> json) {
-  return UnsplashExif(
+UnsplashExif _$UnsplashExifFromJson(Map<String, dynamic> json) => UnsplashExif(
       json['make'] as String,
       json['model'] as String,
       json['exposure_time'] as String,
       json['aperture'] as String,
       json['focal_length'] as String,
-      json['iso'] as int);
-}
+      (json['iso'] as num).toInt(),
+    );
 
 Map<String, dynamic> _$UnsplashExifToJson(UnsplashExif instance) =>
     <String, dynamic>{
@@ -23,5 +22,5 @@ Map<String, dynamic> _$UnsplashExifToJson(UnsplashExif instance) =>
       'exposure_time': instance.exposureTime,
       'aperture': instance.aperture,
       'focal_length': instance.focalLength,
-      'iso': instance.iso
+      'iso': instance.iso,
     };

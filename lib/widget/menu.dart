@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Menu extends StatelessWidget {
-  const Menu({Key key, @required this.callback}) : super(key: key);
+  const Menu({required Key key, required this.callback}) : super(key: key);
   final void Function() callback;
 
   @override

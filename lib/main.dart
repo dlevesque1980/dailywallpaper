@@ -25,7 +25,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsFlutterBinding.ensureInitialized();
     return MaterialApp(
+      
       initialRoute: '/',
       routes: {
         // When we navigate to the "/" route, build the FirstScreen Widget
@@ -38,4 +40,5 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(),
     );
   }
+  
 }
