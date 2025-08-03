@@ -2,6 +2,7 @@ import 'package:dailywallpaper/bloc/home_bloc.dart';
 import 'package:dailywallpaper/bloc_provider/home_provider.dart';
 import 'package:dailywallpaper/widget/carousel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../widget/buttonstate.dart';
 
@@ -51,7 +52,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
+    return AnnotatedRegion(
+    value: const SystemUiOverlayStyle(
+      statusBarColor: Color.fromRGBO(0, 0, 0, 0.2),
+      statusBarIconBrightness: Brightness.light,
+    ),
+    child: Scaffold(
         floatingActionButton: ValueListenableBuilder(
             valueListenable: notifierIndex,
             builder: (context, value, child) {
@@ -78,6 +84,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               } else {
                 return Center(child: CircularProgressIndicator());
               }
-            }));
+            })));
   }
 }

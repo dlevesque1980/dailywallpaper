@@ -14,7 +14,9 @@
          FlutterApplication and put your custom class here. -->
     <application
         android:label="dailywallpaper"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round" >
+       
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -26,11 +28,7 @@
             <!-- This keeps the window background of the activity showing
                  until Flutter renders its first frame. It can be removed if
                  there is no splash screen (such as the default splash screen
-                 defined in @style/LaunchTheme). -->
-            <meta-data
-                android:name="io.flutter.embedding.android.SplashScreenDrawable"
-                android:resource="@drawable/launch_background" />
-
+                 defined in @style/LaunchTheme). -->              
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

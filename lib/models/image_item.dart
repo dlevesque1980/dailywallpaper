@@ -12,7 +12,7 @@ class ImageItem {
     startTime = DateTime.parse(map["StartTime"]!);
     endTime = DateTime.parse(map["EndTime"]!);
     imageIdent = map["ImageIdent"]!;
-    triggerUrl = map["TriggerUrl"]!;
+    triggerUrl = map["TriggerUrl"];
     copyright = map["Copyright"]!;
   }
 }

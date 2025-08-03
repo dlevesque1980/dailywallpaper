@@ -98,7 +98,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
           builder: (context, value, child) {
             return SafeArea(
                 child: Container(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Color.fromRGBO(0, 0, 0, 0.2),
                     padding: EdgeInsets.only(left: 16.0),
                     child: new Row(children: <Widget>[
                       MenuTitle(

@@ -5,15 +5,15 @@ part 'unsplash_urls.g.dart';
 @JsonSerializable()
 class UnsplashUrls extends Object {
   @JsonKey(name: "raw")
-  String raw;
+  String? raw;
   @JsonKey(name: "full")
-  String full;
+  String? full;
   @JsonKey(name: "regular")
-  String regular;
+  String? regular;
   @JsonKey(name: "small")
-  String small;
+  String? small;
   @JsonKey(name: "thumb")
-  String thumb;
+  String? thumb;
 
   UnsplashUrls(this.raw, this.full, this.regular, this.small, this.thumb);
 

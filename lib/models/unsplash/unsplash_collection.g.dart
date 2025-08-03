@@ -9,11 +9,11 @@ part of 'unsplash_collection.dart';
 UnsplashCollection _$UnsplashCollectionFromJson(Map<String, dynamic> json) =>
     UnsplashCollection(
       (json['id'] as num).toInt(),
-      json['title'] as String,
+      json['title'] as String?,
       DateTime.parse(json['published_at'] as String),
       DateTime.parse(json['updated_at'] as String),
       json['curated'] as bool,
-      json['cover_photo'] as String,
+      json['cover_photo'] as String?,
       UnsplashUser.fromJson(json['user'] as Map<String, dynamic>),
     );
 

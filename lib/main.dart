@@ -12,9 +12,7 @@ import 'package:flutter/services.dart';
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-  MyApp() {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.black.withOpacity(0.2)));
-  }
+
   Widget homeProvider() {
     return HomeProvider(homeBloc: HomeBloc(), child: HomeScreen());
   }
@@ -26,6 +24,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     WidgetsFlutterBinding.ensureInitialized();
+     
     return MaterialApp(
       
       initialRoute: '/',

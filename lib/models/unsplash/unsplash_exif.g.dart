@@ -7,12 +7,12 @@ part of 'unsplash_exif.dart';
 // **************************************************************************
 
 UnsplashExif _$UnsplashExifFromJson(Map<String, dynamic> json) => UnsplashExif(
-      json['make'] as String,
-      json['model'] as String,
-      json['exposure_time'] as String,
-      json['aperture'] as String,
-      json['focal_length'] as String,
-      (json['iso'] as num).toInt(),
+      json['make'] as String?,
+      json['model'] as String?,
+      json['exposure_time'] as String?,
+      json['aperture'] as String?,
+      json['focal_length'] as String?,
+      (json['iso'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$UnsplashExifToJson(UnsplashExif instance) =>

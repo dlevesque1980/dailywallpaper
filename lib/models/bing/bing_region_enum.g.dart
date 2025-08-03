@@ -43,12 +43,12 @@ BingRegionEnum _$valueOf(String name) {
     case 'International':
       return _$international;
     default:
-      throw new ArgumentError(name);
+      throw ArgumentError(name);
   }
 }
 
 final BuiltSet<BingRegionEnum> _$values =
-    new BuiltSet<BingRegionEnum>(const <BingRegionEnum>[
+    BuiltSet<BingRegionEnum>(const <BingRegionEnum>[
   _$us,
   _$frenchcanana,
   _$englishcanada,
@@ -85,7 +85,7 @@ mixin _$BingRegionEnumMixin {
 }
 
 Serializer<BingRegionEnum> _$bingRegionEnumSerializer =
-    new _$BingRegionEnumSerializer();
+    _$BingRegionEnumSerializer();
 
 class _$BingRegionEnumSerializer
     implements PrimitiveSerializer<BingRegionEnum> {

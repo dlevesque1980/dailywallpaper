@@ -8,7 +8,7 @@ part of 'unsplash_image.dart';
 
 UnsplashImage _$UnsplashImageFromJson(Map<String, dynamic> json) =>
     UnsplashImage(
-      json['id'] as String,
+      json['id'] as String?,
       DateTime.parse(json['created_at'] as String),
       DateTime.parse(json['updated_at'] as String),
       (json['width'] as num).toInt(),
@@ -17,7 +17,7 @@ UnsplashImage _$UnsplashImageFromJson(Map<String, dynamic> json) =>
       (json['downloads'] as num).toInt(),
       (json['likes'] as num).toInt(),
       json['liked_by_user'] as bool,
-      json['description'] as String,
+      json['description'] as String?,
       UnsplashExif.fromJson(json['exif'] as Map<String, dynamic>),
       UnsplashLocation.fromJson(json['location'] as Map<String, dynamic>),
       (json['current_user_collections'] as List<dynamic>)

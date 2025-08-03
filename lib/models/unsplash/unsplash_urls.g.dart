@@ -7,11 +7,11 @@ part of 'unsplash_urls.dart';
 // **************************************************************************
 
 UnsplashUrls _$UnsplashUrlsFromJson(Map<String, dynamic> json) => UnsplashUrls(
-      json['raw'] as String,
-      json['full'] as String,
-      json['regular'] as String,
-      json['small'] as String,
-      json['thumb'] as String,
+      json['raw'] as String?,
+      json['full'] as String?,
+      json['regular'] as String?,
+      json['small'] as String?,
+      json['thumb'] as String?,
     );
 
 Map<String, dynamic> _$UnsplashUrlsToJson(UnsplashUrls instance) =>

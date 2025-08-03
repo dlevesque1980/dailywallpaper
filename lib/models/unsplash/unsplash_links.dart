@@ -5,19 +5,19 @@ part 'unsplash_links.g.dart';
 @JsonSerializable()
 class UnsplashLinks extends Object {
   @JsonKey(name: "self")
-  String self;
+  String? self;
   @JsonKey(name: "html")
-  String html;
+  String? html;
   @JsonKey(name: "photos")
-  String photos;
+  String? photos;
   @JsonKey(name: "likes")
-  String likes;
+  String? likes;
   @JsonKey(name: "portfolio")
-  String portfolio;
+  String? portfolio;
   @JsonKey(name: "download")
-  String download;
+  String? download;
   @JsonKey(name: "download_location")
-  String downloadLocation;
+  String? downloadLocation;
 
   UnsplashLinks(this.self, this.html, this.photos, this.likes, this.portfolio, this.download, this.downloadLocation);
 

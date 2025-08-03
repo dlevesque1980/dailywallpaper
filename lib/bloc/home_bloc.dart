@@ -62,7 +62,11 @@ class HomeBloc {
     var categories = await PrefHelper.getStringListWithDefault(sp_Unspaslh_Categories, []);
     for (var cat in categories) {
       ImageItem? unsplashImage = await dbHelper.getCurrentImage('unsplash.$cat');
-      if (unsplashImage != null) yield unsplashImage;
+      if (unsplashImage == null) {
+        unsplashImage = await ImageRepository.fetchFromUnsplash(cat);
+        await dbHelper.insertImage(unsplashImage);
+      }
+      yield unsplashImage;
     }
   }
 
@@ -71,7 +75,11 @@ class HomeBloc {
     var region = await PrefHelper.getString(sp_BingRegion);
     var dbHelper = new DatabaseHelper();
     image = await dbHelper.getCurrentImage("bing.$region");
-    return image!;
+    if (image == null) {
+      image = await ImageRepository.fetchFromBing(region!);
+      await dbHelper.insertImage(image);
+    }    
+    return image;
   }
 
   Future<String> _updateWallpaper(int index) async {

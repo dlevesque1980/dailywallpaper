@@ -78,8 +78,8 @@ class ImageRepository {
         "Photo by <a href=\"$userUrl$referalQueryString\">$userName</a> on <a href=\"$unsplashUrl\">Unsplash</a>";
     return new ImageItem(
         "Unsplash - $category",
-        image.urls.regular,
-        image.description,
+        image.urls.regular!,
+        image.description ?? "",
         startTime.toUtc(),
         endTime.toUtc(),
         'unsplash.$category',

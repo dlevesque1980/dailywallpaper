@@ -8,7 +8,7 @@ class UnsplashCollection extends Object {
   @JsonKey(name: "id")
   int Id;
   @JsonKey(name: "title")
-  String title;
+  String? title;
   @JsonKey(name: "published_at")
   DateTime publishedAt;
   @JsonKey(name: "updated_at")
@@ -16,7 +16,7 @@ class UnsplashCollection extends Object {
   @JsonKey(name: "curated")
   bool curated;
   @JsonKey(name: "cover_photo")
-  String coverPhoto;
+  String? coverPhoto;
 
   @JsonKey(name: "user")
   UnsplashUser user;

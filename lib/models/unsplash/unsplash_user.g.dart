@@ -7,16 +7,16 @@ part of 'unsplash_user.dart';
 // **************************************************************************
 
 UnsplashUser _$UnsplashUserFromJson(Map<String, dynamic> json) => UnsplashUser(
-      json['id'] as String,
+      json['id'] as String?,
       DateTime.parse(json['updated_at'] as String),
-      json['username'] as String,
-      json['name'] as String,
-      json['portfolio_url'] as String,
-      json['bio'] as String,
-      json['location'] as String,
-      (json['total_likes'] as num).toInt(),
-      (json['total_photos'] as num).toInt(),
-      (json['total_collections'] as num).toInt(),
+      json['username'] as String?,
+      json['name'] as String?,
+      json['portfolio_url'] as String?,
+      json['bio'] as String?,
+      json['location'] as String?,
+      (json['total_likes'] as num?)?.toInt(),
+      (json['total_photos'] as num?)?.toInt(),
+      (json['total_collections'] as num?)?.toInt(),
       UnsplashLinks.fromJson(json['links'] as Map<String, dynamic>),
     );
 

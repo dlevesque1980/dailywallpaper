@@ -8,8 +8,8 @@ part of 'unsplash_location.dart';
 
 UnsplashLocation _$UnsplashLocationFromJson(Map<String, dynamic> json) =>
     UnsplashLocation(
-      json['city'] as String,
-      json['country'] as String,
+      json['city'] as String?,
+      json['country'] as String?,
       UnsplashPosition.fromJson(json['position'] as Map<String, dynamic>),
     );
 

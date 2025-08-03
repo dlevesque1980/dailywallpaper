@@ -6,25 +6,25 @@ part 'unsplash_user.g.dart';
 @JsonSerializable()
 class UnsplashUser extends Object {
   @JsonKey(name: "id")
-  String Id;
+  String? Id;
   @JsonKey(name: "updated_at")
   DateTime updatedAt;
   @JsonKey(name: "username")
-  String userName;
+  String? userName;
   @JsonKey(name: "name")
-  String name;
+  String? name;
   @JsonKey(name: "portfolio_url")
-  String portfolioUrl;
+  String? portfolioUrl;
   @JsonKey(name: "bio")
-  String bio;
+  String? bio;
   @JsonKey(name: "location")
-  String location;
+  String? location;
   @JsonKey(name: "total_likes")
-  int totalLikes;
+  int? totalLikes;
   @JsonKey(name: "total_photos")
-  int totalPhotos;
+  int? totalPhotos;
   @JsonKey(name: "total_collections")
-  int totalCollection;
+  int? totalCollection;
   @JsonKey(name: "links")
   UnsplashLinks links;
 

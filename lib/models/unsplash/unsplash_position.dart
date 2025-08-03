@@ -16,9 +16,9 @@ part 'unsplash_position.g.dart';
 @JsonSerializable()
 class UnsplashPosition extends Object {
   @JsonKey(name: "latitude")
-  double latitude;
+  double? latitude;
   @JsonKey(name: "longitude")
-  double longitude;
+  double? longitude;
 
   UnsplashPosition(this.latitude, this.longitude);
 
