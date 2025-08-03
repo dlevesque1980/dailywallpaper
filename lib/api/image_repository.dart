@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dailywallpaper/consts/consts.dart';
 import 'package:dailywallpaper/models/unsplash/unsplash_image.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dailywallpaper/helper/datetime_helper.dart';
 import 'package:dailywallpaper/models/bing/bing_images.dart';
 import 'package:dailywallpaper/models/image_item.dart';
@@ -59,8 +60,9 @@ class ImageRepository {
   }
 
   static Future<ImageItem> fetchFromUnsplash(String category) async {
+    final String apiKey = dotenv.env['API_KEY']!;
     final response = await http.get(Uri.parse(
-        'https://api.unsplash.com/photos/random?h=1080&orientation=portrait&query=$category&client_id=$unsplashClientKey'));
+        'https://api.unsplash.com/photos/random?h=1080&orientation=portrait&query=$category&client_id=$apiKey'));
 
     UnsplashImage image;
     if (response.statusCode == 200) {
@@ -88,8 +90,9 @@ class ImageRepository {
   }
 
   static Future<bool> triggerUnsplashDownload(String? url) async {
+    final String apiKey = dotenv.env['API_KEY']!;
     final response =
-        await http.get(Uri.parse("$url?client_id=$unsplashClientKey"));
+        await http.get(Uri.parse("$url?client_id=$apiKey"));
     if (response.statusCode == 200) {
       return true;
     } else {

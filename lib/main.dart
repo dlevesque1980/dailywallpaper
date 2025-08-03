@@ -8,8 +8,12 @@ import 'package:dailywallpaper/screen/older_screen.dart';
 import 'package:dailywallpaper/screen/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() => runApp(MyApp());
+  void main() async {
+    await dotenv.load(fileName: ".env"); // Or load dynamically
+    runApp(MyApp());
+  }
 
 class MyApp extends StatelessWidget {
 
