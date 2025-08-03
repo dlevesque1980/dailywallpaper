@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:dailywallpaper/bloc/settings_bloc.dart';
 import 'package:dailywallpaper/bloc_state/bing_region_state.dart';
@@ -8,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/material.dart' as material;
 
 class BingImageRegionSetting extends StatelessWidget {
-  const BingImageRegionSetting({Key key, @required this.settingsBloc, @required this.item, @required this.choice}) : super(key: key);
+  const BingImageRegionSetting({required Key key, required this.settingsBloc, required this.item, required this.choice}) : super(key: key);
   final SettingsBloc settingsBloc;
   final RegionItem item;
   final BingRegionEnum choice;

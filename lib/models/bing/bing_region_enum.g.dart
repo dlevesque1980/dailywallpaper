@@ -6,18 +6,6 @@ part of 'bing_region_enum.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
-// ignore_for_file: always_put_control_body_on_new_line
-// ignore_for_file: annotate_overrides
-// ignore_for_file: avoid_annotating_with_dynamic
-// ignore_for_file: avoid_catches_without_on_clauses
-// ignore_for_file: avoid_returning_this
-// ignore_for_file: lines_longer_than_80_chars
-// ignore_for_file: omit_local_variable_types
-// ignore_for_file: prefer_expression_function_bodies
-// ignore_for_file: sort_constructors_first
-// ignore_for_file: unnecessary_const
-// ignore_for_file: unnecessary_new
-
 const BingRegionEnum _$us = const BingRegionEnum._('US');
 const BingRegionEnum _$frenchcanana = const BingRegionEnum._('FrenchCanada');
 const BingRegionEnum _$englishcanada = const BingRegionEnum._('EnglishCanada');
@@ -55,12 +43,12 @@ BingRegionEnum _$valueOf(String name) {
     case 'International':
       return _$international;
     default:
-      throw new ArgumentError(name);
+      throw ArgumentError(name);
   }
 }
 
 final BuiltSet<BingRegionEnum> _$values =
-    new BuiltSet<BingRegionEnum>(const <BingRegionEnum>[
+    BuiltSet<BingRegionEnum>(const <BingRegionEnum>[
   _$us,
   _$frenchcanana,
   _$englishcanada,
@@ -91,17 +79,17 @@ class _$BingRegionEnumMeta {
   BuiltSet<BingRegionEnum> get values => _$values;
 }
 
-abstract class _$BingRegionEnumMixin {
+mixin _$BingRegionEnumMixin {
   // ignore: non_constant_identifier_names
   _$BingRegionEnumMeta get BingRegionEnum => const _$BingRegionEnumMeta();
 }
 
 Serializer<BingRegionEnum> _$bingRegionEnumSerializer =
-    new _$BingRegionEnumSerializer();
+    _$BingRegionEnumSerializer();
 
 class _$BingRegionEnumSerializer
     implements PrimitiveSerializer<BingRegionEnum> {
-  static const Map<String, String> _toWire = const <String, String>{
+  static const Map<String, Object> _toWire = const <String, Object>{
     'US': 'en-US',
     'FrenchCanada': 'fr-CA',
     'EnglishCanada': 'en-CA',
@@ -114,7 +102,7 @@ class _$BingRegionEnumSerializer
     'China': 'zh-CN',
     'International': 'en-WW',
   };
-  static const Map<String, String> _fromWire = const <String, String>{
+  static const Map<Object, String> _fromWire = const <Object, String>{
     'en-US': 'US',
     'fr-CA': 'FrenchCanada',
     'en-CA': 'EnglishCanada',
@@ -141,5 +129,8 @@ class _$BingRegionEnumSerializer
   @override
   BingRegionEnum deserialize(Serializers serializers, Object serialized,
           {FullType specifiedType = FullType.unspecified}) =>
-      BingRegionEnum.valueOf(_fromWire[serialized] ?? serialized as String);
+      BingRegionEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
+
+// ignore_for_file: deprecated_member_use_from_same_package,type=lint

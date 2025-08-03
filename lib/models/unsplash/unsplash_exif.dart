@@ -6,17 +6,17 @@ part 'unsplash_exif.g.dart';
 @JsonSerializable()
 class UnsplashExif extends Object {
   @JsonKey(name: "make")
-  String make;
+  String? make;
   @JsonKey(name: "model")
-  String model;
+  String? model;
   @JsonKey(name: "exposure_time")
-  String exposureTime;
+  String? exposureTime;
   @JsonKey(name: "aperture")
-  String aperture;
+  String? aperture;
   @JsonKey(name: "focal_length")
-  String focalLength;
+  String? focalLength;
   @JsonKey(name: "iso")
-  int iso;
+  int? iso;
 
   UnsplashExif(this.make, this.model, this.exposureTime, this.aperture, this.focalLength, this.iso);
 

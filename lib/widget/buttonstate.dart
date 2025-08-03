@@ -9,7 +9,7 @@ enum ButtonState { init, submitting, completed }
 
 class ButtonStates extends StatefulWidget {
   const ButtonStates(
-      {Key key, @required this.onPressed, @required this.homeBloc})
+      {Key? key, required this.onPressed, required this.homeBloc})
       : super(key: key);
   final void Function() onPressed;
   final HomeBloc homeBloc;
@@ -61,7 +61,7 @@ class _ButtonStatesState extends State<ButtonStates> {
                 child: buildButton())
             : SizedBox(
                 width: double.infinity,
-                height: double.infinity,
+                height: double.infinity,              
                 child: circularContainer(isDone)));
   }
 
@@ -89,7 +89,8 @@ class _ButtonStatesState extends State<ButtonStates> {
   Widget circularContainer(bool done) {
     final color = done ? Colors.green : Colors.blue;
     return Container(
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      
+      decoration: BoxDecoration(color: color,  borderRadius: BorderRadius.circular(15.0)),
       child: Center(
         child: done
             ? const Icon(Icons.done, size: 50, color: Colors.white)

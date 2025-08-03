@@ -6,9 +6,9 @@ part 'unsplash_location.g.dart';
 @JsonSerializable()
 class UnsplashLocation extends Object {
   @JsonKey(name: "city")
-  String city;
+  String? city;
   @JsonKey(name: "country")
-  String country;
+  String? country;
   @JsonKey(name: "position")
   UnsplashPosition position;
 

@@ -11,7 +11,7 @@ part 'unsplash_image.g.dart';
 @JsonSerializable()
 class UnsplashImage extends Object {
   @JsonKey(name: "id")
-  String Id;
+  String? Id;
   @JsonKey(name: "created_at")
   DateTime createdAt;
   @JsonKey(name: "updated_at")
@@ -29,7 +29,7 @@ class UnsplashImage extends Object {
   @JsonKey(name: "liked_by_user")
   bool likeByUser;
   @JsonKey(name: "description")
-  String description;
+  String? description;
   @JsonKey(name: "exif")
   UnsplashExif exif;
   @JsonKey(name: "location")

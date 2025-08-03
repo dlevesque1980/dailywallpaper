@@ -5,7 +5,6 @@ import 'package:dailywallpaper/bloc_state/bing_region_state.dart';
 import 'package:dailywallpaper/bloc_state/categories_state.dart';
 import 'package:dailywallpaper/models/bing/bing_region_enum.dart';
 import 'package:dailywallpaper/widget/bing_region_image_setting.dart';
-import 'package:dailywallpaper/widget/checkbox_categories_setting.dart';
 import 'package:flutter/material.dart';
 import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
 import 'package:multi_select_flutter/util/multi_select_item.dart';
@@ -18,26 +17,26 @@ class SettingScreen extends StatefulWidget {
 }
 
 class _SettingScreenState extends State<SettingScreen> {
-  SettingsBloc settingsBloc;
-  CategoriesBloc categoriesBloc;
+  late SettingsBloc settingsBloc;
+  late CategoriesBloc categoriesBloc;
   final formKey = new GlobalKey<FormState>();
 
-  BingRegionState initialBingData(Sink<String> regionQuery) {
+  BingRegionState? initialBingData(Sink<String> regionQuery) {
     regionQuery.add("");
     return null;
   }
 
-  List<RegionItem> initialThumbnail(Sink<String> thumbnailQuery) {
+  List<RegionItem>? initialThumbnail(Sink<String> thumbnailQuery) {
     thumbnailQuery.add("");
     return null;
   }
 
-  bool initialLockData(Sink<String> lockQuery) {
+  bool? initialLockData(Sink<String> lockQuery) {
     lockQuery.add("");
     return null;
   }
 
-  CategoriesState initialCategories(Sink<List<String>> categoriesQuery) {
+  CategoriesState? initialCategories(Sink<List<String>> categoriesQuery) {
     categoriesQuery.add(<String>[]);
     return null;
   }
@@ -49,7 +48,7 @@ class _SettingScreenState extends State<SettingScreen> {
     super.dispose();
   }
 
-  Widget handleSnapshotState<T>(AsyncSnapshot<T> snapshot) {
+  Widget? handleSnapshotState<T>(AsyncSnapshot<T> snapshot) {
     if (snapshot.hasError) return Text('Error: ${snapshot.error}');
     if (snapshot.connectionState == ConnectionState.none ||
         snapshot.connectionState == ConnectionState.waiting) {
@@ -72,11 +71,11 @@ class _SettingScreenState extends State<SettingScreen> {
                     padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
                     child: GridView.count(
                         crossAxisCount: 3,
-                        children: snapshot.data.map<Widget>((item) {
+                        children: snapshot.data!.map<Widget>((item) {
                           return BingImageRegionSetting(
                               settingsBloc: settingsBloc,
                               item: item,
-                              choice: state.choice);
+                              choice: state.choice, key: Key('BingImageRegionSettings'),);
                         }).toList()),
                   ));
             },
@@ -87,8 +86,7 @@ class _SettingScreenState extends State<SettingScreen> {
   @override
   Widget build(BuildContext context) {
     final ButtonStyle flatButtonStyle = TextButton.styleFrom(
-      primary: Colors.black87,
-      minimumSize: Size(88, 36),
+      foregroundColor: Colors.black87, minimumSize: Size(88, 36),
       padding: EdgeInsets.symmetric(horizontal: 16.0),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(2.0)),
@@ -96,10 +94,13 @@ class _SettingScreenState extends State<SettingScreen> {
     );
     settingsBloc = SettingsProvider.of(context).settingsBloc;
     categoriesBloc = SettingsProvider.of(context).categoriesBloc;
-    return WillPopScope(
-        onWillPop: () {
-          Navigator.pop(context, true);
-          return new Future(() => true);
+    return   PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (bool didPop,dynamic) async {
+          if (didPop) return;
+          final NavigatorState navigator = Navigator.of(context);
+          navigator.pop();
+
         },
         child: Scaffold(
             appBar: AppBar(
@@ -130,7 +131,7 @@ class _SettingScreenState extends State<SettingScreen> {
                                   )),
                             ),
                             Switch(
-                                value: snapshot.data,
+                                value: snapshot.data!,
                                 onChanged: (value) => settingsBloc.lockQuery
                                     .add(value.toString()))
                           ],
@@ -162,7 +163,7 @@ class _SettingScreenState extends State<SettingScreen> {
                                   Container(
                                     child: Text(
                                         BingRegionEnum.labelOf(
-                                            snapshot.data.choice),
+                                            snapshot.data!.choice),
                                         overflow: TextOverflow.ellipsis,
                                         textAlign: TextAlign.right,
                                         style: TextStyle(
@@ -174,7 +175,7 @@ class _SettingScreenState extends State<SettingScreen> {
                                 ],
                               ),
                               onPressed: () =>
-                                  showBingRegion(context, snapshot.data),
+                                  showBingRegion(context, snapshot.data!),
                             ),
                           ],
                         );
@@ -197,29 +198,28 @@ class _SettingScreenState extends State<SettingScreen> {
                               style: TextStyle(
                                   fontSize: 19.0,
                                   fontWeight: FontWeight.normal)),
-                          initialValue: snapshot.data.choices,
-                          items: snapshot.data.listOfCategories
+                          initialValue: snapshot.data!.choices!,
+                          items: snapshot.data!.listOfCategories
                               .map((e) => MultiSelectItem(e, e))
                               .toList(),
                           listType: MultiSelectListType.CHIP,
                           validator: (values) {
-                            if (values.length <= 3)
+                            if (values!.length <= 3)
                               return null;
                             else
                               return "No more than 3 categories";
                           },
                           onSaved: (values) {
-                            categoriesBloc.categoriesQuery.add(values);
+                            categoriesBloc.categoriesQuery.add(values!);
                           },
                           onConfirm: (values) {
-                            if (!formKey.currentState.validate()) {
+                            if (!formKey.currentState!.validate()) {
                               values.removeLast();
                               setState(() {
                                 var test = values;
                               });
-                              return false;
                             }
-                            formKey.currentState.save();
+                            formKey.currentState!.save();
                           },
                         );
                   },

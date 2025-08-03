@@ -6,7 +6,7 @@ import 'package:flutter/material.dart' as material;
 class InfoImage extends StatelessWidget {
   final ImageItem image;
 
-  InfoImage({this.image});
+  InfoImage({required this.image});
 
   final double descFontSize = 20.0;
   final double cpRightFontSize = 15.0;
@@ -27,15 +27,14 @@ class InfoImage extends StatelessWidget {
                           child: SingleChildScrollView(
                             child: Column(
                               children: <Widget>[
-                                if (image.description != null)
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      image.description ?? "",
-                                      style: material.TextStyle(fontSize: 20.0, color: Colors.black, package: "dailywallpaper"),
-                                    ),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    image.description ?? "",
+                                    style: material.TextStyle(fontSize: 20.0, color: Colors.black, package: "dailywallpaper"),
                                   ),
-                                if (image.description != null) Text(""),
+                                ),
+                                Text(""),
                                 Align(
                                     alignment: Alignment.centerLeft,
                                     child: TextWithHyperLink(text: image.copyright, color: Colors.black, hyperlinkColor: Colors.indigoAccent)),

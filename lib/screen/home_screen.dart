@@ -2,6 +2,7 @@ import 'package:dailywallpaper/bloc/home_bloc.dart';
 import 'package:dailywallpaper/bloc_provider/home_provider.dart';
 import 'package:dailywallpaper/widget/carousel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../widget/buttonstate.dart';
 
@@ -12,10 +13,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  AppLifecycleState _lastLifecycleState;
+  late AppLifecycleState _lastLifecycleState;
   ValueNotifier<int> notifierIndex = new ValueNotifier(0);
-  HomeBloc homeBloc;
-  Stream<String> wallpaperMessage;
+  HomeBloc? homeBloc;
+  Stream<String>? wallpaperMessage;
 
   @override
   void initState() {
@@ -34,17 +35,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    homeBloc.dispose();
+    homeBloc?.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() {
-        _lastLifecycleState = state;
-      });
-    }
   }
 
   void _onChange(int index, bool refresh) {
@@ -60,13 +52,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
+    return AnnotatedRegion(
+    value: const SystemUiOverlayStyle(
+      statusBarColor: Color.fromRGBO(0, 0, 0, 0.2),
+      statusBarIconBrightness: Brightness.light,
+    ),
+    child: Scaffold(
         floatingActionButton: ValueListenableBuilder(
             valueListenable: notifierIndex,
             builder: (context, value, child) {
               return ButtonStates(
-                onPressed: () => homeBloc.setWallpaper.add(notifierIndex.value),
-                homeBloc: homeBloc,
+                onPressed: () => homeBloc!.setWallpaper.add(notifierIndex.value),
+                homeBloc: homeBloc!,
               );
               // return FloatingActionButton(
               //   elevation: 0.0,
@@ -76,17 +73,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // );
             }),
         body: StreamBuilder(
-            stream: homeBloc.results,
-            initialData: homeBloc.initialData(notifierIndex.value),
+            stream: homeBloc!.results,
+            initialData: homeBloc!.initialData(notifierIndex.value),
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 return Carousel(
-                  list: snapshot.data.list,
+                  list: snapshot.data!.list,
                   onChange: this._onChange,
                 );
               } else {
                 return Center(child: CircularProgressIndicator());
               }
-            }));
+            })));
   }
 }

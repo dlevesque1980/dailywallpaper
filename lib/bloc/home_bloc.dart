@@ -21,14 +21,15 @@ class HomeBloc {
   Sink<String> get query => _query;
   Stream<String> get wallpaper => _wallpaper;
   Sink<int> get setWallpaper => _setWallpaper;
-  HomeState state;
+  HomeState? state;
+  
 
   HomeBloc() {
     _results = _query.distinct().asyncMap(_imageHandler).asBroadcastStream();
     _wallpaper = _setWallpaper.asyncMap(_updateWallpaper).asBroadcastStream();
   }
 
-  HomeState initialData(int index) {
+  HomeState? initialData(int index) {
     var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
     if (!fetchingInitialData) {
       fetchingInitialData = true;
@@ -43,7 +44,7 @@ class HomeBloc {
         });
       });
     }
-    return null;
+    return state;
   }
 
   Future<HomeState> _imageHandler(String query) async {
@@ -53,14 +54,14 @@ class HomeBloc {
       list.add(i);
     }
     state = HomeState(list, 0);
-    return state;
+    return state!;
   }
 
   Stream<ImageItem> _unsplashHandler(String query) async* {
     var dbHelper = new DatabaseHelper();
-    var categories = await PrefHelper.getStringList(sp_Unspaslh_Categories);
+    var categories = await PrefHelper.getStringListWithDefault(sp_Unspaslh_Categories, []);
     for (var cat in categories) {
-      ImageItem unsplashImage = await dbHelper.getCurrentImage('unsplash.$cat');
+      ImageItem? unsplashImage = await dbHelper.getCurrentImage('unsplash.$cat');
       if (unsplashImage == null) {
         unsplashImage = await ImageRepository.fetchFromUnsplash(cat);
         await dbHelper.insertImage(unsplashImage);
@@ -70,31 +71,30 @@ class HomeBloc {
   }
 
   Future<ImageItem> _bingHandler(String query) async {
-    ImageItem image;
+    ImageItem? image;
     var region = await PrefHelper.getString(sp_BingRegion);
     var dbHelper = new DatabaseHelper();
     image = await dbHelper.getCurrentImage("bing.$region");
     if (image == null) {
-      image = await ImageRepository.fetchFromBing(region);
+      image = await ImageRepository.fetchFromBing(region!);
       await dbHelper.insertImage(image);
-    }
-
+    }    
     return image;
   }
 
   Future<String> _updateWallpaper(int index) async {
     var setLocked =
         await PrefHelper.getBoolWithDefault(sp_IncludeLockWallpaper, true);
-    String message;
-    var image = state.list[index];
+    String? message;
+    var image = state!.list[index];
 
     if (setLocked) {
-      message = await Setwallpaper.setBothWallpaper(image.url);
+      message = await Setwallpaper.instance.setBothWallpaper(image.url);
     } else {
-      message = await Setwallpaper.setSystemWallpaper(image.url);
+      message = await Setwallpaper.instance.setSystemWallpaper(image.url);
     }
 
-    if (image.triggerUrl != null && image.triggerUrl.isNotEmpty) {
+    if (image.triggerUrl != null && image.triggerUrl!.isNotEmpty) {
       ImageRepository.triggerUnsplashDownload(image.triggerUrl);
     }
 
