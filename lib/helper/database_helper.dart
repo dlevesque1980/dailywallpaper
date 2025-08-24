@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dailywallpaper/models/image_item.dart';
+import 'package:dailywallpaper/helper/datetime_helper.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -57,5 +58,55 @@ class DatabaseHelper {
 
     var image = ImageItem.fromMap(list.first);
     return image;
+  }
+
+  /// Get historical images (for history screen)
+  Future<List<ImageItem>> getHistoricalImages({int limit = 30}) async {
+    var theDb = await db;
+    if (theDb == null) return [];
+
+    List<Map> list = await theDb.rawQuery(
+      "SELECT * FROM DailyImages ORDER BY StartTime DESC LIMIT ?", 
+      [limit]
+    );
+    
+    return list.map((map) => ImageItem.fromMap(map)).toList();
+  }
+
+  /// Clean up old images (keep only last 30 days)
+  Future<void> cleanupOldImages({int daysToKeep = 30}) async {
+    var theDb = await db;
+    if (theDb == null) return;
+
+    await theDb.rawDelete(
+      "DELETE FROM DailyImages WHERE StartTime < datetime('now', '-$daysToKeep days')"
+    );
+  }
+
+  /// Get images for a specific date
+  Future<List<ImageItem>> getImagesForDate(DateTime date) async {
+    var theDb = await db;
+    if (theDb == null) return [];
+
+    var startOfDay = DateTimeHelper.startDayDate(date);
+    var endOfDay = startOfDay.add(Duration(days: 1));
+
+    List<Map> list = await theDb.rawQuery(
+      "SELECT * FROM DailyImages WHERE StartTime >= ? AND StartTime < ? ORDER BY id",
+      [startOfDay.toString(), endOfDay.toString()]
+    );
+    
+    return list.map((map) => ImageItem.fromMap(map)).toList();
+  }
+
+  /// Delete image by identifier
+  Future<void> deleteImageByIdent(String imageIdent) async {
+    var theDb = await db;
+    if (theDb == null) return;
+
+    await theDb.rawDelete(
+      "DELETE FROM DailyImages WHERE ImageIdent = ?",
+      [imageIdent]
+    );
   }
 }

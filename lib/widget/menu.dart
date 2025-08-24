@@ -18,9 +18,26 @@ class Menu extends StatelessWidget {
       itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
         PopupMenuItem<String>(
           value: '/settings',
-          child: const Text('Settings', textAlign: TextAlign.center),
+          child: Row(
+            children: [
+              Icon(Icons.settings, size: 20),
+              SizedBox(width: 8),
+              Text('Settings'),
+            ],
+          ),
           height: 40.0,
-        ),
+        ) //,
+        // PopupMenuItem<String>(
+        //   value: '/older',
+        //   child: Row(
+        //     children: [
+        //       Icon(Icons.history, size: 20),
+        //       SizedBox(width: 8),
+        //       Text('History'),
+        //     ],
+        //   ),
+        //   height: 40.0,
+        // ),
       ],
     );
   }
