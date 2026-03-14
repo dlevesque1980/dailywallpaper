@@ -4,7 +4,6 @@ import 'dart:async';
 class PrefHelper {
   static Future<SharedPreferences> get prefs => SharedPreferences.getInstance();
 
-
   static Future<bool> getBool(String key) async {
     final p = await prefs;
     return p.getBool(key) ?? false;
@@ -16,7 +15,7 @@ class PrefHelper {
   }
 
   static bool setDefaultBoolValue(String key, bool val) {
-    setBool(key,val);
+    setBool(key, val);
     return val;
   }
 
@@ -36,7 +35,8 @@ class PrefHelper {
     return p.setString(key, value);
   }
 
-  static Future<String> getStringWithDefault(String key, String defValue) async {
+  static Future<String> getStringWithDefault(
+      String key, String defValue) async {
     var val = await getString(key);
     if (val != null) return val;
 
@@ -54,11 +54,35 @@ class PrefHelper {
     return p.setStringList(key, value);
   }
 
-  static Future<List<String>> getStringListWithDefault(String key, List<String> defValue) async {
+  static Future<List<String>> getStringListWithDefault(
+      String key, List<String> defValue) async {
     var val = await getStringList(key);
     if (val != null) return val;
 
     setStringList(key, defValue);
     return defValue;
+  }
+
+  static Future<int?> getInt(String key) async {
+    final p = await prefs;
+    return p.getInt(key);
+  }
+
+  static Future<bool> setInt(String key, int value) async {
+    final p = await prefs;
+    return p.setInt(key, value);
+  }
+
+  static Future<int> getIntWithDefault(String key, int defValue) async {
+    var val = await getInt(key);
+    if (val != null) return val;
+
+    setInt(key, defValue);
+    return defValue;
+  }
+
+  static Future<bool> remove(String key) async {
+    final p = await prefs;
+    return p.remove(key);
   }
 }

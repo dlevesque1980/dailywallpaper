@@ -1,11 +1,13 @@
 import 'package:dailywallpaper/bloc/home_bloc.dart';
+import 'package:dailywallpaper/bloc/history_bloc.dart';
 import 'package:dailywallpaper/bloc/settings_bloc.dart';
 import 'package:dailywallpaper/bloc/pexels_categories_bloc.dart';
 import 'package:dailywallpaper/bloc_provider/settings_provider.dart';
+import 'package:dailywallpaper/bloc_provider/history_provider.dart';
 import 'package:dailywallpaper/screen/home_screen.dart';
+import 'package:dailywallpaper/screen/history_screen.dart';
 import 'package:dailywallpaper/bloc_provider/home_provider.dart';
-import 'package:dailywallpaper/screen/older_screen.dart';
-import 'package:dailywallpaper/screen/settings_screen.dart';
+import 'package:dailywallpaper/screen/simplified_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -38,7 +40,14 @@ class MyApp extends StatelessWidget {
     return SettingsProvider(
       settingsBloc: SettingsBloc(),
       pexelsCategoriesBloc: PexelsCategoriesBloc(),
-      child: SettingScreen(),
+      child: SimplifiedSettingsScreen(),
+    );
+  }
+
+  Widget historyProvider() {
+    return HistoryProvider(
+      historyBloc: HistoryBloc(),
+      child: HistoryScreen(),
     );
   }
 
@@ -53,7 +62,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => homeProvider(),
         // When we navigate to the "/second" route, build the SecondScreen Widget
         '/settings': (context) => settingsProvider(),
-        //'/older': (context) => OlderScreen()
+        '/older': (context) => historyProvider(),
       },
       title: 'Daily Wallpaper',
       theme: ThemeData(),

@@ -13,17 +13,22 @@ const String sp_SmartCropEntropyAnalysis = "smartcropentropyanalysis";
 const String sp_SmartCropEdgeDetection = "smartcropedgedetection";
 const String sp_SmartCropCenterWeighting = "smartcropcenterweighting";
 const String sp_SmartCropMaxProcessingTime = "smartcropmaxprocessingtime";
+const String sp_SmartCropBatteryOptimization = "smartcropbatteryoptimization";
+const String sp_SmartCropMaxCandidates = "smartcropmaxcandidates";
 
 // Popular Pexels categories for wallpapers - optimized for smart crop visibility
 const List<String> defaultPexelsCategories = [
   "portrait", // Images avec sujets centrés - bon pour smart crop
-  "people",   // Visages et personnes - excellent pour smart crop
-  "animals",  // Animaux - très bon pour la détection de sujets
-  "flowers",  // Détails intéressants pour l'analyse d'entropie
+  "people", // Visages et personnes - excellent pour smart crop
+  "animals", // Animaux - très bon pour la détection de sujets
+  "flowers", // Détails intéressants pour l'analyse d'entropie
+  "mountain",
+  "forest",
+  "ocean",
   "architecture", // Lignes et structures pour rule of thirds
-  "city",     // Scènes complexes avec points d'intérêt
-  "landscape", 
+  "city", // Scènes complexes avec points d'intérêt
+  "landscape",
   "nature",
   "abstract", // Formes et couleurs pour l'analyse
-  "minimal"   // Compositions simples mais efficaces
+  "minimal" // Compositions simples mais efficaces
 ];

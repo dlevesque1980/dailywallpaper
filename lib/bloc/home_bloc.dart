@@ -16,6 +16,8 @@ import '../services/smart_crop/smart_cropper.dart';
 import '../services/smart_crop/smart_crop_preferences.dart';
 import '../services/smart_crop/utils/screen_utils.dart';
 import '../services/smart_crop/utils/image_utils.dart';
+import '../services/smart_crop/utils/image_type_detector.dart';
+import '../services/image_preloader_service.dart';
 
 class HomeBloc {
   Stream<HomeState> _results = Stream.empty();
@@ -29,7 +31,9 @@ class HomeBloc {
   Stream<String> get wallpaper => _wallpaper;
   Sink<int> get setWallpaper => _setWallpaper;
   HomeState? state;
-  
+
+  // Service de préchargement
+  final ImagePreloaderService _preloaderService = ImagePreloaderService();
 
   HomeBloc() {
     _results = _query.distinct().asyncMap(_imageHandler).asBroadcastStream();
@@ -41,7 +45,8 @@ class HomeBloc {
     if (!fetchingInitialData) {
       fetchingInitialData = true;
       PrefHelper.getStringWithDefault(sp_BingRegion, "en-US").then((region) {
-        PrefHelper.getStringListWithDefault(sp_PexelsCategories, defaultPexelsCategories.take(3).toList())
+        PrefHelper.getStringListWithDefault(
+                sp_PexelsCategories, defaultPexelsCategories.take(3).toList())
             .then((categories) {
           var catStr = categories.join(";");
           print("query:$dateStr.$region;$catStr");
@@ -58,7 +63,8 @@ class HomeBloc {
     fetchingInitialData = false; // Reset the flag
     var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
     PrefHelper.getStringWithDefault(sp_BingRegion, "en-US").then((region) {
-      PrefHelper.getStringListWithDefault(sp_PexelsCategories, defaultPexelsCategories.take(3).toList())
+      PrefHelper.getStringListWithDefault(
+              sp_PexelsCategories, defaultPexelsCategories.take(3).toList())
           .then((categories) {
         var catStr = categories.join(";");
         // Add a timestamp to force refresh
@@ -75,10 +81,10 @@ class HomeBloc {
     try {
       if (state?.list != null && state!.list.isNotEmpty) {
         debugPrint('Refreshing smart crop for ${state!.list.length} images');
-        
+
         // Clear existing crop cache to force reprocessing with new settings
         await SmartCropPreferences.clearCropCache();
-        
+
         // Reprocess all current images with new settings
         _processImagesWithSmartCrop(state!.list);
       }
@@ -89,30 +95,33 @@ class HomeBloc {
 
   Future<HomeState> _imageHandler(String query) async {
     var list = <ImageItem>[];
-    
+
     // Clean up old images periodically (keep last 30 days)
     var dbHelper = new DatabaseHelper();
     await dbHelper.cleanupOldImages(daysToKeep: 30);
-    
+
     list.add(await _bingHandler(query));
     await for (ImageItem i in _pexelsHandler(query)) {
       list.add(i);
     }
-    
-    // Add NASA image if enabled
+
+    // Add NASA image (always included)
     bool forceRefresh = query.contains('refresh=');
-    debugPrint('Checking NASA image... forceRefresh: $forceRefresh');
+    debugPrint('Loading NASA image... forceRefresh: $forceRefresh');
     var nasaImage = await _nasaHandler(query, forceRefresh: forceRefresh);
     if (nasaImage != null) {
       debugPrint('NASA image added to list: ${nasaImage.source}');
       list.add(nasaImage);
     } else {
-      debugPrint('NASA image is null - either disabled or not available');
+      debugPrint('NASA image is null - not available');
     }
-    
-    // Start background smart crop processing for all images
+
+    // Démarrer le préchargement intelligent des images
+    unawaited(_preloaderService.preloadImages(list, 0));
+
+    // Start background smart crop processing for all images (legacy)
     _processImagesWithSmartCrop(list);
-    
+
     state = HomeState(list, 0);
     return state!;
   }
@@ -122,20 +131,25 @@ class HomeBloc {
   void _processImagesWithSmartCrop(List<ImageItem> images) async {
     try {
       // Check if smart crop is enabled
-      final isSmartCropEnabled = await SmartCropPreferences.isSmartCropEnabled();
+      final isSmartCropEnabled =
+          await SmartCropPreferences.isSmartCropEnabled();
       if (!isSmartCropEnabled) {
         debugPrint('Smart crop is disabled, skipping background processing');
         return;
       }
 
-      final cropSettings = await SmartCropPreferences.getCropSettings();
+      final baseCropSettings = await SmartCropPreferences.getCropSettings();
       final screenSize = ScreenUtils.getPhysicalScreenSize();
-      
-      debugPrint('Starting background smart crop processing for ${images.length} images');
+
+      debugPrint(
+          'Starting background smart crop processing for ${images.length} images');
 
       // Process each image in the background
       for (final imageItem in images) {
-        _processImageWithSmartCrop(imageItem, screenSize, cropSettings);
+        // Optimiser les paramètres selon la source de l'image
+        final optimizedSettings =
+            _getOptimizedCropSettings(imageItem, baseCropSettings);
+        _processImageWithSmartCrop(imageItem, screenSize, optimizedSettings);
       }
     } catch (e) {
       debugPrint('Error in background smart crop processing: $e');
@@ -144,8 +158,8 @@ class HomeBloc {
 
   /// Process a single image with smart crop in the background
   void _processImageWithSmartCrop(
-    ImageItem imageItem, 
-    ui.Size screenSize, 
+    ImageItem imageItem,
+    ui.Size screenSize,
     dynamic cropSettings,
   ) async {
     try {
@@ -162,11 +176,14 @@ class HomeBloc {
       final targetSize = ScreenUtils.calculateTargetSize(
         ui.Size(sourceImage.width.toDouble(), sourceImage.height.toDouble()),
         screenSize.width / screenSize.height,
-        maxDimension: math.max(screenSize.width, screenSize.height).round(), // Use actual screen size
+        maxDimension: math
+            .max(screenSize.width, screenSize.height)
+            .round(), // Use actual screen size
       );
 
       // Check if we already have a cached crop for this image and target size
-      final cachedCrop = await SmartCropper.getCachedCrop(imageItem.url, targetSize, cropSettings);
+      final cachedCrop = await SmartCropper.getCachedCrop(
+          imageItem.url, targetSize, cropSettings);
       if (cachedCrop != null) {
         debugPrint('Smart crop already cached for: ${imageItem.imageIdent}');
         return;
@@ -181,17 +198,17 @@ class HomeBloc {
       );
 
       if (result.success) {
-        debugPrint('Smart crop completed successfully for: ${imageItem.imageIdent}');
+        debugPrint(
+            'Smart crop completed successfully for: ${imageItem.imageIdent}');
         // The result is automatically cached by SmartCropper
       } else {
-        debugPrint('Smart crop failed for: ${imageItem.imageIdent}, error: ${result.error}');
+        debugPrint(
+            'Smart crop failed for: ${imageItem.imageIdent}, error: ${result.error}');
       }
     } catch (e) {
       debugPrint('Error processing smart crop for ${imageItem.imageIdent}: $e');
     }
   }
-
-
 
   Future<ImageItem> _bingHandler(String query) async {
     ImageItem? image;
@@ -201,26 +218,24 @@ class HomeBloc {
     if (image == null) {
       image = await ImageRepository.fetchFromBing(region!);
       await dbHelper.insertImage(image);
-    }    
+    }
     return image;
   }
 
   Stream<ImageItem> _pexelsHandler(String query) async* {
     var dbHelper = new DatabaseHelper();
     var categories = await PrefHelper.getStringListWithDefault(
-      sp_PexelsCategories, 
-      defaultPexelsCategories.take(3).toList()
-    );
-    
+        sp_PexelsCategories, defaultPexelsCategories.take(3).toList());
+
     // Get current date string for daily wallpaper logic
     var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
-    
+
     for (var category in categories) {
       try {
         // Create unique identifier with date like Bing does
         var imageIdent = 'pexels.$category.$dateStr';
         ImageItem? pexelsImage = await dbHelper.getCurrentImage(imageIdent);
-        
+
         if (pexelsImage == null) {
           // Fetch new image and update its identifier to include date
           pexelsImage = await ImageRepository.fetchFromPexels(category);
@@ -236,22 +251,18 @@ class HomeBloc {
     }
   }
 
-  Future<ImageItem?> _nasaHandler(String query, {bool forceRefresh = false}) async {
-    // Check if NASA is enabled in settings
-    var nasaEnabled = await PrefHelper.getBoolWithDefault(sp_NASAEnabled, false);
-    debugPrint('NASA enabled: $nasaEnabled');
-    if (!nasaEnabled) {
-      debugPrint('NASA is disabled in settings');
-      return null;
-    }
-    
+  Future<ImageItem?> _nasaHandler(String query,
+      {bool forceRefresh = false}) async {
+    // NASA images are now always included (no toggle check)
+    debugPrint('Loading NASA image (always enabled)');
+
     var dbHelper = new DatabaseHelper();
     var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
     var imageIdent = 'nasa.apod.$dateStr';
-    
+
     try {
       ImageItem? nasaImage;
-      
+
       if (forceRefresh) {
         // Force refresh: delete existing cached image and fetch new one
         print('Force refreshing NASA image...');
@@ -260,7 +271,7 @@ class HomeBloc {
       } else {
         nasaImage = await dbHelper.getCurrentImage(imageIdent);
       }
-      
+
       if (nasaImage == null) {
         // Fetch new NASA APOD
         print('Fetching new NASA APOD...');
@@ -269,13 +280,14 @@ class HomeBloc {
         nasaImage.imageIdent = imageIdent;
         await dbHelper.insertImage(nasaImage);
       }
-      
+
       return nasaImage;
     } catch (e) {
       print('Error loading NASA APOD: $e');
       // Check if it's a rate limit error
       if (e.toString().contains('429') || e.toString().contains('rate limit')) {
-        debugPrint('NASA API rate limit exceeded. Try again later or use a real API key.');
+        debugPrint(
+            'NASA API rate limit exceeded. Try again later or use a real API key.');
       }
       // Return null if NASA fails, don't break the entire app
       return null;
@@ -289,81 +301,97 @@ class HomeBloc {
     var image = state!.list[index];
 
     try {
-      final isSmartCropEnabled = await SmartCropPreferences.isSmartCropEnabled();
-      
+      final isSmartCropEnabled =
+          await SmartCropPreferences.isSmartCropEnabled();
+
       if (isSmartCropEnabled) {
         debugPrint('Smart crop is enabled, processing image for wallpaper');
-        final cropSettings = await SmartCropPreferences.getCropSettings();
+        final baseCropSettings = await SmartCropPreferences.getCropSettings();
+        final optimizedSettings =
+            _getOptimizedCropSettings(image, baseCropSettings);
         final screenSize = ScreenUtils.getPhysicalScreenSize();
-        
+
         // Load the source image
         final sourceImage = await ImageUtils.loadImageFromUrl(image.url);
         if (sourceImage != null) {
           final targetSize = ScreenUtils.calculateTargetSize(
-            ui.Size(sourceImage.width.toDouble(), sourceImage.height.toDouble()),
+            ui.Size(
+                sourceImage.width.toDouble(), sourceImage.height.toDouble()),
             screenSize.width / screenSize.height,
             maxDimension: math.max(screenSize.width, screenSize.height).round(),
           );
-          
-          debugPrint('Target size for wallpaper: ${targetSize.width}x${targetSize.height}');
-          
+
+          debugPrint(
+              'Target size for wallpaper: ${targetSize.width}x${targetSize.height}');
+
           // Try to get the cached crop coordinates
-          final cachedCrop = await SmartCropper.getCachedCrop(image.url, targetSize, cropSettings);
+          final cachedCrop = await SmartCropper.getCachedCrop(
+              image.url, targetSize, optimizedSettings);
           if (cachedCrop != null) {
-            debugPrint('Found cached crop coordinates: ${cachedCrop.toString()}');
-            
+            debugPrint(
+                'Found cached crop coordinates: ${cachedCrop.toString()}');
+
             // Apply the crop to create the wallpaper image
             final croppedImage = await SmartCropper.applyCropAndResize(
               sourceImage,
               cachedCrop,
               targetSize,
             );
-            
+
             // Convert the cropped image to bytes
             final imageBytes = await ImageUtils.imageToBytes(croppedImage);
-            
+
             if (imageBytes != null) {
-              debugPrint('Using cropped image bytes for wallpaper (${imageBytes.length} bytes)');
-              
+              debugPrint(
+                  'Using cropped image bytes for wallpaper (${imageBytes.length} bytes)');
+
               // Use the new methods that accept bytes
               if (setLocked) {
-                message = await Setwallpaper.instance.setBothWallpaperFromBytes(imageBytes);
+                message = await Setwallpaper.instance
+                    .setBothWallpaperFromBytes(imageBytes);
               } else {
-                message = await Setwallpaper.instance.setSystemWallpaperFromBytes(imageBytes);
+                message = await Setwallpaper.instance
+                    .setSystemWallpaperFromBytes(imageBytes);
               }
-              
+
               return message;
             } else {
-              debugPrint('Failed to convert cropped image to bytes, falling back to original');
+              debugPrint(
+                  'Failed to convert cropped image to bytes, falling back to original');
             }
           } else {
             debugPrint('No cached crop found, processing image now...');
-            
+
             // Process the image with smart crop
             final processedResult = await SmartCropper.processImage(
               image.url,
               sourceImage,
               targetSize,
-              cropSettings,
+              optimizedSettings,
             );
-            
+
             if (processedResult.success) {
               // Convert the processed image to bytes
-              final imageBytes = await ImageUtils.imageToBytes(processedResult.image);
-              
+              final imageBytes =
+                  await ImageUtils.imageToBytes(processedResult.image);
+
               if (imageBytes != null) {
-                debugPrint('Using newly processed cropped image bytes for wallpaper (${imageBytes.length} bytes)');
-                
+                debugPrint(
+                    'Using newly processed cropped image bytes for wallpaper (${imageBytes.length} bytes)');
+
                 // Use the new methods that accept bytes
                 if (setLocked) {
-                  message = await Setwallpaper.instance.setBothWallpaperFromBytes(imageBytes);
+                  message = await Setwallpaper.instance
+                      .setBothWallpaperFromBytes(imageBytes);
                 } else {
-                  message = await Setwallpaper.instance.setSystemWallpaperFromBytes(imageBytes);
+                  message = await Setwallpaper.instance
+                      .setSystemWallpaperFromBytes(imageBytes);
                 }
-                
+
                 return message;
               } else {
-                debugPrint('Failed to convert processed image to bytes, falling back to original');
+                debugPrint(
+                    'Failed to convert processed image to bytes, falling back to original');
               }
             } else {
               debugPrint('Failed to process image: ${processedResult.error}');
@@ -390,7 +418,42 @@ class HomeBloc {
     return message;
   }
 
+  /// Optimise les paramètres de crop selon le type d'image
+  dynamic _getOptimizedCropSettings(ImageItem imageItem, dynamic baseSettings) {
+    // Déterminer la source de l'image
+    String? imageSource;
+    if (imageItem.source.toLowerCase().contains('bing')) {
+      imageSource = 'bing';
+    } else if (imageItem.source.toLowerCase().contains('nasa')) {
+      imageSource = 'nasa';
+    } else if (imageItem.source.toLowerCase().contains('pexels')) {
+      imageSource = 'pexels';
+    }
+
+    // Retourner les paramètres optimisés selon la source
+    switch (imageSource) {
+      case 'bing':
+        return ImageTypeDetector.getBingOptimizedSettings();
+      case 'nasa':
+        return ImageTypeDetector.getNASAOptimizedSettings();
+      case 'pexels':
+        return ImageTypeDetector.getPexelsOptimizedSettings();
+      default:
+        // Utiliser les paramètres de base si la source n'est pas reconnue
+        return baseSettings;
+    }
+  }
+
+  /// Notifie le changement d'index pour le préchargement
+  void onIndexChanged(int newIndex) {
+    if (state?.list != null && state!.list.isNotEmpty) {
+      // Relancer le préchargement avec le nouvel index
+      unawaited(_preloaderService.preloadImages(state!.list, newIndex));
+    }
+  }
+
   void dispose() {
+    _preloaderService.clearCache();
     _query.close();
     _setWallpaper.close();
   }

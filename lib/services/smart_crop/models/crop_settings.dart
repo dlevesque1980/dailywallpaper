@@ -2,10 +2,10 @@
 enum CropAggressiveness {
   /// Conservative cropping - minimal changes, prefer center crops
   conservative,
-  
+
   /// Balanced cropping - moderate analysis, good balance of safety and optimization
   balanced,
-  
+
   /// Aggressive cropping - maximum analysis, prioritize optimal composition
   aggressive,
 }
@@ -14,21 +14,27 @@ enum CropAggressiveness {
 class CropSettings {
   /// Overall aggressiveness of the cropping algorithm
   final CropAggressiveness aggressiveness;
-  
+
   /// Whether to enable rule of thirds analysis
   final bool enableRuleOfThirds;
-  
+
   /// Whether to enable entropy-based analysis
   final bool enableEntropyAnalysis;
-  
+
   /// Whether to enable edge detection analysis
   final bool enableEdgeDetection;
-  
+
   /// Whether to enable center-weighted analysis
   final bool enableCenterWeighting;
-  
+
   /// Maximum time allowed for processing
   final Duration maxProcessingTime;
+
+  /// Whether to enable battery optimization
+  final bool enableBatteryOptimization;
+
+  /// Maximum number of crop candidates to generate
+  final int maxCropCandidates;
 
   const CropSettings({
     this.aggressiveness = CropAggressiveness.balanced,
@@ -37,16 +43,68 @@ class CropSettings {
     this.enableEdgeDetection = false,
     this.enableCenterWeighting = true,
     this.maxProcessingTime = const Duration(seconds: 2),
+    this.enableBatteryOptimization = false,
+    this.maxCropCandidates = 10,
   });
 
   /// Default settings for the smart crop system
   static const CropSettings defaultSettings = CropSettings(
-    aggressiveness: CropAggressiveness.aggressive, // Plus agressif pour voir l'effet
+    aggressiveness: CropAggressiveness.balanced,
     enableRuleOfThirds: true,
     enableEntropyAnalysis: true,
-    enableEdgeDetection: true, // Activé pour plus d'analyse
+    enableEdgeDetection: false,
     enableCenterWeighting: true,
-    maxProcessingTime: Duration(seconds: 3), // Plus de temps pour un meilleur résultat
+    maxProcessingTime: Duration(seconds: 2),
+    enableBatteryOptimization: false,
+    maxCropCandidates: 10,
+  );
+
+  /// Optimized settings for landscape images (like Bing wallpapers)
+  static const CropSettings landscapeOptimized = CropSettings(
+    aggressiveness: CropAggressiveness.aggressive,
+    enableRuleOfThirds: true,
+    enableEntropyAnalysis: true,
+    enableEdgeDetection: true,
+    enableCenterWeighting: false, // Moins important pour les paysages
+    maxProcessingTime: Duration(seconds: 3),
+    enableBatteryOptimization: false,
+    maxCropCandidates: 15,
+  );
+
+  /// Conservative settings for portrait or complex images
+  static const CropSettings conservative = CropSettings(
+    aggressiveness: CropAggressiveness.conservative,
+    enableRuleOfThirds: true,
+    enableEntropyAnalysis: false,
+    enableEdgeDetection: false,
+    enableCenterWeighting: true,
+    maxProcessingTime: Duration(seconds: 1),
+    enableBatteryOptimization: true,
+    maxCropCandidates: 5,
+  );
+
+  /// Balanced settings for general use
+  static const CropSettings balanced = CropSettings(
+    aggressiveness: CropAggressiveness.balanced,
+    enableRuleOfThirds: true,
+    enableEntropyAnalysis: true,
+    enableEdgeDetection: false,
+    enableCenterWeighting: true,
+    maxProcessingTime: Duration(seconds: 2),
+    enableBatteryOptimization: false,
+    maxCropCandidates: 10,
+  );
+
+  /// Aggressive settings for maximum optimization
+  static const CropSettings aggressive = CropSettings(
+    aggressiveness: CropAggressiveness.aggressive,
+    enableRuleOfThirds: true,
+    enableEntropyAnalysis: true,
+    enableEdgeDetection: true,
+    enableCenterWeighting: true,
+    maxProcessingTime: Duration(seconds: 4),
+    enableBatteryOptimization: false,
+    maxCropCandidates: 20,
   );
 
   /// Creates a copy with modified values
@@ -57,14 +115,20 @@ class CropSettings {
     bool? enableEdgeDetection,
     bool? enableCenterWeighting,
     Duration? maxProcessingTime,
+    bool? enableBatteryOptimization,
+    int? maxCropCandidates,
   }) {
     return CropSettings(
       aggressiveness: aggressiveness ?? this.aggressiveness,
       enableRuleOfThirds: enableRuleOfThirds ?? this.enableRuleOfThirds,
-      enableEntropyAnalysis: enableEntropyAnalysis ?? this.enableEntropyAnalysis,
+      enableEntropyAnalysis:
+          enableEntropyAnalysis ?? this.enableEntropyAnalysis,
       enableEdgeDetection: enableEdgeDetection ?? this.enableEdgeDetection,
-      enableCenterWeighting: enableCenterWeighting ?? this.enableCenterWeighting,
+      enableCenterWeighting:
+          enableCenterWeighting ?? this.enableCenterWeighting,
       maxProcessingTime: maxProcessingTime ?? this.maxProcessingTime,
+      enableBatteryOptimization: enableBatteryOptimization ?? this.enableBatteryOptimization,
+      maxCropCandidates: maxCropCandidates ?? this.maxCropCandidates,
     );
   }
 
@@ -80,8 +144,7 @@ class CropSettings {
 
   /// Validates that settings are valid
   bool get isValid {
-    return maxProcessingTime.inMilliseconds > 0 &&
-           enabledStrategies.isNotEmpty;
+    return maxProcessingTime.inMilliseconds > 0 && enabledStrategies.isNotEmpty;
   }
 
   @override
@@ -93,12 +156,12 @@ class CropSettings {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is CropSettings &&
-           other.aggressiveness == aggressiveness &&
-           other.enableRuleOfThirds == enableRuleOfThirds &&
-           other.enableEntropyAnalysis == enableEntropyAnalysis &&
-           other.enableEdgeDetection == enableEdgeDetection &&
-           other.enableCenterWeighting == enableCenterWeighting &&
-           other.maxProcessingTime == maxProcessingTime;
+        other.aggressiveness == aggressiveness &&
+        other.enableRuleOfThirds == enableRuleOfThirds &&
+        other.enableEntropyAnalysis == enableEntropyAnalysis &&
+        other.enableEdgeDetection == enableEdgeDetection &&
+        other.enableCenterWeighting == enableCenterWeighting &&
+        other.maxProcessingTime == maxProcessingTime;
   }
 
   @override
@@ -122,18 +185,24 @@ class CropSettings {
       'enableEdgeDetection': enableEdgeDetection,
       'enableCenterWeighting': enableCenterWeighting,
       'maxProcessingTimeMs': maxProcessingTime.inMilliseconds,
+      'enableBatteryOptimization': enableBatteryOptimization,
+      'maxCropCandidates': maxCropCandidates,
     };
   }
 
   /// Creates settings from a Map (deserialization)
   factory CropSettings.fromMap(Map<String, dynamic> map) {
     return CropSettings(
-      aggressiveness: CropAggressiveness.values[map['aggressiveness'] ?? CropAggressiveness.balanced.index],
+      aggressiveness: CropAggressiveness
+          .values[map['aggressiveness'] ?? CropAggressiveness.balanced.index],
       enableRuleOfThirds: map['enableRuleOfThirds'] ?? true,
       enableEntropyAnalysis: map['enableEntropyAnalysis'] ?? true,
       enableEdgeDetection: map['enableEdgeDetection'] ?? false,
       enableCenterWeighting: map['enableCenterWeighting'] ?? true,
-      maxProcessingTime: Duration(milliseconds: map['maxProcessingTimeMs'] ?? 2000),
+      maxProcessingTime:
+          Duration(milliseconds: map['maxProcessingTimeMs'] ?? 2000),
+      enableBatteryOptimization: map['enableBatteryOptimization'] ?? false,
+      maxCropCandidates: map['maxCropCandidates'] ?? 10,
     );
   }
 
@@ -156,13 +225,13 @@ class CropSettings {
     final cleanJson = json.replaceAll(RegExp(r'[{}"]'), '');
     final pairs = cleanJson.split(',');
     final map = <String, dynamic>{};
-    
+
     for (final pair in pairs) {
       final keyValue = pair.split(':');
       if (keyValue.length == 2) {
         final key = keyValue[0].trim();
         final value = keyValue[1].trim();
-        
+
         if (key == 'aggressiveness' || key == 'maxProcessingTimeMs') {
           map[key] = int.tryParse(value) ?? 0;
         } else {
@@ -170,7 +239,7 @@ class CropSettings {
         }
       }
     }
-    
+
     return CropSettings.fromMap(map);
   }
 }

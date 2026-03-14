@@ -15,7 +15,9 @@ class MenuTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return new Expanded(
-      child: new Text(_images[_imageIndex].source ?? "", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.white)),
+      child: new Text(_images[_imageIndex].source,
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.w500, color: Colors.white)),
     );
   }
 }

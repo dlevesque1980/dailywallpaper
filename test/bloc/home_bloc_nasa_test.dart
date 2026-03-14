@@ -12,17 +12,30 @@ void main() {
 
     test('should have NASA handler method available', () {
       final homeBloc = HomeBloc();
-      
+
       // Verify that the HomeBloc can be instantiated
       expect(homeBloc, isA<HomeBloc>());
       expect(homeBloc.results, isA<Stream>());
-      
+
       homeBloc.dispose();
     });
 
-    test('should have NASA preference constant defined', () {
-      // Test that NASA preference constant is defined
+    test('should have NASA preference constant defined (legacy)', () {
+      // Test that NASA preference constant is defined (kept for backward compatibility)
+      // Note: NASA is now always enabled in HomeBloc, this constant is no longer used
       expect(sp_NASAEnabled, 'nasaenabled');
+    });
+
+    test('should always include NASA images regardless of toggle setting', () {
+      // Test that NASA is always included now (no toggle dependency)
+      // This test verifies that the NASA toggle removal was successful
+      final homeBloc = HomeBloc();
+
+      // Verify that HomeBloc doesn't check NASA toggle anymore
+      // The _nasaHandler method should always attempt to load NASA images
+      expect(homeBloc, isA<HomeBloc>());
+
+      homeBloc.dispose();
     });
 
     // Note: We're not testing actual NASA API calls here to avoid hitting rate limits

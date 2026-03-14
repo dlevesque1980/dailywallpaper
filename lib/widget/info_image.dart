@@ -23,21 +23,28 @@ class InfoImage extends StatelessWidget {
                     return LayoutBuilder(
                       builder: (context, constraints) {
                         return Container(
-                          padding: EdgeInsets.only(top: 16.0, bottom: 16.0, left: 12.0, right: 12.0),
+                          padding: EdgeInsets.only(
+                              top: 16.0, bottom: 16.0, left: 12.0, right: 12.0),
                           child: SingleChildScrollView(
                             child: Column(
                               children: <Widget>[
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: Text(
-                                    image.description ?? "",
-                                    style: material.TextStyle(fontSize: 20.0, color: Colors.black, package: "dailywallpaper"),
+                                    image.description,
+                                    style: material.TextStyle(
+                                        fontSize: 20.0,
+                                        color: Colors.black,
+                                        package: "dailywallpaper"),
                                   ),
                                 ),
                                 Text(""),
                                 Align(
                                     alignment: Alignment.centerLeft,
-                                    child: TextWithHyperLink(text: image.copyright, color: Colors.black, hyperlinkColor: Colors.indigoAccent)),
+                                    child: TextWithHyperLink(
+                                        text: image.copyright,
+                                        color: Colors.black,
+                                        hyperlinkColor: Colors.indigoAccent)),
                               ],
                             ),
                           ),

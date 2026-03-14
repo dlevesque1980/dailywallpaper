@@ -12,9 +12,9 @@ import 'crop_cache_entry.dart';
 class CropCacheManager {
   static final CropCacheManager _instance = CropCacheManager._internal();
   static CropCacheDatabase? _database;
-  
+
   factory CropCacheManager() => _instance;
-  
+
   CropCacheManager._internal();
 
   /// Gets the database instance
@@ -30,9 +30,10 @@ class CropCacheManager {
     CropSettings settings,
   ) {
     final settingsHash = _generateSettingsHash(settings);
-    final sizeString = '${targetSize.width.toInt()}x${targetSize.height.toInt()}';
+    final sizeString =
+        '${targetSize.width.toInt()}x${targetSize.height.toInt()}';
     final keyString = '${imageUrl}_${sizeString}_$settingsHash';
-    
+
     // Create a hash of the key string for consistent length
     final bytes = utf8.encode(keyString);
     final digest = sha256.convert(bytes);
@@ -49,7 +50,7 @@ class CropCacheManager {
       'enableCenterWeighting': settings.enableCenterWeighting,
       'maxProcessingTime': settings.maxProcessingTime.inMilliseconds,
     };
-    
+
     final settingsString = json.encode(settingsMap);
     final bytes = utf8.encode(settingsString);
     final digest = sha256.convert(bytes);
@@ -65,24 +66,23 @@ class CropCacheManager {
     try {
       final cacheKey = generateCacheKey(imageUrl, targetSize, settings);
       final entry = await _db.getByCacheKey(cacheKey);
-      
+
       if (entry == null) return null;
-      
+
       // Check if entry is expired
       if (entry.isExpired()) {
         await _db.delete(entry.id!);
         return null;
       }
-      
+
       // Verify settings haven't changed
       final currentSettingsHash = _generateSettingsHash(settings);
       if (entry.settingsHash != currentSettingsHash) {
         await _db.delete(entry.id!);
         return null;
       }
-      
+
       return entry.coordinates;
-      
     } catch (e) {
       // Log error but don't throw - cache misses should be graceful
       return null;
@@ -99,7 +99,7 @@ class CropCacheManager {
     try {
       final cacheKey = generateCacheKey(imageUrl, targetSize, settings);
       final settingsHash = _generateSettingsHash(settings);
-      
+
       final entry = CropCacheEntry.create(
         cacheKey: cacheKey,
         imageUrl: imageUrl,
@@ -108,10 +108,9 @@ class CropCacheManager {
         settingsHash: settingsHash,
         coordinates: coordinates,
       );
-      
+
       await _db.insert(entry);
       return true;
-      
     } catch (e) {
       // Log error but don't throw - cache failures shouldn't break the app
       return false;
@@ -141,7 +140,7 @@ class CropCacheManager {
     try {
       final newSettingsHash = _generateSettingsHash(newSettings);
       final db = await _db.database;
-      
+
       // Delete entries with different settings hash
       return await db.delete(
         'crop_cache',
@@ -156,7 +155,14 @@ class CropCacheManager {
   /// Clears all cached crops
   Future<int> clearCache() async {
     try {
-      return await _db.clear();
+      // Add timeout to prevent indefinite blocking
+      return await _db.clear().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          // If timeout occurs, return 0 (no entries cleared)
+          return 0;
+        },
+      );
     } catch (e) {
       return 0;
     }
@@ -180,7 +186,30 @@ class CropCacheManager {
     Duration ttl = const Duration(days: 7),
     int maxEntries = 1000,
   }) async {
-    return await _db.performMaintenance(ttl: ttl, maxEntries: maxEntries);
+    try {
+      // Add timeout to prevent indefinite blocking
+      return await _db
+          .performMaintenance(ttl: ttl, maxEntries: maxEntries)
+          .timeout(
+        const Duration(minutes: 2),
+        onTimeout: () {
+          // If timeout occurs, return failed result
+          return CropCacheMaintenanceResult(
+            expiredEntriesDeleted: 0,
+            lruEntriesEvicted: 0,
+            success: false,
+            error: 'Maintenance operation timed out after 2 minutes',
+          );
+        },
+      );
+    } catch (e) {
+      return CropCacheMaintenanceResult(
+        expiredEntriesDeleted: 0,
+        lruEntriesEvicted: 0,
+        success: false,
+        error: e.toString(),
+      );
+    }
   }
 
   /// Preloads cache for common screen sizes
@@ -205,14 +234,13 @@ class CropCacheManager {
         // Check if already cached
         final cached = await getCachedCrop(imageUrl, size, settings);
         if (cached != null) continue;
-        
+
         // Analyze and cache
         final coordinates = await analyzer(size);
         await cacheCrop(imageUrl, size, settings, coordinates);
-        
+
         // Small delay to avoid overwhelming the system
         await Future.delayed(const Duration(milliseconds: 100));
-        
       } catch (e) {
         // Continue with other sizes if one fails
         continue;
@@ -224,7 +252,7 @@ class CropCacheManager {
   Future<CropCacheHitRate> getHitRateStats() async {
     try {
       final db = await _db.database;
-      
+
       // This is a simplified hit rate calculation
       // In a real implementation, you'd track hits/misses separately
       final result = await db.rawQuery('''
@@ -235,13 +263,13 @@ class CropCacheManager {
           MIN(access_count) as min_access_count
         FROM crop_cache
       ''');
-      
+
       final row = result.first;
       final totalEntries = row['total_entries'] as int;
       final avgAccessCount = (row['avg_access_count'] as double?) ?? 0.0;
       final maxAccessCount = (row['max_access_count'] as int?) ?? 0;
       final minAccessCount = (row['min_access_count'] as int?) ?? 0;
-      
+
       // Estimate hit rate based on access patterns
       // Entries with access_count > 1 indicate cache hits
       final hitResult = await db.rawQuery('''
@@ -249,10 +277,11 @@ class CropCacheManager {
         FROM crop_cache 
         WHERE access_count > 1
       ''');
-      
+
       final hitEntries = hitResult.first['hit_entries'] as int;
-      final estimatedHitRate = totalEntries > 0 ? hitEntries / totalEntries : 0.0;
-      
+      final estimatedHitRate =
+          totalEntries > 0 ? hitEntries / totalEntries : 0.0;
+
       return CropCacheHitRate(
         totalEntries: totalEntries,
         averageAccessCount: avgAccessCount,
@@ -260,7 +289,6 @@ class CropCacheManager {
         minAccessCount: minAccessCount,
         estimatedHitRate: estimatedHitRate,
       );
-      
     } catch (e) {
       return const CropCacheHitRate(
         totalEntries: 0,
@@ -276,7 +304,7 @@ class CropCacheManager {
   Future<int> optimizeCache() async {
     try {
       final db = await _db.database;
-      
+
       // Find and remove duplicate cache keys (shouldn't happen but just in case)
       final duplicatesResult = await db.rawQuery('''
         SELECT cache_key, COUNT(*) as count, MIN(id) as keep_id
@@ -284,25 +312,24 @@ class CropCacheManager {
         GROUP BY cache_key 
         HAVING COUNT(*) > 1
       ''');
-      
+
       int deletedCount = 0;
-      
+
       for (final row in duplicatesResult) {
         final cacheKey = row['cache_key'] as String;
         final keepId = row['keep_id'] as int;
-        
+
         // Delete all but the oldest entry for this cache key
         final deleted = await db.delete(
           'crop_cache',
           where: 'cache_key = ? AND id != ?',
           whereArgs: [cacheKey, keepId],
         );
-        
+
         deletedCount += deleted;
       }
-      
+
       return deletedCount;
-      
     } catch (e) {
       return 0;
     }
@@ -337,6 +364,6 @@ class CropCacheHitRate {
   @override
   String toString() {
     return 'CropCacheHitRate(entries: $totalEntries, hitRate: ${hitRatePercentage.toStringAsFixed(1)}%, '
-           'avgAccess: ${averageAccessCount.toStringAsFixed(1)})';
+        'avgAccess: ${averageAccessCount.toStringAsFixed(1)})';
   }
 }

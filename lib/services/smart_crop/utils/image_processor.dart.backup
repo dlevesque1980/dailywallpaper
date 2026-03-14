@@ -1,0 +1,506 @@
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'dart:math' as math;
+import '../models/crop_coordinates.dart';
+
+/// Configuration for object detection
+class DetectionConfig {
+  final double threshold;
+  final int maxObjects;
+  final bool enableFiltering;
+  final Map<String, dynamic> customParams;
+
+  const DetectionConfig({
+    this.threshold = 0.5,
+    this.maxObjects = 10,
+    this.enableFiltering = true,
+    this.customParams = const {},
+  });
+
+  static const DetectionConfig defaultConfig = DetectionConfig();
+}
+
+/// Represents a detected object in an image
+class DetectedObject {
+  final ui.Rect boundingBox;
+  final double confidence;
+  final String type;
+  final Map<String, dynamic> metadata;
+
+  const DetectedObject({
+    required this.boundingBox,
+    required this.confidence,
+    required this.type,
+    this.metadata = const {},
+  });
+}
+
+/// Shared image processing utilities for all analyzers
+class ImageProcessor {
+  static const int _defaultMaxDimension = 512;
+  static const double _complexityThreshold = 0.5;
+
+  /// Gets raw RGBA pixel data from an image
+  ///
+  /// [image] The source image
+  ///
+  /// Returns pixel data as Uint8List in RGBA format
+  static Future<Uint8List> getImageData(ui.Image image) async {
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    if (byteData == null) {
+      throw Exception('Failed to convert image to byte data');
+    }
+    return byteData.buffer.asUint8List();
+  }
+
+  /// Downsamples an image for analysis while preserving aspect ratio
+  ///
+  /// [image] The source image
+  /// [maxDimension] Maximum width or height for the downsampled image
+  ///
+  /// Returns a downsampled image suitable for analysis
+  static Future<ui.Image> downsampleForAnalysis(
+      ui.Image image, int maxDimension) async {
+    final originalWidth = image.width;
+    final originalHeight = image.height;
+
+    // If image is already small enough, return as-is
+    if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
+      return image;
+    }
+
+    // Calculate new dimensions preserving aspect ratio
+    final aspectRatio = originalWidth / originalHeight;
+    late int newWidth, newHeight;
+
+    if (originalWidth > originalHeight) {
+      newWidth = maxDimension;
+      newHeight = (maxDimension / aspectRatio).round();
+    } else {
+      newHeight = maxDimension;
+      newWidth = (maxDimension * aspectRatio).round();
+    }
+
+    // Create a picture recorder to draw the scaled image
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+
+    // Draw the image scaled to new dimensions
+    canvas.drawImageRect(
+      image,
+      ui.Rect.fromLTWH(
+          0, 0, originalWidth.toDouble(), originalHeight.toDouble()),
+      ui.Rect.fromLTWH(0, 0, newWidth.toDouble(), newHeight.toDouble()),
+      ui.Paint(),
+    );
+
+    // Convert to image
+    final picture = recorder.endRecording();
+    final scaledImage = await picture.toImage(newWidth, newHeight);
+    picture.dispose();
+
+    return scaledImage;
+  }
+
+  /// Applies a Gaussian blur filter to an image region
+  ///
+  /// [pixels] RGBA pixel data
+  /// [width] Image width
+  /// [height] Image height
+  /// [region] Region to apply filter (null for entire image)
+  /// [radius] Blur radius
+  ///
+  /// Returns filtered pixel data
+  static Uint8List applyGaussianBlur(
+    Uint8List pixels,
+    int width,
+    int height, {
+    ui.Rect? region,
+    double radius = 1.0,
+  }) {
+    final result = Uint8List.fromList(pixels);
+    final kernelSize = (radius * 2).round() + 1;
+    final kernel = _generateGaussianKernel(kernelSize, radius);
+
+    final startX = region?.left.round() ?? 0;
+    final startY = region?.top.round() ?? 0;
+    final endX = region?.right.round() ?? width;
+    final endY = region?.bottom.round() ?? height;
+
+    // Apply horizontal pass
+    for (int y = startY; y < endY; y++) {
+      for (int x = startX; x < endX; x++) {
+        for (int channel = 0; channel < 3; channel++) {
+          // RGB only, preserve alpha
+          double sum = 0.0;
+          double weightSum = 0.0;
+
+          for (int i = 0; i < kernelSize; i++) {
+            final sampleX = x + i - kernelSize ~/ 2;
+            if (sampleX >= 0 && sampleX < width) {
+              final pixelIndex = (y * width + sampleX) * 4 + channel;
+              sum += pixels[pixelIndex] * kernel[i];
+              weightSum += kernel[i];
+            }
+          }
+
+          final resultIndex = (y * width + x) * 4 + channel;
+          result[resultIndex] = (sum / weightSum).round().clamp(0, 255);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /// Detects objects in an image using generic detection algorithms
+  ///
+  /// [image] The source image
+  /// [config] Detection configuration
+  ///
+  /// Returns list of detected objects
+  static Future<List<DetectedObject>> detectObjects(
+    ui.Image image,
+    DetectionConfig config,
+  ) async {
+    final pixels = await ImageProcessor.getImageData(image);
+    final objects = <DetectedObject>[];
+
+    // Simple edge-based object detection
+    final edges = _detectEdges(pixels, image.width, image.height);
+    final regions = _findConnectedRegions(edges, image.width, image.height);
+
+    for (final region in regions) {
+      if (region.width * region.height > 100) {
+        // Minimum size threshold
+        final confidence = _calculateObjectConfidence(
+            region, pixels, image.width, image.height);
+
+        if (confidence >= config.threshold) {
+          objects.add(DetectedObject(
+            boundingBox: region,
+            confidence: confidence,
+            type: 'generic_object',
+            metadata: {
+              'area': region.width * region.height,
+              'aspect_ratio': region.width / region.height,
+            },
+          ));
+        }
+      }
+    }
+
+    // Sort by confidence and limit results
+    objects.sort((a, b) => b.confidence.compareTo(a.confidence));
+    return objects.take(config.maxObjects).toList();
+  }
+
+  /// Calculates image complexity based on edge density and color variation
+  ///
+  /// [image] The source image
+  ///
+  /// Returns complexity score between 0.0 and 1.0
+  static Future<double> calculateImageComplexity(ui.Image image) async {
+    final pixels = await ImageProcessor.getImageData(image);
+    final width = image.width;
+    final height = image.height;
+
+    // Calculate edge density
+    final edges = _detectEdges(pixels, width, height);
+    final edgeCount = edges.where((edge) => edge > 0).length;
+    final edgeDensity = edgeCount / (width * height);
+
+    // Calculate color variation
+    final colorVariation = _calculateColorVariation(pixels, width, height);
+
+    // Combine metrics
+    final complexity =
+        (edgeDensity * 0.6 + colorVariation * 0.4).clamp(0.0, 1.0);
+    return complexity;
+  }
+
+  /// Preprocesses an image for analysis (downsampling, filtering, etc.)
+  ///
+  /// [image] The source image
+  /// [maxDimension] Maximum dimension for downsampling
+  /// [applyFiltering] Whether to apply noise reduction filtering
+  ///
+  /// Returns preprocessed image
+  static Future<ui.Image> preprocessForAnalysis(
+    ui.Image image, {
+    int maxDimension = _defaultMaxDimension,
+    bool applyFiltering = false,
+  }) async {
+    // Downsample if needed
+    ui.Image processedImage = await downsampleForAnalysis(image, maxDimension);
+
+    // Apply filtering if requested
+    if (applyFiltering) {
+      final pixels = await ImageProcessor.getImageData(processedImage);
+      final filteredPixels = applyGaussianBlur(
+        pixels,
+        processedImage.width,
+        processedImage.height,
+        radius: 0.5,
+      );
+
+      // Convert back to image
+      processedImage = await _pixelsToImage(
+        filteredPixels,
+        processedImage.width,
+        processedImage.height,
+      );
+    }
+
+    return processedImage;
+  }
+
+  /// Extracts a region of interest from an image
+  ///
+  /// [image] The source image
+  /// [region] The region to extract (in relative coordinates 0.0-1.0)
+  ///
+  /// Returns the extracted region as a new image
+  static Future<ui.Image> extractRegion(ui.Image image, ui.Rect region) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+
+    final srcRect = ui.Rect.fromLTWH(
+      region.left * image.width,
+      region.top * image.height,
+      region.width * image.width,
+      region.height * image.height,
+    );
+
+    final dstRect = ui.Rect.fromLTWH(
+      0,
+      0,
+      region.width * image.width,
+      region.height * image.height,
+    );
+
+    canvas.drawImageRect(image, srcRect, dstRect, ui.Paint());
+
+    final picture = recorder.endRecording();
+    final extractedImage = await picture.toImage(
+      dstRect.width.round(),
+      dstRect.height.round(),
+    );
+    picture.dispose();
+
+    return extractedImage;
+  }
+
+  /// Generates a Gaussian kernel for blur operations
+  static List<double> _generateGaussianKernel(int size, double sigma) {
+    final kernel = List<double>.filled(size, 0.0);
+    final center = size ~/ 2;
+    double sum = 0.0;
+
+    for (int i = 0; i < size; i++) {
+      final x = i - center;
+      kernel[i] = math.exp(-(x * x) / (2 * sigma * sigma));
+      sum += kernel[i];
+    }
+
+    // Normalize kernel
+    for (int i = 0; i < size; i++) {
+      kernel[i] /= sum;
+    }
+
+    return kernel;
+  }
+
+  /// Detects edges in an image using Sobel operator
+  static List<double> _detectEdges(Uint8List pixels, int width, int height) {
+    final edges = List<double>.filled(width * height, 0.0);
+
+    // Sobel kernels
+    const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+    const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+
+    for (int y = 1; y < height - 1; y++) {
+      for (int x = 1; x < width - 1; x++) {
+        double gx = 0.0, gy = 0.0;
+
+        for (int ky = -1; ky <= 1; ky++) {
+          for (int kx = -1; kx <= 1; kx++) {
+            final pixelIndex = ((y + ky) * width + (x + kx)) * 4;
+            final gray = (pixels[pixelIndex] +
+                    pixels[pixelIndex + 1] +
+                    pixels[pixelIndex + 2]) /
+                3.0;
+            final kernelIndex = (ky + 1) * 3 + (kx + 1);
+
+            gx += gray * sobelX[kernelIndex];
+            gy += gray * sobelY[kernelIndex];
+          }
+        }
+
+        edges[y * width + x] = math.sqrt(gx * gx + gy * gy);
+      }
+    }
+
+    return edges;
+  }
+
+  /// Finds connected regions in edge-detected image
+  static List<ui.Rect> _findConnectedRegions(
+      List<double> edges, int width, int height) {
+    final visited = List<bool>.filled(width * height, false);
+    final regions = <ui.Rect>[];
+    const threshold = 50.0;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final index = y * width + x;
+        if (!visited[index] && edges[index] > threshold) {
+          final region =
+              _floodFill(edges, visited, width, height, x, y, threshold);
+          if (region != null) {
+            regions.add(region);
+          }
+        }
+      }
+    }
+
+    return regions;
+  }
+
+  /// Flood fill algorithm to find connected regions
+  static ui.Rect? _floodFill(
+    List<double> edges,
+    List<bool> visited,
+    int width,
+    int height,
+    int startX,
+    int startY,
+    double threshold,
+  ) {
+    final stack = <List<int>>[
+      [startX, startY]
+    ];
+    int minX = startX, maxX = startX, minY = startY, maxY = startY;
+    int pixelCount = 0;
+
+    while (stack.isNotEmpty) {
+      final current = stack.removeLast();
+      final x = current[0];
+      final y = current[1];
+      final index = y * width + x;
+
+      if (x < 0 ||
+          x >= width ||
+          y < 0 ||
+          y >= height ||
+          visited[index] ||
+          edges[index] <= threshold) {
+        continue;
+      }
+
+      visited[index] = true;
+      pixelCount++;
+
+      minX = math.min(minX, x);
+      maxX = math.max(maxX, x);
+      minY = math.min(minY, y);
+      maxY = math.max(maxY, y);
+
+      // Add neighbors
+      stack.addAll([
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1]
+      ]);
+    }
+
+    // Return region if it's large enough
+    if (pixelCount > 100) {
+      return ui.Rect.fromLTRB(
+        minX.toDouble(),
+        minY.toDouble(),
+        maxX.toDouble(),
+        maxY.toDouble(),
+      );
+    }
+
+    return null;
+  }
+
+  /// Calculates confidence score for a detected object
+  static double _calculateObjectConfidence(
+    ui.Rect region,
+    Uint8List pixels,
+    int width,
+    int height,
+  ) {
+    final area = region.width * region.height;
+    final imageArea = width * height;
+    final areaRatio = area / imageArea;
+
+    // Prefer objects that are not too small or too large
+    final sizeScore = 1.0 - (areaRatio - 0.1).abs() / 0.4;
+
+    // Calculate edge density in region
+    final edgeDensity =
+        _calculateRegionEdgeDensity(region, pixels, width, height);
+
+    return (sizeScore * 0.6 + edgeDensity * 0.4).clamp(0.0, 1.0);
+  }
+
+  /// Calculates edge density in a specific region
+  static double _calculateRegionEdgeDensity(
+    ui.Rect region,
+    Uint8List pixels,
+    int width,
+    int height,
+  ) {
+    final edges = _detectEdges(pixels, width, height);
+    double edgeSum = 0.0;
+    int pixelCount = 0;
+
+    for (int y = region.top.round(); y < region.bottom.round(); y++) {
+      for (int x = region.left.round(); x < region.right.round(); x++) {
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          edgeSum += edges[y * width + x];
+          pixelCount++;
+        }
+      }
+    }
+
+    return pixelCount > 0 ? (edgeSum / pixelCount) / 255.0 : 0.0;
+  }
+
+  /// Calculates color variation in an image
+  static double _calculateColorVariation(
+      Uint8List pixels, int width, int height) {
+    double rSum = 0.0, gSum = 0.0, bSum = 0.0;
+    final pixelCount = width * height;
+
+    // Calculate mean colors
+    for (int i = 0; i < pixelCount; i++) {
+      final index = i * 4;
+      rSum += pixels[index];
+      gSum += pixels[index + 1];
+      bSum += pixels[index + 2];
+    }
+
+    final rMean = rSum / pixelCount;
+    final gMean = gSum / pixelCount;
+    final bMean = bSum / pixelCount;
+
+    // Calculate variance
+    double rVariance = 0.0, gVariance = 0.0, bVariance = 0.0;
+    for (int i = 0; i < pixelCount; i++) {
+      final index = i * 4;
+      rVariance += math.pow(pixels[index] - rMean, 2);
+      gVariance += math.pow(pixels[index + 1] - gMean, 2);
+      bVariance += math.pow(pixels[index + 2] - bMean, 2);
+    }
+
+    final totalVariance =
+        (rVariance + gVariance + bVariance) / (3 * pixelCount);
+    return (math.sqrt(totalVariance) / 255.0).clamp(0.0, 1.0);
+  }
+

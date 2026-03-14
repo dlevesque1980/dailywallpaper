@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import '../bloc/home_bloc.dart';
 
 bool isAnimating = true;
+
 //enum to declare 3 state of buttonenum ButtonState { init, submitting, completed }
 enum ButtonState { init, submitting, completed }
 
@@ -42,8 +43,6 @@ class _ButtonStatesState extends State<ButtonStates> {
 
   @override
   Widget build(BuildContext context) {
-    final buttonWidth = MediaQuery.of(context).size.width;
-
     // update the UI depending on below variable values
     final isInit = state == ButtonState.init;
     final isDone = state == ButtonState.completed;
@@ -61,7 +60,7 @@ class _ButtonStatesState extends State<ButtonStates> {
                 child: buildButton())
             : SizedBox(
                 width: double.infinity,
-                height: double.infinity,              
+                height: double.infinity,
                 child: circularContainer(isDone)));
   }
 
@@ -89,8 +88,8 @@ class _ButtonStatesState extends State<ButtonStates> {
   Widget circularContainer(bool done) {
     final color = done ? Colors.green : Colors.blue;
     return Container(
-      
-      decoration: BoxDecoration(color: color,  borderRadius: BorderRadius.circular(15.0)),
+      decoration: BoxDecoration(
+          color: color, borderRadius: BorderRadius.circular(15.0)),
       child: Center(
         child: done
             ? const Icon(Icons.done, size: 50, color: Colors.white)

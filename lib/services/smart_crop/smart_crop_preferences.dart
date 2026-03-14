@@ -25,17 +25,30 @@ class SmartCropPreferences {
       // Check if we need to migrate settings
       await _migrateSettingsIfNeeded();
 
-      final aggressivenessIndex = await _getIntWithDefault(sp_SmartCropAggressiveness, CropAggressiveness.balanced.index);
-      final enableRuleOfThirds = await PrefHelper.getBoolWithDefault(sp_SmartCropRuleOfThirds, true);
-      final enableEntropyAnalysis = await PrefHelper.getBoolWithDefault(sp_SmartCropEntropyAnalysis, true);
-      final enableEdgeDetection = await PrefHelper.getBoolWithDefault(sp_SmartCropEdgeDetection, false);
-      final enableCenterWeighting = await PrefHelper.getBoolWithDefault(sp_SmartCropCenterWeighting, true);
-      final maxProcessingTimeMs = await _getIntWithDefault(sp_SmartCropMaxProcessingTime, 2000);
+      final aggressivenessIndex = await _getIntWithDefault(
+          sp_SmartCropAggressiveness, CropAggressiveness.balanced.index);
+      final enableRuleOfThirds =
+          await PrefHelper.getBoolWithDefault(sp_SmartCropRuleOfThirds, true);
+      final enableEntropyAnalysis = await PrefHelper.getBoolWithDefault(
+          sp_SmartCropEntropyAnalysis, true);
+      final enableEdgeDetection =
+          await PrefHelper.getBoolWithDefault(sp_SmartCropEdgeDetection, false);
+      final enableCenterWeighting = await PrefHelper.getBoolWithDefault(
+          sp_SmartCropCenterWeighting, true);
+      final maxProcessingTimeMs =
+          await _getIntWithDefault(sp_SmartCropMaxProcessingTime, 2000);
+      final enableBatteryOptimization = await PrefHelper.getBoolWithDefault(
+          sp_SmartCropBatteryOptimization, false);
+      final maxCropCandidates =
+          await _getIntWithDefault(sp_SmartCropMaxCandidates, 10);
 
       // Clamp aggressiveness index to valid range
-      final clampedAggressivenessIndex = aggressivenessIndex.clamp(0, CropAggressiveness.values.length - 1);
+      final clampedAggressivenessIndex =
+          aggressivenessIndex.clamp(0, CropAggressiveness.values.length - 1);
       // Clamp processing time to reasonable range
       final clampedProcessingTimeMs = maxProcessingTimeMs.clamp(500, 10000);
+      // Clamp max candidates to reasonable range
+      final clampedMaxCandidates = maxCropCandidates.clamp(1, 50);
 
       final settings = CropSettings(
         aggressiveness: CropAggressiveness.values[clampedAggressivenessIndex],
@@ -44,6 +57,8 @@ class SmartCropPreferences {
         enableEdgeDetection: enableEdgeDetection,
         enableCenterWeighting: enableCenterWeighting,
         maxProcessingTime: Duration(milliseconds: clampedProcessingTimeMs),
+        enableBatteryOptimization: enableBatteryOptimization,
+        maxCropCandidates: clampedMaxCandidates,
       );
 
       // Validate settings and return default if invalid
@@ -52,6 +67,11 @@ class SmartCropPreferences {
       // Return default settings if any error occurs
       return CropSettings.defaultSettings;
     }
+  }
+
+  /// Sets crop settings (alias for saveCropSettings for consistency)
+  static Future<bool> setCropSettings(CropSettings settings) async {
+    return await saveCropSettings(settings);
   }
 
   /// Saves crop settings to preferences
@@ -64,11 +84,19 @@ class SmartCropPreferences {
 
       final results = await Future.wait([
         _setInt(sp_SmartCropAggressiveness, settings.aggressiveness.index),
-        PrefHelper.setBool(sp_SmartCropRuleOfThirds, settings.enableRuleOfThirds),
-        PrefHelper.setBool(sp_SmartCropEntropyAnalysis, settings.enableEntropyAnalysis),
-        PrefHelper.setBool(sp_SmartCropEdgeDetection, settings.enableEdgeDetection),
-        PrefHelper.setBool(sp_SmartCropCenterWeighting, settings.enableCenterWeighting),
-        _setInt(sp_SmartCropMaxProcessingTime, settings.maxProcessingTime.inMilliseconds),
+        PrefHelper.setBool(
+            sp_SmartCropRuleOfThirds, settings.enableRuleOfThirds),
+        PrefHelper.setBool(
+            sp_SmartCropEntropyAnalysis, settings.enableEntropyAnalysis),
+        PrefHelper.setBool(
+            sp_SmartCropEdgeDetection, settings.enableEdgeDetection),
+        PrefHelper.setBool(
+            sp_SmartCropCenterWeighting, settings.enableCenterWeighting),
+        _setInt(sp_SmartCropMaxProcessingTime,
+            settings.maxProcessingTime.inMilliseconds),
+        PrefHelper.setBool(sp_SmartCropBatteryOptimization,
+            settings.enableBatteryOptimization),
+        _setInt(sp_SmartCropMaxCandidates, settings.maxCropCandidates),
       ]);
 
       // Update version after successful save
@@ -87,32 +115,35 @@ class SmartCropPreferences {
 
   /// Gets crop aggressiveness setting
   static Future<CropAggressiveness> getCropAggressiveness() async {
-    final index = await _getIntWithDefault(sp_SmartCropAggressiveness, CropAggressiveness.balanced.index);
-    return CropAggressiveness.values[index.clamp(0, CropAggressiveness.values.length - 1)];
+    final index = await _getIntWithDefault(
+        sp_SmartCropAggressiveness, CropAggressiveness.balanced.index);
+    return CropAggressiveness
+        .values[index.clamp(0, CropAggressiveness.values.length - 1)];
   }
 
   /// Sets crop aggressiveness setting
-  static Future<bool> setCropAggressiveness(CropAggressiveness aggressiveness) async {
+  static Future<bool> setCropAggressiveness(
+      CropAggressiveness aggressiveness) async {
     return await _setInt(sp_SmartCropAggressiveness, aggressiveness.index);
   }
 
   /// Validates current settings and fixes any issues
   static Future<CropSettings> validateAndFixSettings() async {
     final settings = await getCropSettings();
-    
+
     if (!settings.isValid) {
       // If settings are invalid, reset to defaults
       await resetToDefaults();
       return CropSettings.defaultSettings;
     }
-    
+
     return settings;
   }
 
   /// Migrates settings from older versions if needed
   static Future<void> _migrateSettingsIfNeeded() async {
     final currentVersion = await _getIntWithDefault(_versionKey, 0);
-    
+
     if (currentVersion < _currentVersion) {
       // Perform migration based on version
       switch (currentVersion) {
@@ -122,7 +153,7 @@ class SmartCropPreferences {
           break;
         // Add more migration cases as needed for future versions
       }
-      
+
       await _setInt(_versionKey, _currentVersion);
     }
   }
@@ -143,7 +174,7 @@ class SmartCropPreferences {
   static Future<Map<String, dynamic>> getSettingsSummary() async {
     final enabled = await isSmartCropEnabled();
     final settings = await getCropSettings();
-    
+
     return {
       'enabled': enabled,
       'aggressiveness': settings.aggressiveness.name,
@@ -159,7 +190,7 @@ class SmartCropPreferences {
       final cacheManager = CropCacheManager();
       final stats = await cacheManager.getStats();
       final hitRate = await cacheManager.getHitRateStats();
-      
+
       return {
         'totalEntries': stats.totalEntries,
         'totalSizeMB': stats.totalSizeMB,
@@ -206,7 +237,7 @@ class SmartCropPreferences {
     try {
       final cacheManager = CropCacheManager();
       final result = await cacheManager.performMaintenance();
-      
+
       return {
         'expiredDeleted': result.expiredEntriesDeleted,
         'lruDeleted': result.lruEntriesEvicted,

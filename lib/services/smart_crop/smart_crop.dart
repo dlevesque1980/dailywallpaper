@@ -1,5 +1,5 @@
 /// Smart Crop Library
-/// 
+///
 /// Provides intelligent image cropping capabilities for optimizing wallpaper
 /// display across different screen ratios using local analysis algorithms.
 
@@ -8,6 +8,7 @@ export 'smart_cropper.dart';
 
 // Preferences and settings
 export 'smart_crop_preferences.dart';
+export 'smart_crop_profile_manager.dart';
 
 // Models
 export 'models/crop_coordinates.dart';

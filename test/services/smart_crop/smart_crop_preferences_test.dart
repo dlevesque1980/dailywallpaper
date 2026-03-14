@@ -31,14 +31,15 @@ void main() {
       test('should return default settings initially', () async {
         // Clear any existing preferences first
         await SmartCropPreferences.resetToDefaults();
-        
+
         final settings = await SmartCropPreferences.getCropSettings();
-        expect(settings.aggressiveness, CropAggressiveness.aggressive);
+        expect(settings.aggressiveness, CropAggressiveness.balanced);
         expect(settings.enableRuleOfThirds, true);
         expect(settings.enableEntropyAnalysis, true);
-        expect(settings.enableEdgeDetection, true);
+        expect(
+            settings.enableEdgeDetection, false); // Changé à false par défaut
         expect(settings.enableCenterWeighting, true);
-        expect(settings.maxProcessingTime, const Duration(seconds: 3));
+        expect(settings.maxProcessingTime, const Duration(seconds: 2));
       });
 
       test('should save and retrieve custom settings', () async {
@@ -51,7 +52,8 @@ void main() {
           maxProcessingTime: const Duration(seconds: 3),
         );
 
-        final saved = await SmartCropPreferences.saveCropSettings(customSettings);
+        final saved =
+            await SmartCropPreferences.saveCropSettings(customSettings);
         expect(saved, true);
 
         final retrieved = await SmartCropPreferences.getCropSettings();
@@ -73,7 +75,8 @@ void main() {
           maxProcessingTime: const Duration(seconds: 2),
         );
 
-        final saved = await SmartCropPreferences.saveCropSettings(invalidSettings);
+        final saved =
+            await SmartCropPreferences.saveCropSettings(invalidSettings);
         expect(saved, false);
 
         // Should still have default settings
@@ -84,25 +87,31 @@ void main() {
       test('should clamp invalid values when loading', () async {
         // Manually set invalid values in SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('smart_crop_settings_version', 1); // Prevent migration reset
+        await prefs.setInt(
+            'smart_crop_settings_version', 1); // Prevent migration reset
         await prefs.setInt('smartcropaggressiveness', 999); // Invalid index
         await prefs.setInt('smartcropmaxprocessingtime', 100); // Too low
 
         final settings = await SmartCropPreferences.getCropSettings();
-        expect(settings.aggressiveness, CropAggressiveness.aggressive); // Clamped to max valid
-        expect(settings.maxProcessingTime.inMilliseconds, 500); // Clamped to minimum
+        expect(settings.aggressiveness,
+            CropAggressiveness.aggressive); // Clamped to max valid
+        expect(settings.maxProcessingTime.inMilliseconds,
+            500); // Clamped to minimum
       });
     });
 
     group('Crop Aggressiveness', () {
       test('should save and retrieve aggressiveness setting', () async {
-        await SmartCropPreferences.setCropAggressiveness(CropAggressiveness.conservative);
-        final aggressiveness = await SmartCropPreferences.getCropAggressiveness();
+        await SmartCropPreferences.setCropAggressiveness(
+            CropAggressiveness.conservative);
+        final aggressiveness =
+            await SmartCropPreferences.getCropAggressiveness();
         expect(aggressiveness, CropAggressiveness.conservative);
       });
 
       test('should return balanced by default', () async {
-        final aggressiveness = await SmartCropPreferences.getCropAggressiveness();
+        final aggressiveness =
+            await SmartCropPreferences.getCropAggressiveness();
         expect(aggressiveness, CropAggressiveness.balanced);
       });
     });
@@ -150,9 +159,10 @@ void main() {
         // Set version first to prevent migration reset
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('smart_crop_settings_version', 1);
-        
+
         await SmartCropPreferences.setSmartCropEnabled(true);
-        await SmartCropPreferences.setCropAggressiveness(CropAggressiveness.conservative);
+        await SmartCropPreferences.setCropAggressiveness(
+            CropAggressiveness.conservative);
 
         final summary = await SmartCropPreferences.getSettingsSummary();
         expect(summary['enabled'], true);
@@ -168,7 +178,7 @@ void main() {
         // This should trigger migration from version 0 to 1
         final settings = await SmartCropPreferences.getCropSettings();
         expect(settings.isValid, true);
-        
+
         // Verify version was set
         final prefs = await SharedPreferences.getInstance();
         final version = prefs.getInt('smart_crop_settings_version');
@@ -223,7 +233,7 @@ void main() {
     test('should handle malformed JSON gracefully', () {
       const malformedJson = '{"invalid": "json"';
       final settings = CropSettings.fromJson(malformedJson);
-      
+
       // Should return settings with default values for missing fields
       expect(settings.aggressiveness, CropAggressiveness.balanced);
       expect(settings.enableRuleOfThirds, true);

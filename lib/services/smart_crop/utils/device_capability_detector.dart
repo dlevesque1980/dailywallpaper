@@ -5,22 +5,22 @@ import 'dart:math' as math;
 /// Detects device capabilities and provides performance scaling recommendations
 class DeviceCapabilityDetector {
   static DeviceCapability? _cachedCapability;
-  
+
   /// Gets the device capability assessment
   static Future<DeviceCapability> getDeviceCapability() async {
     if (_cachedCapability != null) {
       return _cachedCapability!;
     }
-    
+
     _cachedCapability = await _assessDeviceCapability();
     return _cachedCapability!;
   }
-  
+
   /// Clears cached capability (useful for testing or when device state changes)
   static void clearCache() {
     _cachedCapability = null;
   }
-  
+
   /// Assesses device capability based on available metrics
   static Future<DeviceCapability> _assessDeviceCapability() async {
     try {
@@ -28,9 +28,9 @@ class DeviceCapabilityDetector {
       final memoryTier = await _assessMemoryTier();
       final processingTier = await _assessProcessingTier();
       final batteryOptimized = _shouldOptimizeForBattery();
-      
+
       final overallTier = _calculateOverallTier(memoryTier, processingTier);
-      
+
       return DeviceCapability(
         platform: platform,
         memoryTier: memoryTier,
@@ -47,7 +47,7 @@ class DeviceCapabilityDetector {
       return DeviceCapability.conservative();
     }
   }
-  
+
   /// Detects the platform type
   static DevicePlatform _detectPlatform() {
     if (io.Platform.isAndroid) {
@@ -64,18 +64,21 @@ class DeviceCapabilityDetector {
       return DevicePlatform.unknown;
     }
   }
-  
+
   /// Assesses memory tier based on available indicators
   static Future<PerformanceTier> _assessMemoryTier() async {
     try {
       // Get screen size as a proxy for device capability
-      final screenSize = ui.window.physicalSize;
+      final screenSize =
+          ui.PlatformDispatcher.instance.views.first.physicalSize;
       final screenPixels = screenSize.width * screenSize.height;
-      
+
       // Higher resolution screens typically indicate more capable devices
-      if (screenPixels > 2000000) { // > 2MP (e.g., 1440x1440+)
+      if (screenPixels > 2000000) {
+        // > 2MP (e.g., 1440x1440+)
         return PerformanceTier.high;
-      } else if (screenPixels > 1000000) { // > 1MP (e.g., 1080x1080+)
+      } else if (screenPixels > 1000000) {
+        // > 1MP (e.g., 1080x1080+)
         return PerformanceTier.medium;
       } else {
         return PerformanceTier.low;
@@ -84,22 +87,21 @@ class DeviceCapabilityDetector {
       return PerformanceTier.low;
     }
   }
-  
+
   /// Assesses processing tier using a simple benchmark
   static Future<PerformanceTier> _assessProcessingTier() async {
     try {
       // Simple CPU benchmark - measure time to perform calculations
       final stopwatch = Stopwatch()..start();
-      
+
       // Perform some mathematical operations
-      double result = 0.0;
       for (int i = 0; i < 100000; i++) {
-        result += math.sin(i.toDouble()) * math.cos(i.toDouble());
+        math.sin(i.toDouble()) * math.cos(i.toDouble());
       }
-      
+
       stopwatch.stop();
       final durationMs = stopwatch.elapsedMilliseconds;
-      
+
       // Classify based on benchmark time
       if (durationMs < 50) {
         return PerformanceTier.high;
@@ -112,13 +114,13 @@ class DeviceCapabilityDetector {
       return PerformanceTier.low;
     }
   }
-  
+
   /// Determines if battery optimization should be prioritized
   static bool _shouldOptimizeForBattery() {
     // Mobile platforms should prioritize battery optimization
     return io.Platform.isAndroid || io.Platform.isIOS;
   }
-  
+
   /// Calculates overall performance tier
   static PerformanceTier _calculateOverallTier(
     PerformanceTier memoryTier,
@@ -128,10 +130,10 @@ class DeviceCapabilityDetector {
     final memoryIndex = memoryTier.index;
     final processingIndex = processingTier.index;
     final minIndex = math.min(memoryIndex, processingIndex);
-    
+
     return PerformanceTier.values[minIndex];
   }
-  
+
   /// Gets maximum concurrent analyzers based on tier
   static int _getMaxConcurrentAnalyzers(PerformanceTier tier) {
     switch (tier) {
@@ -143,7 +145,7 @@ class DeviceCapabilityDetector {
         return 1;
     }
   }
-  
+
   /// Gets maximum image dimension for analysis based on tier
   static int _getMaxImageDimension(PerformanceTier tier) {
     switch (tier) {
@@ -155,7 +157,7 @@ class DeviceCapabilityDetector {
         return 256;
     }
   }
-  
+
   /// Gets isolate usage threshold based on tier
   static int _getIsolateThreshold(PerformanceTier tier) {
     switch (tier) {
@@ -164,10 +166,11 @@ class DeviceCapabilityDetector {
       case PerformanceTier.medium:
         return 512 * 512; // 0.25MP
       case PerformanceTier.low:
-        return 2048 * 2048; // 4MP (higher threshold = less likely to use isolate)
+        return 2048 *
+            2048; // 4MP (higher threshold = less likely to use isolate)
     }
   }
-  
+
   /// Gets timeout multiplier based on tier
   static double _getTimeoutMultiplier(PerformanceTier tier) {
     switch (tier) {
@@ -192,7 +195,7 @@ class DeviceCapability {
   final int maxImageDimension;
   final int useIsolateThreshold;
   final double timeoutMultiplier;
-  
+
   const DeviceCapability({
     required this.platform,
     required this.memoryTier,
@@ -204,7 +207,7 @@ class DeviceCapability {
     required this.useIsolateThreshold,
     required this.timeoutMultiplier,
   });
-  
+
   /// Creates a conservative capability profile for unknown devices
   factory DeviceCapability.conservative() {
     return const DeviceCapability(
@@ -219,21 +222,23 @@ class DeviceCapability {
       timeoutMultiplier: 2.0,
     );
   }
-  
+
   /// Checks if the device is considered high performance
   bool get isHighPerformance => overallTier == PerformanceTier.high;
-  
+
   /// Checks if the device is considered low performance
   bool get isLowPerformance => overallTier == PerformanceTier.low;
-  
+
   /// Checks if the device is mobile
-  bool get isMobile => platform == DevicePlatform.android || platform == DevicePlatform.ios;
-  
+  bool get isMobile =>
+      platform == DevicePlatform.android || platform == DevicePlatform.ios;
+
   /// Checks if the device is desktop
-  bool get isDesktop => platform == DevicePlatform.macos || 
-                       platform == DevicePlatform.windows || 
-                       platform == DevicePlatform.linux;
-  
+  bool get isDesktop =>
+      platform == DevicePlatform.macos ||
+      platform == DevicePlatform.windows ||
+      platform == DevicePlatform.linux;
+
   @override
   String toString() {
     return 'DeviceCapability('

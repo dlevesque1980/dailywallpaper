@@ -26,18 +26,18 @@ class Menu extends StatelessWidget {
             ],
           ),
           height: 40.0,
-        ) //,
-        // PopupMenuItem<String>(
-        //   value: '/older',
-        //   child: Row(
-        //     children: [
-        //       Icon(Icons.history, size: 20),
-        //       SizedBox(width: 8),
-        //       Text('History'),
-        //     ],
-        //   ),
-        //   height: 40.0,
-        // ),
+        ),
+        PopupMenuItem<String>(
+          value: '/older',
+          child: Row(
+            children: [
+              Icon(Icons.history, size: 20),
+              SizedBox(width: 8),
+              Text('History'),
+            ],
+          ),
+          height: 40.0,
+        ),
       ],
     );
   }

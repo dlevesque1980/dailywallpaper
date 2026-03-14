@@ -2,12 +2,11 @@ import 'package:dailywallpaper/bloc/home_bloc.dart';
 import 'package:dailywallpaper/bloc_provider/home_provider.dart';
 import 'package:dailywallpaper/models/image_item.dart';
 import 'package:dailywallpaper/widget/carousel.dart';
+import 'package:dailywallpaper/widget/wallpaper_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../widget/buttonstate.dart';
 
 class HomeScreen extends StatefulWidget {
   HomeScreen() : super(key: const Key('__homeScreen__'));
@@ -60,7 +59,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else {
       // Safe to update index immediately for normal tab changes
       if (notifierIndex.value != index) {
-        notifierIndex.value = index; // Correction: mettre à jour notifierIndex avec le nouvel index
+        notifierIndex.value = index;
+        // Notifier le HomeBloc du changement d'index pour le préchargement
+        homeBloc?.onIndexChanged(index);
       }
     }
   }
@@ -127,162 +128,163 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion(
-    value: const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-    child: Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(kToolbarHeight),
-          child: ValueListenableBuilder(
-            valueListenable: notifierIndex,
-            builder: (context, value, child) {
-              return StreamBuilder(
-                stream: homeBloc!.results,
-                builder: (context, snapshot) {
-                  String title = "Daily Wallpaper";
-                  if (snapshot.hasData && snapshot.data!.list.isNotEmpty) {
-                    // Ensure index is within bounds
-                    int safeIndex = notifierIndex.value;
-                    if (safeIndex >= snapshot.data!.list.length) {
-                      safeIndex = snapshot.data!.list.length - 1;
-                    }
-                    title = snapshot.data!.list[safeIndex].source;
-                  }
-                  
-                  return AppBar(
-                    title: Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                        shadows: [
-                          Shadow(
-                            offset: Offset(1.0, 1.0),
-                            blurRadius: 3.0,
-                            color: Colors.black.withValues(alpha: 0.5),
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+        child: Scaffold(
+            extendBodyBehindAppBar: true,
+            appBar: PreferredSize(
+              preferredSize: Size.fromHeight(kToolbarHeight),
+              child: ValueListenableBuilder(
+                valueListenable: notifierIndex,
+                builder: (context, value, child) {
+                  return StreamBuilder(
+                    stream: homeBloc!.results,
+                    builder: (context, snapshot) {
+                      String title = "Daily Wallpaper";
+                      if (snapshot.hasData && snapshot.data!.list.isNotEmpty) {
+                        // Ensure index is within bounds
+                        int safeIndex = notifierIndex.value;
+                        if (safeIndex >= snapshot.data!.list.length) {
+                          safeIndex = snapshot.data!.list.length - 1;
+                        }
+                        title = snapshot.data!.list[safeIndex].source;
+                      }
+
+                      return AppBar(
+                        title: Text(
+                          title,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Colors.black.withValues(alpha: 0.5),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    backgroundColor: Colors.transparent,
-                    elevation: 0.0,
-                    actions: [
-                      IconButton(
-                        icon: Icon(Icons.info_outline, 
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(1.0, 1.0),
-                              blurRadius: 3.0,
-                              color: Colors.black.withValues(alpha: 0.5),
-                            ),
-                          ],
                         ),
-                        onPressed: () {
-                          if (snapshot.hasData && snapshot.data!.list.isNotEmpty) {
-                            // Ensure index is within bounds
-                            int safeIndex = notifierIndex.value;
-                            if (safeIndex >= snapshot.data!.list.length) {
-                              safeIndex = snapshot.data!.list.length - 1;
-                            }
-                            _showImageInfo(context, snapshot.data!.list[safeIndex]);
-                          }
-                        },
-                      ),
-                      PopupMenuButton<String>(
-                        onSelected: (choice) {
-                          if (choice == '/settings') {
-                            // Navigate to settings with callback when returning
-                            Navigator.pushNamed(context, choice).then((_) {
-                              // This will be called when returning from settings (including swipe back)
-                              print('Returned from settings, refreshing...');
-                              homeBloc?.refresh();
-                            });
-                          } else {
-                            Navigator.pushNamed(context, choice);
-                          }
-                        },
-                        icon: Icon(Icons.more_vert, 
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(1.0, 1.0),
-                              blurRadius: 3.0,
-                              color: Colors.black.withValues(alpha: 0.5),
-                            ),
-                          ],
-                        ),
-                        itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
-                          PopupMenuItem<String>(
-                            value: '/settings',
-                            child: Row(
-                              children: [
-                                Icon(Icons.settings, size: 20),
-                                SizedBox(width: 8),
-                                Text('Settings'),
+                        backgroundColor: Colors.transparent,
+                        elevation: 0.0,
+                        actions: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.info_outline,
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(1.0, 1.0),
+                                  blurRadius: 3.0,
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                ),
                               ],
                             ),
+                            onPressed: () {
+                              if (snapshot.hasData &&
+                                  snapshot.data!.list.isNotEmpty) {
+                                // Ensure index is within bounds
+                                int safeIndex = notifierIndex.value;
+                                if (safeIndex >= snapshot.data!.list.length) {
+                                  safeIndex = snapshot.data!.list.length - 1;
+                                }
+                                _showImageInfo(
+                                    context, snapshot.data!.list[safeIndex]);
+                              }
+                            },
                           ),
-                          PopupMenuItem<String>(
-                            value: '/older',
-                            child: Row(
-                              children: [
-                                Icon(Icons.history, size: 20),
-                                SizedBox(width: 8),
-                                Text('History'),
+                          PopupMenuButton<String>(
+                            onSelected: (choice) {
+                              if (choice == '/settings') {
+                                // Navigate to settings with callback when returning
+                                Navigator.pushNamed(context, choice).then((_) {
+                                  // This will be called when returning from settings (including swipe back)
+                                  print(
+                                      'Returned from settings, refreshing...');
+                                  homeBloc?.refresh();
+                                });
+                              } else {
+                                Navigator.pushNamed(context, choice);
+                              }
+                            },
+                            icon: Icon(
+                              Icons.more_vert,
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(1.0, 1.0),
+                                  blurRadius: 3.0,
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                ),
                               ],
                             ),
+                            itemBuilder: (BuildContext context) =>
+                                <PopupMenuItem<String>>[
+                              PopupMenuItem<String>(
+                                value: '/settings',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.settings, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Settings'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: '/older',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.history, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('History'),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   );
                 },
-              );
-            },
-          ),
-        ),
-        floatingActionButton: ValueListenableBuilder(
-            valueListenable: notifierIndex,
-            builder: (context, value, child) {
-              return ButtonStates(
-                onPressed: () => homeBloc!.setWallpaper.add(notifierIndex.value),
-                homeBloc: homeBloc!,
-              );
-              // return FloatingActionButton(
-              //   elevation: 0.0,
-              //   child: new Icon(Icons.wallpaper),
-              //   backgroundColor: Colors.lightBlue,
-              //   onPressed: () => homeBloc.setWallpaper.add(notifierIndex.value),
-              // );
-            }),
-        body: StreamBuilder(
-            stream: homeBloc!.results,
-            initialData: homeBloc!.initialData(notifierIndex.value),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                // Check if current index is out of bounds and adjust if needed
-                if (notifierIndex.value >= snapshot.data!.list.length) {
-                  // Schedule index correction after build
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      notifierIndex.value = snapshot.data!.list.length - 1;
+              ),
+            ),
+            floatingActionButton: ValueListenableBuilder(
+                valueListenable: notifierIndex,
+                builder: (context, value, child) {
+                  return WallpaperButton(
+                    onPressed: () =>
+                        homeBloc!.setWallpaper.add(notifierIndex.value),
+                    wallpaperStream: homeBloc!.wallpaper,
+                  );
+                }),
+            body: StreamBuilder(
+                stream: homeBloc!.results,
+                initialData: homeBloc!.initialData(notifierIndex.value),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    // Check if current index is out of bounds and adjust if needed
+                    if (notifierIndex.value >= snapshot.data!.list.length) {
+                      // Schedule index correction after build
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          notifierIndex.value = snapshot.data!.list.length - 1;
+                        }
+                      });
                     }
-                  });
-                }
-                
-                return Carousel(
-                  list: snapshot.data!.list,
-                  onChange: this._onChange,
-                );
-              } else {
-                return Center(child: CircularProgressIndicator());
-              }
-            })));
+
+                    return Carousel(
+                      list: snapshot.data!.list,
+                      onChange: this._onChange,
+                    );
+                  } else {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                })));
   }
 }

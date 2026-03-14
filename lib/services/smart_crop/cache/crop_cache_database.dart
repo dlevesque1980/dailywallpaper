@@ -8,12 +8,12 @@ class CropCacheDatabase {
   static const String _databaseName = 'crop_cache.db';
   static const int _databaseVersion = 1;
   static const String _tableName = 'crop_cache';
-  
+
   static Database? _database;
   static final CropCacheDatabase _instance = CropCacheDatabase._internal();
-  
+
   factory CropCacheDatabase() => _instance;
-  
+
   CropCacheDatabase._internal();
 
   /// Gets the database instance, creating it if necessary
@@ -26,7 +26,7 @@ class CropCacheDatabase {
   Future<Database> _initDatabase() async {
     final documentsDirectory = await getDatabasesPath();
     final path = join(documentsDirectory, _databaseName);
-    
+
     return await openDatabase(
       path,
       version: _databaseVersion,
@@ -61,15 +61,15 @@ class CropCacheDatabase {
     await db.execute('''
       CREATE INDEX idx_cache_key ON $_tableName (cache_key)
     ''');
-    
+
     await db.execute('''
       CREATE INDEX idx_image_url ON $_tableName (image_url)
     ''');
-    
+
     await db.execute('''
       CREATE INDEX idx_created_at ON $_tableName (created_at)
     ''');
-    
+
     await db.execute('''
       CREATE INDEX idx_last_accessed_at ON $_tableName (last_accessed_at)
     ''');
@@ -86,7 +86,7 @@ class CropCacheDatabase {
   /// Inserts a new cache entry
   Future<int> insert(CropCacheEntry entry) async {
     final db = await database;
-    
+
     try {
       return await db.insert(
         _tableName,
@@ -101,7 +101,7 @@ class CropCacheDatabase {
   /// Gets a cache entry by cache key
   Future<CropCacheEntry?> getByCacheKey(String cacheKey) async {
     final db = await database;
-    
+
     try {
       final List<Map<String, dynamic>> maps = await db.query(
         _tableName,
@@ -111,12 +111,12 @@ class CropCacheDatabase {
       );
 
       if (maps.isEmpty) return null;
-      
+
       final entry = CropCacheEntry.fromMap(maps.first);
-      
+
       // Update access information
       await _updateAccess(db, entry);
-      
+
       return entry.copyWithAccess();
     } catch (e) {
       throw CropCacheException('Failed to get cache entry: $e');
@@ -126,7 +126,7 @@ class CropCacheDatabase {
   /// Gets all cache entries for an image URL
   Future<List<CropCacheEntry>> getByImageUrl(String imageUrl) async {
     final db = await database;
-    
+
     try {
       final List<Map<String, dynamic>> maps = await db.query(
         _tableName,
@@ -157,7 +157,7 @@ class CropCacheDatabase {
   /// Updates a cache entry
   Future<int> update(CropCacheEntry entry) async {
     final db = await database;
-    
+
     try {
       return await db.update(
         _tableName,
@@ -173,7 +173,7 @@ class CropCacheDatabase {
   /// Deletes a cache entry by ID
   Future<int> delete(int id) async {
     final db = await database;
-    
+
     try {
       return await db.delete(
         _tableName,
@@ -188,7 +188,7 @@ class CropCacheDatabase {
   /// Deletes cache entries by cache key
   Future<int> deleteByCacheKey(String cacheKey) async {
     final db = await database;
-    
+
     try {
       return await db.delete(
         _tableName,
@@ -203,7 +203,7 @@ class CropCacheDatabase {
   /// Deletes all cache entries for an image URL
   Future<int> deleteByImageUrl(String imageUrl) async {
     final db = await database;
-    
+
     try {
       return await db.delete(
         _tableName,
@@ -211,7 +211,8 @@ class CropCacheDatabase {
         whereArgs: [imageUrl],
       );
     } catch (e) {
-      throw CropCacheException('Failed to delete cache entries by image URL: $e');
+      throw CropCacheException(
+          'Failed to delete cache entries by image URL: $e');
     }
   }
 
@@ -219,7 +220,7 @@ class CropCacheDatabase {
   Future<int> deleteExpired({Duration ttl = const Duration(days: 7)}) async {
     final db = await database;
     final cutoffTime = DateTime.now().subtract(ttl).millisecondsSinceEpoch;
-    
+
     try {
       return await db.delete(
         _tableName,
@@ -234,49 +235,71 @@ class CropCacheDatabase {
   /// Performs LRU eviction to keep cache size under limit
   Future<int> evictLRU({int maxEntries = 1000}) async {
     final db = await database;
-    
+
     try {
-      // Get current count
-      final countResult = await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName');
-      final currentCount = countResult.first['count'] as int;
-      
-      if (currentCount <= maxEntries) return 0;
-      
-      // Calculate how many entries to remove
-      final entriesToRemove = currentCount - maxEntries;
-      
-      // Get the oldest entries by last access time
-      final oldestEntries = await db.query(
-        _tableName,
-        columns: ['id'],
-        orderBy: 'last_accessed_at ASC',
-        limit: entriesToRemove,
-      );
-      
-      if (oldestEntries.isEmpty) return 0;
-      
-      // Delete the oldest entries
-      final idsToDelete = oldestEntries.map((entry) => entry['id']).join(',');
-      return await db.rawDelete('DELETE FROM $_tableName WHERE id IN ($idsToDelete)');
-      
+      // Use a more efficient approach with batched deletion to avoid blocking
+      return await _evictLRUBatched(db, maxEntries);
     } catch (e) {
       throw CropCacheException('Failed to perform LRU eviction: $e');
     }
   }
 
+  /// Performs LRU eviction using batched deletion to avoid blocking
+  Future<int> _evictLRUBatched(Database db, int maxEntries) async {
+    const batchSize = 50; // Delete in small batches to avoid blocking
+    int totalDeleted = 0;
+
+    // Limit iterations to prevent infinite loops
+    for (int iteration = 0; iteration < 100; iteration++) {
+      // Check current entry count efficiently
+      final countResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName');
+      final currentCount = countResult.first['count'] as int;
+
+      if (currentCount <= maxEntries) break;
+
+      // Delete a small batch of oldest entries
+      final batchToDelete = ((currentCount - maxEntries).clamp(1, batchSize));
+
+      // Use a more efficient deletion approach
+      final deleted = await db.rawDelete('''
+        DELETE FROM $_tableName 
+        WHERE id IN (
+          SELECT id FROM $_tableName 
+          ORDER BY last_accessed_at ASC 
+          LIMIT ?
+        )
+      ''', [batchToDelete]);
+
+      totalDeleted += deleted;
+
+      // If no entries were deleted, break to avoid infinite loop
+      if (deleted == 0) break;
+
+      // Add a small delay between batches to prevent blocking the UI
+      if (iteration % 10 == 9) {
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+    }
+
+    return totalDeleted;
+  }
+
   /// Gets cache statistics
   Future<CropCacheStats> getStats() async {
     final db = await database;
-    
+
     try {
       // Get total count
-      final countResult = await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName');
+      final countResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName');
       final totalEntries = countResult.first['count'] as int;
-      
+
       // Get total size (approximate)
-      final sizeResult = await db.rawQuery('SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()');
+      final sizeResult = await db.rawQuery(
+          'SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()');
       final totalSizeBytes = sizeResult.first['size'] as int;
-      
+
       // Get oldest and newest entries
       DateTime? oldestEntry, newestEntry;
       if (totalEntries > 0) {
@@ -286,21 +309,25 @@ class CropCacheDatabase {
           orderBy: 'created_at ASC',
           limit: 1,
         );
-        oldestEntry = DateTime.fromMillisecondsSinceEpoch(oldestResult.first['created_at'] as int);
-        
+        oldestEntry = DateTime.fromMillisecondsSinceEpoch(
+            oldestResult.first['created_at'] as int);
+
         final newestResult = await db.query(
           _tableName,
           columns: ['created_at'],
           orderBy: 'created_at DESC',
           limit: 1,
         );
-        newestEntry = DateTime.fromMillisecondsSinceEpoch(newestResult.first['created_at'] as int);
+        newestEntry = DateTime.fromMillisecondsSinceEpoch(
+            newestResult.first['created_at'] as int);
       }
-      
+
       // Get average access count
-      final avgAccessResult = await db.rawQuery('SELECT AVG(access_count) as avg_access FROM $_tableName');
-      final avgAccessCount = (avgAccessResult.first['avg_access'] as double?) ?? 0.0;
-      
+      final avgAccessResult = await db
+          .rawQuery('SELECT AVG(access_count) as avg_access FROM $_tableName');
+      final avgAccessCount =
+          (avgAccessResult.first['avg_access'] as double?) ?? 0.0;
+
       return CropCacheStats(
         totalEntries: totalEntries,
         totalSizeBytes: totalSizeBytes,
@@ -308,7 +335,6 @@ class CropCacheDatabase {
         newestEntry: newestEntry,
         averageAccessCount: avgAccessCount,
       );
-      
     } catch (e) {
       throw CropCacheException('Failed to get cache statistics: $e');
     }
@@ -317,12 +343,53 @@ class CropCacheDatabase {
   /// Clears all cache entries
   Future<int> clear() async {
     final db = await database;
-    
+
     try {
-      return await db.delete(_tableName);
+      // For very large tables, use batched deletion to avoid blocking
+      return await _clearBatched(db);
     } catch (e) {
       throw CropCacheException('Failed to clear cache: $e');
     }
+  }
+
+  /// Clears cache using batched deletion to avoid blocking
+  Future<int> _clearBatched(Database db) async {
+    const batchSize = 1000; // Delete in batches
+    int totalDeleted = 0;
+
+    // First, try a simple delete for small tables
+    final countResult =
+        await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName');
+    final totalCount = countResult.first['count'] as int;
+
+    if (totalCount <= batchSize) {
+      // Small table, delete all at once
+      return await db.delete(_tableName);
+    }
+
+    // Large table, delete in batches
+    for (int iteration = 0; iteration < 1000; iteration++) {
+      // Limit iterations
+      final deleted = await db.rawDelete('''
+        DELETE FROM $_tableName 
+        WHERE id IN (
+          SELECT id FROM $_tableName 
+          LIMIT ?
+        )
+      ''', [batchSize]);
+
+      totalDeleted += deleted;
+
+      // If no entries were deleted, we're done
+      if (deleted == 0) break;
+
+      // Add a small delay between batches to prevent blocking
+      if (iteration % 10 == 9) {
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+    }
+
+    return totalDeleted;
   }
 
   /// Closes the database connection
@@ -342,7 +409,7 @@ class CropCacheDatabase {
     try {
       final expiredDeleted = await deleteExpired(ttl: ttl);
       final lruEvicted = await evictLRU(maxEntries: maxEntries);
-      
+
       return CropCacheMaintenanceResult(
         expiredEntriesDeleted: expiredDeleted,
         lruEntriesEvicted: lruEvicted,
@@ -387,7 +454,7 @@ class CropCacheStats {
   @override
   String toString() {
     return 'CropCacheStats(entries: $totalEntries, size: ${totalSizeMB.toStringAsFixed(2)}MB, '
-           'avgAccess: ${averageAccessCount.toStringAsFixed(1)}, age: ${cacheAge?.inDays ?? 0}d)';
+        'avgAccess: ${averageAccessCount.toStringAsFixed(1)}, age: ${cacheAge?.inDays ?? 0}d)';
   }
 }
 
@@ -410,16 +477,16 @@ class CropCacheMaintenanceResult {
   @override
   String toString() {
     return 'CropCacheMaintenanceResult(success: $success, expired: $expiredEntriesDeleted, '
-           'lru: $lruEntriesEvicted, total: $totalEntriesDeleted)';
+        'lru: $lruEntriesEvicted, total: $totalEntriesDeleted)';
   }
 }
 
 /// Exception thrown by cache operations
 class CropCacheException implements Exception {
   final String message;
-  
+
   const CropCacheException(this.message);
-  
+
   @override
   String toString() => 'CropCacheException: $message';
 }

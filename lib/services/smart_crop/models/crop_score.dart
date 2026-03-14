@@ -4,15 +4,15 @@ import 'crop_coordinates.dart';
 class CropScore {
   /// The crop coordinates
   final CropCoordinates coordinates;
-  
+
   /// Overall score for this crop (0.0 to 1.0, higher is better)
   final double score;
-  
+
   /// Strategy that generated this score
   final String strategy;
-  
+
   /// Detailed metrics from the analysis
-  final Map<String, double> metrics;
+  final Map<String, dynamic> metrics;
 
   const CropScore({
     required this.coordinates,
@@ -26,7 +26,7 @@ class CropScore {
     CropCoordinates? coordinates,
     double? score,
     String? strategy,
-    Map<String, double>? metrics,
+    Map<String, dynamic>? metrics,
   }) {
     return CropScore(
       coordinates: coordinates ?? this.coordinates,
@@ -41,6 +41,26 @@ class CropScore {
     return score >= 0.0 && score <= 1.0 && coordinates.isValid;
   }
 
+  /// Converts to JSON for serialization
+  Map<String, dynamic> toJson() {
+    return {
+      'coordinates': coordinates.toJson(),
+      'score': score,
+      'strategy': strategy,
+      'metrics': metrics,
+    };
+  }
+
+  /// Creates from JSON
+  factory CropScore.fromJson(Map<String, dynamic> json) {
+    return CropScore(
+      coordinates: CropCoordinates.fromJson(json['coordinates']),
+      score: (json['score'] ?? 0.0).toDouble(),
+      strategy: json['strategy'] ?? 'unknown',
+      metrics: Map<String, dynamic>.from(json['metrics'] ?? {}),
+    );
+  }
+
   @override
   String toString() {
     return 'CropScore(score: $score, strategy: $strategy, coordinates: $coordinates, metrics: $metrics)';
@@ -50,10 +70,10 @@ class CropScore {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is CropScore &&
-           other.coordinates == coordinates &&
-           other.score == score &&
-           other.strategy == strategy &&
-           _mapEquals(other.metrics, metrics);
+        other.coordinates == coordinates &&
+        other.score == score &&
+        other.strategy == strategy &&
+        _mapEquals(other.metrics, metrics);
   }
 
   @override
@@ -62,7 +82,7 @@ class CropScore {
   }
 
   /// Helper method to compare maps
-  bool _mapEquals(Map<String, double> a, Map<String, double> b) {
+  bool _mapEquals(Map<String, dynamic> a, Map<String, dynamic> b) {
     if (a.length != b.length) return false;
     for (final key in a.keys) {
       if (!b.containsKey(key) || a[key] != b[key]) return false;
