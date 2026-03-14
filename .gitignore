@@ -71,3 +71,4 @@
 
 .kiro
 *.env
+.env
