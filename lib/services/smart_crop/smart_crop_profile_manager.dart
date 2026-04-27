@@ -39,6 +39,9 @@ class SmartCropProfileManager {
     }
 
     try {
+      final currentSettings = await SmartCropPreferences.getCropSettings();
+      final currentScaling = currentSettings.enableSubjectScaling;
+      
       switch (level) {
         case 0:
           // Disable Smart Crop completely
@@ -52,6 +55,7 @@ class SmartCropProfileManager {
             enableBatteryOptimization: true,
             maxProcessingTime: const Duration(seconds: 1),
             maxCropCandidates: 3,
+            enableSubjectScaling: currentScaling,
           ));
 
         case 2:
@@ -62,6 +66,7 @@ class SmartCropProfileManager {
             enableBatteryOptimization: true,
             maxProcessingTime: const Duration(seconds: 2),
             maxCropCandidates: 5,
+            enableSubjectScaling: currentScaling,
           ));
 
         case 3:
@@ -72,6 +77,7 @@ class SmartCropProfileManager {
             enableBatteryOptimization: true,
             maxProcessingTime: const Duration(seconds: 3),
             maxCropCandidates: 8,
+            enableSubjectScaling: currentScaling,
           ));
 
         default:

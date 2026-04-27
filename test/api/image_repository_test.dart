@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/api/image_repository.dart';
+import 'package:dailywallpaper/data/repositories/image_repository.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() {

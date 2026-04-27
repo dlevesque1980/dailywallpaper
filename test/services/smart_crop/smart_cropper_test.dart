@@ -276,6 +276,7 @@ void main() {
           enableCenterWeighting: false,
           enableEntropyAnalysis: false,
           enableEdgeDetection: false,
+          aggressiveness: CropAggressiveness.conservative, // Prevent extra analyzers from kicking in
         );
 
         final result = await SmartCropper.analyzeCrop(

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/models/nasa/nasa_response.dart';
+import 'package:dailywallpaper/data/models/nasa/nasa_response.dart';
 
 void main() {
   group('NASAResponse', () {

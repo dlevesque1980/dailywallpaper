@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/screen/simplified_settings_screen.dart';
-import 'package:dailywallpaper/bloc_provider/settings_provider.dart';
-import 'package:dailywallpaper/bloc/settings_bloc.dart';
-import 'package:dailywallpaper/bloc/pexels_categories_bloc.dart';
+import 'package:dailywallpaper/features/settings/screens/simplified_settings_screen.dart';
+import 'package:dailywallpaper/features/settings/bloc/settings_provider.dart';
+import 'package:dailywallpaper/features/settings/bloc/settings_bloc.dart';
+import 'package:dailywallpaper/features/settings/bloc/pexels_categories_bloc.dart';
 import 'package:dailywallpaper/services/smart_crop/smart_crop_profile_manager.dart';
-import 'package:dailywallpaper/utils/transparent_error_handling.dart';
+import 'package:dailywallpaper/core/utils/transparent_error_handling.dart';
 
 void main() {
   group('SimplifiedSettingsScreen UI Tests', () {

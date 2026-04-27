@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../prefs/pref_helper.dart';
-import '../../prefs/pref_consts.dart';
+import 'package:dailywallpaper/core/preferences/pref_helper.dart';
+import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 import 'models/crop_settings.dart';
 import 'cache/crop_cache_manager.dart';
 
@@ -41,6 +41,8 @@ class SmartCropPreferences {
           sp_SmartCropBatteryOptimization, false);
       final maxCropCandidates =
           await _getIntWithDefault(sp_SmartCropMaxCandidates, 10);
+      final enableSubjectScaling = await PrefHelper.getBoolWithDefault(
+          sp_SmartCropSubjectScaling, true);
 
       // Clamp aggressiveness index to valid range
       final clampedAggressivenessIndex =
@@ -59,6 +61,7 @@ class SmartCropPreferences {
         maxProcessingTime: Duration(milliseconds: clampedProcessingTimeMs),
         enableBatteryOptimization: enableBatteryOptimization,
         maxCropCandidates: clampedMaxCandidates,
+        enableSubjectScaling: enableSubjectScaling,
       );
 
       // Validate settings and return default if invalid
@@ -97,6 +100,8 @@ class SmartCropPreferences {
         PrefHelper.setBool(sp_SmartCropBatteryOptimization,
             settings.enableBatteryOptimization),
         _setInt(sp_SmartCropMaxCandidates, settings.maxCropCandidates),
+        PrefHelper.setBool(sp_SmartCropSubjectScaling,
+            settings.enableSubjectScaling),
       ]);
 
       // Update version after successful save

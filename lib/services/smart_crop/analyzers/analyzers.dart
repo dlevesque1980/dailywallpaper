@@ -14,3 +14,4 @@ export 'face_detection_crop_analyzer.dart';
 export 'object_detection_crop_analyzer.dart';
 export 'enhanced_composition_crop_analyzer.dart';
 export 'color_crop_analyzer.dart';
+export 'ml_subject_crop_analyzer.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/api/pexels_service.dart';
+import 'package:dailywallpaper/data/repositories/pexels_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() {

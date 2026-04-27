@@ -2,9 +2,9 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:dailywallpaper/helper/database_helper.dart';
-import 'package:dailywallpaper/models/image_item.dart';
-import 'package:dailywallpaper/bloc/history_bloc.dart';
+import 'package:dailywallpaper/core/database/database_helper.dart';
+import 'package:dailywallpaper/data/models/image_item.dart';
+import 'package:dailywallpaper/features/history/bloc/history_bloc.dart';
 
 void main() {
   group('History Performance Tests', () {

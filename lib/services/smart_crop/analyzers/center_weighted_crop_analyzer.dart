@@ -15,7 +15,7 @@ class CenterWeightedCropAnalyzer implements CropAnalyzer {
   String get strategyName => 'center_weighted';
 
   @override
-  double get weight => 0.6; // Moderate weight for conservative approach
+  double get weight => 0.85; // High weight for conservative approach
 
   @override
   bool get isEnabledByDefault => true;

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
-import '../models/image_item.dart';
+import 'package:dailywallpaper/data/models/image_item.dart';
 import 'smart_crop/smart_cropper.dart';
 import 'smart_crop/smart_crop_preferences.dart';
 import 'smart_crop/utils/screen_utils.dart';

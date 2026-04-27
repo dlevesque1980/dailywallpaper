@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/screen/history_screen.dart';
-import 'package:dailywallpaper/bloc/history_bloc.dart';
-import 'package:dailywallpaper/bloc_provider/history_provider.dart';
-import 'package:dailywallpaper/bloc_state/history_state.dart';
-import 'package:dailywallpaper/models/image_item.dart';
+import 'package:dailywallpaper/features/history/screens/history_screen.dart';
+import 'package:dailywallpaper/features/history/bloc/history_bloc.dart';
+import 'package:dailywallpaper/features/history/bloc/history_provider.dart';
+import 'package:dailywallpaper/features/history/bloc/history_state.dart';
+import 'package:dailywallpaper/data/models/image_item.dart';
 
 void main() {
   group('HistoryScreen Yesterday Selection Tests', () {

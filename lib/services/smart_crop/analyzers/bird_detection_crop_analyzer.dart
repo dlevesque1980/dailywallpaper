@@ -974,6 +974,10 @@ class BirdDetectionCropAnalyzer implements CropAnalyzer {
         'has_beak': bird.hasBeak ? 1.0 : 0.0,
         'bird_inclusion': _scoreBirdInclusion(crop, bird),
         'bird_type': bird.type.index.toDouble(),
+        'subject_x': bird.bounds.left,
+        'subject_y': bird.bounds.top,
+        'subject_width': bird.bounds.width,
+        'subject_height': bird.bounds.height,
       });
     }
 

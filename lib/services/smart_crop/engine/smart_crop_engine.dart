@@ -12,6 +12,8 @@ import '../registry/analyzer_registry.dart';
 import '../utils/error_handler.dart';
 import '../utils/degradation_manager.dart';
 import '../utils/fallback_strategies.dart';
+import '../utils/subject_fit_checker.dart';
+import '../analyzers/analyzers.dart';
 // import '../utils/performance_monitor.dart'; // TODO: Implement performance monitoring
 
 /// Exception thrown when crop analysis fails
@@ -43,12 +45,26 @@ class SmartCropEngine {
   final Map<String, dynamic> _engineStats = {};
   final List<Duration> _recentProcessingTimes = [];
 
+  /// Whether the engine is initialized
+  bool get isInitialized => _isInitialized;
+
   /// Initializes the engine with default analyzers
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      // Register built-in analyzers would go here
+      // Register built-in analyzers
+      _registry.registerAnalyzer(FaceDetectionCropAnalyzer());
+      _registry.registerAnalyzer(ObjectDetectionCropAnalyzer());
+      _registry.registerAnalyzer(BirdDetectionCropAnalyzer());
+      _registry.registerAnalyzer(SubjectDetectionCropAnalyzer());
+      _registry.registerAnalyzer(LandscapeAwareCropAnalyzer());
+      _registry.registerAnalyzer(RuleOfThirdsCropAnalyzer());
+      _registry.registerAnalyzer(CenterWeightedCropAnalyzer());
+      _registry.registerAnalyzer(EntropyBasedCropAnalyzer());
+      _registry.registerAnalyzer(EdgeDetectionCropAnalyzer());
+      _registry.registerAnalyzer(MlSubjectCropAnalyzer());
+
       // For now, we'll mark as initialized
       _isInitialized = true;
 
@@ -358,7 +374,72 @@ class SmartCropEngine {
       }
 
       // Select best crop from scores
-      final bestCrop = _selectBestCrop(scores, context.settings);
+      var bestCrop = _selectBestCrop(scores, context.settings);
+
+      // Apply Subject Fit Checker if scaling is enabled
+      if (context.settings.enableSubjectScaling) {
+        try {
+          final originalScore = scores.firstWhere(
+              (s) => s.coordinates.strategy == bestCrop.strategy,
+              orElse: () => scores.first);
+          final metrics = originalScore.metrics;
+
+          if (metrics.containsKey('subject_x') &&
+              metrics.containsKey('subject_y') &&
+              metrics.containsKey('subject_width') &&
+              metrics.containsKey('subject_height')) {
+            final subjectBounds = ui.Rect.fromLTWH(
+                metrics['subject_x']!,
+                metrics['subject_y']!,
+                metrics['subject_width']!,
+                metrics['subject_height']!);
+
+            final fitResult = SubjectFitChecker.checkSubjectFit(
+              bestCrop,
+              subjectBounds,
+              ui.Size(image.width.toDouble(), image.height.toDouble()),
+              targetSize,
+              minCoverage: context.settings.minSubjectCoverage,
+              maxScale: context.settings.maxScaleFactor,
+              allowLetterbox: context.settings.allowLetterbox,
+            );
+
+            if (fitResult.needsScaling) {
+              bestCrop = fitResult.adjustedCrop;
+            }
+          }
+        } catch (e) {
+          // Ignore scaling errors to prevent crop failure
+        }
+      }
+
+      // Apply letterbox crop expansion for wide landscape images when allowed.
+      // When the source image is wide (>1.3 aspect) and allowLetterbox is on,
+      // expand the crop window to capture more of the scene. The crop center
+      // stays the same; applyCropAndResize fills the empty portrait space with
+      // a blurred background rather than using an ultra-narrow portrait strip.
+      if (context.settings.allowLetterbox) {
+        try {
+          final imageAspect = image.width / image.height;
+          if (imageAspect > 1.3) {
+            // Target a crop width of 50% of the image (vs the default ~27-32%)
+            // This is wide enough to show a meaningful portion of the scene
+            // while still having some blurred fill on the sides.
+            const targetLetterboxWidth = 0.50;
+            if (bestCrop.width < targetLetterboxWidth) {
+              final cropCenterX = bestCrop.x + bestCrop.width / 2;
+              final newX = (cropCenterX - targetLetterboxWidth / 2).clamp(0.0, 1.0 - targetLetterboxWidth);
+              bestCrop = bestCrop.copyWith(
+                x: newX,
+                width: targetLetterboxWidth,
+                strategy: '${bestCrop.strategy}_letterbox',
+              );
+            }
+          }
+        } catch (e) {
+          // Ignore letterbox expansion errors
+        }
+      }
 
       if (!completer.isCompleted) {
         final enhancedResult = _createEnhancedCropResult(
@@ -366,7 +447,13 @@ class SmartCropEngine {
           allScores: scores,
           processingTime: context.elapsedTime,
           fromCache: false,
-          analyzerMetadata: {'analysis_completed': true},
+          analyzerMetadata: {
+            'analysis_completed': true,
+            if (bestCrop.strategy.contains('ml_subject_detection'))
+              'ml_subject_used': true,
+            if (bestCrop.strategy.contains('letterbox'))
+              'letterbox_applied': true,
+          },
         );
         completer.complete(enhancedResult);
       }
@@ -397,9 +484,42 @@ class SmartCropEngine {
     final weightedScores = <CropScore>[];
 
     for (final score in scores) {
-      final analyzer = _registry.getAnalyzer(score.strategy);
+      // Find the analyzer that produced this score (handle specialized strategy names)
+      CropAnalyzer? analyzer;
+      
+      // Try exact match first
+      analyzer = _registry.getAnalyzer(score.strategy);
+      
+      // If no exact match, try matching by prefix (e.g. subject_detection_context matches subject_detection)
+      if (analyzer == null) {
+        for (final a in _registry.getAllAnalyzers()) {
+          if (score.strategy.startsWith(a.strategyName)) {
+            analyzer = a;
+            break;
+          }
+        }
+      }
+
       if (analyzer != null) {
-        final weightedScore = score.score * analyzer.weight;
+        double aggressivenessMultiplier = 1.0;
+        final baseStrategy = analyzer.strategyName;
+
+        if (baseStrategy == 'ml_subject_detection' || baseStrategy == 'subject_detection') {
+          switch (settings.aggressiveness) {
+            case CropAggressiveness.conservative:
+              aggressivenessMultiplier = 1.3;
+              break;
+            case CropAggressiveness.balanced:
+              aggressivenessMultiplier = 1.4;
+              break;
+            case CropAggressiveness.aggressive:
+              aggressivenessMultiplier = 1.5;
+              break;
+          }
+        }
+
+        final weightedScore =
+            score.score * analyzer.weight * aggressivenessMultiplier;
 
         weightedScores.add(score.copyWith(
           score: weightedScore,
@@ -408,8 +528,12 @@ class SmartCropEngine {
             'weighted_score': weightedScore,
             'original_score': score.score,
             'analyzer_weight': analyzer.weight,
+            'aggressiveness_multiplier': aggressivenessMultiplier,
           },
         ));
+      } else {
+        // Fallback for unknown analyzers - use raw score
+        weightedScores.add(score);
       }
     }
 

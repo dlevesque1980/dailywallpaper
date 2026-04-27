@@ -17,7 +17,7 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
   String get strategyName => 'subject_detection';
 
   @override
-  double get weight => 0.9; // Poids très élevé pour priorité maximale
+  double get weight => 0.85; // Increased weight to compete with specialized analyzers
 
   @override
   bool get isEnabledByDefault => true;
@@ -51,14 +51,20 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
     double bestScore = 0.0;
     Map<String, double> bestMetrics = {};
 
-    for (final subject in subjects) {
+    double maxImportance = 0.0;
+    if (subjects.isNotEmpty) {
+      maxImportance = subjects.map((s) => s.importance).reduce(math.max);
+    }
+
+    for (int i = 0; i < subjects.length; i++) {
+      final subject = subjects[i];
       // Tester différentes stratégies de crop pour ce sujet
       final strategies =
           _generateCropStrategies(subject, imageSize, targetAspectRatio);
 
       for (final strategy in strategies) {
         final score =
-            await _scoreSubjectCrop(strategy, subject, imageSize, imageData);
+            await _scoreSubjectCrop(strategy, subject, imageSize, imageData, maxImportance, targetAspectRatio);
         final metrics =
             await _calculateMetrics(strategy, subject, imageSize, imageData);
 
@@ -73,6 +79,11 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
     bestCrop ??= _getCenterCrop(imageSize, targetAspectRatio);
     bestMetrics = await _calculateMetrics(bestCrop,
         subjects.isNotEmpty ? subjects.first : null, imageSize, imageData);
+        
+    if (subjects.isNotEmpty) {
+       bestMetrics['subject_target_x'] = subjects.first.center.dx;
+       bestMetrics['subject_target_y'] = subjects.first.center.dy;
+    }
 
     return CropScore(
       coordinates: bestCrop,
@@ -111,8 +122,8 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
     // Trier par importance (taille, contraste, position)
     mergedSubjects.sort((a, b) => b.importance.compareTo(a.importance));
 
-    // Retourner les 3 meilleurs sujets maximum
-    return mergedSubjects.take(3).toList();
+    // Retourner les 5 meilleurs sujets maximum pour ne pas rater la tête
+    return mergedSubjects.take(5).toList();
   }
 
   /// Détection de sujets par analyse de contraste
@@ -138,8 +149,8 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
         final contrast = _calculateLocalContrast(
             imageData, width, startX, endX, startY, endY);
 
-        // Si le contraste est élevé, c'est probablement un sujet
-        if (contrast > 0.4) {
+        // Si le contraste est suffisant, c'est probablement un sujet
+        if (contrast > 0.25) {
           final centerX = (startX + endX) / 2 / width;
           final centerY = (startY + endY) / 2 / height;
           final size = math.sqrt((cellWidth * cellHeight) / (width * height));
@@ -202,7 +213,7 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
         final importance = shape.confidence *
             shape.size *
             _getPositionWeight(shape.center.dx, shape.center.dy) *
-            1.2; // Bonus pour les formes
+            1.2; // Bonus réduit (1.8 -> 1.2) pour éviter que des roches ou gouttes d'eau ne dominent le sujet
 
         subjects.add(DetectedSubject(
           center: shape.center,
@@ -462,7 +473,7 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
                 math.pow(current.center.dy - subjects[j].center.dy, 2));
 
         if (distance < 0.15) {
-          // Seuil de proximité
+          // Seuil de proximité resserré pour éviter de fusionner la moitié de l'image
           nearby.add(subjects[j]);
           processed[j] = true;
         }
@@ -487,10 +498,18 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
     double maxConfidence = 0.0;
     SubjectType bestType = subjects.first.type;
 
+    // Use a power-weighted center to bias towards the MOST important subject
+    // instead of a flat average of all clusters.
+    double totalSaliencyWeight = 0;
+
     for (final subject in subjects) {
       totalImportance += subject.importance;
-      weightedX += subject.center.dx * subject.importance;
-      weightedY += subject.center.dy * subject.importance;
+      
+      // We use importance^2 to ensure the 'hero' subject dominates the center calculation
+      final saliencyWeight = math.pow(subject.importance, 2.0);
+      weightedX += subject.center.dx * saliencyWeight;
+      weightedY += subject.center.dy * saliencyWeight;
+      totalSaliencyWeight += saliencyWeight;
 
       minX = math.min(minX, subject.bounds.left);
       minY = math.min(minY, subject.bounds.top);
@@ -504,8 +523,8 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
     }
 
     return DetectedSubject(
-      center:
-          ui.Offset(weightedX / totalImportance, weightedY / totalImportance),
+      center: ui.Offset(
+          weightedX / totalSaliencyWeight, weightedY / totalSaliencyWeight),
       bounds: ui.Rect.fromLTRB(minX, minY, maxX, maxY),
       type: bestType,
       confidence: maxConfidence,
@@ -517,7 +536,8 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
   double _getPositionWeight(double x, double y) {
     final distanceFromCenter =
         math.sqrt(math.pow(x - 0.5, 2) + math.pow(y - 0.5, 2));
-    return math.max(0.3, 1.0 - distanceFromCenter);
+    // Aggressive center bias (matches SubjectDetectionCropAnalyzer)
+    return math.max(0.1, 1.0 - (distanceFromCenter * 2.5));
   }
 
   /// Génère différentes stratégies de crop pour un sujet
@@ -545,26 +565,52 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
   /// Crée un crop serré sur le sujet
   CropCoordinates? _createTightCrop(
       DetectedSubject subject, ui.Size imageSize, double targetAspectRatio) {
-    // Ajuster pour respecter le ratio cible
-    final cropWidth = _calculateCropWidth(imageSize, targetAspectRatio);
-    final cropHeight = _calculateCropHeight(imageSize, targetAspectRatio);
+    final bounds = subject.bounds;
+    // Stratégie 1: Crop serré sur le sujet
+    final xMargin = bounds.width * 0.15;
+    final yMargin = bounds.height * 0.15;
 
-    // Centrer le crop sur le sujet
-    final centerX = subject.center.dx;
-    final centerY = subject.center.dy;
+    final tightCropWidth = bounds.width + (xMargin * 2);
+    final tightCropHeight = bounds.height + (yMargin * 2);
+    
+    // We want the relative width and height to result in an absolute crop 
+    // that matches the targetAspectRatio.
+    // targetAspectRatio = absolute width / absolute height
+    // So targetAspectRatio = (relativeWidth * imageWidth) / (relativeHeight * imageHeight)
+    // => relativeWidth / relativeHeight = targetAspectRatio / imageAspectRatio
+    final imageAspectRatio = imageSize.width / imageSize.height;
+    final targetRelativeRatio = targetAspectRatio / imageAspectRatio;
+    
+    double scaledWidth = tightCropWidth;
+    double scaledHeight = tightCropHeight;
+    
+    if (scaledWidth / scaledHeight > targetRelativeRatio) {
+      // It's too wide for the target aspect ratio, we must increase the height
+      scaledHeight = scaledWidth / targetRelativeRatio;
+    } else {
+      // It's too tall, we must increase the width
+      scaledWidth = scaledHeight * targetRelativeRatio;
+    }
+    
+    // Check if the scaled width/height exceeds 1.0. If so, cap it while maintaining aspect ratio
+    if (scaledWidth > 1.0 || scaledHeight > 1.0) {
+        final scaleX = 1.0 / scaledWidth;
+        final scaleY = 1.0 / scaledHeight;
+        final minScale = math.min(scaleX, scaleY);
+        scaledWidth *= minScale;
+        scaledHeight *= minScale;
+    }
 
-    final cropX =
-        math.max(0.0, math.min(1.0 - cropWidth, centerX - cropWidth / 2));
-    final cropY =
-        math.max(0.0, math.min(1.0 - cropHeight, centerY - cropHeight / 2));
+    final cropX = math.max(0.0, math.min(1.0 - scaledWidth, subject.center.dx - scaledWidth / 2));
+    final cropY = math.max(0.0, math.min(1.0 - scaledHeight, subject.center.dy - scaledHeight / 2));
 
     return CropCoordinates(
       x: cropX,
       y: cropY,
-      width: cropWidth,
-      height: cropHeight,
+      width: scaledWidth,
+      height: scaledHeight,
       confidence: subject.confidence * 0.9, // Légèrement réduit car plus risqué
-      strategy: '${strategyName}_tight',
+      strategy: '${strategyName}_tight_scaled',
     );
   }
 
@@ -616,22 +662,32 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
 
   /// Score un crop basé sur le sujet détecté
   Future<double> _scoreSubjectCrop(CropCoordinates crop,
-      DetectedSubject subject, ui.Size imageSize, Uint8List imageData) async {
+      DetectedSubject subject, ui.Size imageSize, Uint8List imageData, double maxImportance, double targetAspectRatio) async {
     double score = 0.0;
 
-    // 1. Inclusion du sujet (40%)
-    score += _scoreSubjectInclusion(crop, subject) * 0.4;
+    // 1. Inclusion du sujet (25%)
+    score += _scoreSubjectInclusion(crop, subject) * 0.25;
 
-    // 2. Qualité du sujet dans le crop (30%)
-    score += _scoreSubjectQuality(crop, subject, imageSize, imageData) * 0.3;
+    // 2. Qualité du sujet dans le crop (15%)
+    score += _scoreSubjectQuality(crop, subject, imageSize, imageData) * 0.15;
 
-    // 3. Composition générale (20%)
-    score += _scoreComposition(crop, subject) * 0.2;
+    // 3. Composition générale (15%)
+    score += _scoreComposition(crop, subject) * 0.15;
 
-    // 4. Évitement des bords (10%)
-    score += _scoreEdgeAvoidance(crop) * 0.1;
+    // 4. Évitement des bords (5%) - réduit pour favoriser les grands crops
+    score += _scoreEdgeAvoidance(crop) * 0.05;
 
-    return math.min(1.0, score);
+    // 5. Importance relative du sujet (20%)
+    final relativeImportance = maxImportance > 0 ? subject.importance / maxImportance : 1.0;
+    score += relativeImportance * 0.20;
+
+    // 6. Résolution / Taille du crop (10%) - Favorise légèrement les grands crops sans écraser les autres analyseurs
+    final maxCropWidth = _calculateCropWidth(imageSize, targetAspectRatio);
+    final maxCropHeight = _calculateCropHeight(imageSize, targetAspectRatio);
+    final sizeRatio = (crop.width * crop.height) / (maxCropWidth * maxCropHeight);
+    score += sizeRatio * 0.10;
+
+    return score; // Don't cap at 1.0 here, let the highest score win!
   }
 
   /// Score l'inclusion du sujet dans le crop
@@ -655,7 +711,7 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
     double typeBonus = 1.0;
     switch (subject.type) {
       case SubjectType.circularShape:
-        typeBonus = 1.3; // Bonus pour les formes circulaires (têtes, yeux)
+        typeBonus = 1.2; // Bonus réduit pour les formes circulaires (têtes, yeux) pour éviter l'inflation du score
         break;
       case SubjectType.highContrast:
         typeBonus = 1.1;
@@ -753,6 +809,10 @@ class SubjectDetectionCropAnalyzer implements CropAnalyzer {
         'subject_importance': subject.importance,
         'subject_inclusion': _scoreSubjectInclusion(crop, subject),
         'subject_type': subject.type.index.toDouble(),
+        'subject_x': subject.bounds.left,
+        'subject_y': subject.bounds.top,
+        'subject_width': subject.bounds.width,
+        'subject_height': subject.bounds.height,
       });
     }
 

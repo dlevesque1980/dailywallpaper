@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'crop_cache_entry.dart';
@@ -6,11 +7,15 @@ import 'crop_cache_entry.dart';
 /// Database manager for crop cache entries
 class CropCacheDatabase {
   static const String _databaseName = 'crop_cache.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
   static const String _tableName = 'crop_cache';
 
   static Database? _database;
   static final CropCacheDatabase _instance = CropCacheDatabase._internal();
+
+  /// Override database path for testing (set before first use)
+  @visibleForTesting
+  static String? testDatabasePath;
 
   factory CropCacheDatabase() => _instance;
 
@@ -24,8 +29,13 @@ class CropCacheDatabase {
 
   /// Initializes the database
   Future<Database> _initDatabase() async {
-    final documentsDirectory = await getDatabasesPath();
-    final path = join(documentsDirectory, _databaseName);
+    final String path;
+    if (testDatabasePath != null) {
+      path = testDatabasePath!;
+    } else {
+      final documentsDirectory = await getDatabasesPath();
+      path = join(documentsDirectory, _databaseName);
+    }
 
     return await openDatabase(
       path,
@@ -73,13 +83,33 @@ class CropCacheDatabase {
     await db.execute('''
       CREATE INDEX idx_last_accessed_at ON $_tableName (last_accessed_at)
     ''');
+
+    await _createMlSubjectCacheTable(db);
+  }
+
+  /// Creates the ml_subject_cache table and its index
+  Future<void> _createMlSubjectCacheTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE ml_subject_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_url TEXT NOT NULL UNIQUE,
+        subject_x REAL NOT NULL,
+        subject_y REAL NOT NULL,
+        subject_width REAL NOT NULL,
+        subject_height REAL NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_ml_cache_image_url ON ml_subject_cache (image_url)
+    ''');
   }
 
   /// Handles database upgrades
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle future schema migrations here
     if (oldVersion < 2) {
-      // Example: Add new columns or tables
+      await _createMlSubjectCacheTable(db);
     }
   }
 
@@ -394,6 +424,16 @@ class CropCacheDatabase {
 
   /// Closes the database connection
   Future<void> close() async {
+    final db = _database;
+    if (db != null) {
+      await db.close();
+      _database = null;
+    }
+  }
+
+  /// Resets the singleton database instance (for testing only)
+  @visibleForTesting
+  static Future<void> resetForTesting() async {
     final db = _database;
     if (db != null) {
       await db.close();

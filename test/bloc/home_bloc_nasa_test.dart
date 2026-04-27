@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:dailywallpaper/bloc/home_bloc.dart';
-import 'package:dailywallpaper/prefs/pref_consts.dart';
+import 'package:dailywallpaper/features/wallpaper/bloc/home_bloc.dart';
+import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 
 void main() {
   group('HomeBloc NASA Integration', () {

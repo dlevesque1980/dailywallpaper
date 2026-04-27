@@ -22,7 +22,7 @@ void main() {
         expect(analyzer.name, equals('object_detection'));
         expect(analyzer.strategyName, equals('object_detection'));
         expect(analyzer.priority, equals(800));
-        expect(analyzer.weight, equals(0.85));
+        expect(analyzer.weight, equals(0.90));
         expect(analyzer.isEnabledByDefault, isTrue);
         expect(analyzer.minConfidenceThreshold, equals(0.1));
       });

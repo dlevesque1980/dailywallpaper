@@ -72,3 +72,7 @@
 .kiro
 *.env
 .env
+# Base de données SQLite locale
+wallpaper.db
+*.db
+tool/output/

@@ -13,7 +13,7 @@ void main() {
 
     test('should have correct properties', () {
       expect(analyzer.strategyName, equals('landscape_aware'));
-      expect(analyzer.weight, equals(0.8));
+      expect(analyzer.weight, equals(1.0));
       expect(analyzer.isEnabledByDefault, isTrue);
       expect(analyzer.minConfidenceThreshold, equals(0.2));
     });

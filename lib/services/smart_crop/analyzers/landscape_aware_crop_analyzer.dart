@@ -15,7 +15,7 @@ class LandscapeAwareCropAnalyzer implements CropAnalyzer {
   String get strategyName => 'landscape_aware';
 
   @override
-  double get weight => 0.8; // Poids élevé pour les paysages
+  double get weight => 1.0; // Force landscape aware for horizontal nature photos
 
   @override
   bool get isEnabledByDefault => true;
@@ -54,10 +54,43 @@ class LandscapeAwareCropAnalyzer implements CropAnalyzer {
     for (final candidate in candidates) {
       final score = await _scoreLandscapeCrop(candidate, imageSize, imageData);
       final metrics = await _calculateMetrics(candidate, imageSize, imageData);
+      // print('Landscape candidate ${candidate.strategy} x=${candidate.x} score=$score');
 
       if (score > bestScore) {
         bestScore = score;
         bestCrop = candidate;
+        
+        // Find the bounding box of the included subjects for this candidate if subjects exist
+        final subjects = _detectSubjectAreas(imageSize, imageData);
+        if (subjects.isNotEmpty) {
+           double minX = 1.0, minY = 1.0, maxX = 0.0, maxY = 0.0;
+           bool foundSubjectInCrop = false;
+           for(final subject in subjects) {
+               if (subject.dx >= candidate.x &&
+                  subject.dx <= candidate.x + candidate.width &&
+                  subject.dy >= candidate.y &&
+                  subject.dy <= candidate.y + candidate.height) {
+                  
+                  minX = math.min(minX, subject.dx);
+                  minY = math.min(minY, subject.dy);
+                  maxX = math.max(maxX, subject.dx);
+                  maxY = math.max(maxY, subject.dy);
+                  foundSubjectInCrop = true;
+               }
+           }
+           
+           if (foundSubjectInCrop) {
+              // Add a small padding around the points to create a proper bounding box
+              final boxWidth = math.max(0.1, maxX - minX);
+              final boxHeight = math.max(0.1, maxY - minY);
+              
+              metrics['subject_x'] = math.max(0.0, minX - 0.05);
+              metrics['subject_y'] = math.max(0.0, minY - 0.05);
+              metrics['subject_width'] = math.min(1.0 - metrics['subject_x']!, boxWidth + 0.1);
+              metrics['subject_height'] = math.min(1.0 - metrics['subject_y']!, boxHeight + 0.1);
+           }
+        }
+        
         bestMetrics = metrics;
       }
     }
@@ -118,20 +151,47 @@ class LandscapeAwareCropAnalyzer implements CropAnalyzer {
     // 3. Candidats basés sur la détection de sujets
     final subjectAreas = _detectSubjectAreas(imageSize, imageData);
 
-    for (final subjectArea in subjectAreas) {
-      final cropX = math.max(
-          0.0, math.min(1.0 - cropWidth, subjectArea.dx - cropWidth / 2));
-      final cropY = math.max(
-          0.0, math.min(1.0 - cropHeight, subjectArea.dy - cropHeight / 2));
+    if (subjectAreas.isNotEmpty) {
+      // a. Candidat centré sur le point moyen de tous les sujets pour équilibrer la scène
+      double avgX = 0;
+      double avgY = 0;
+      for (final s in subjectAreas) {
+        avgX += s.dx;
+        avgY += s.dy;
+      }
+      avgX /= subjectAreas.length;
+      avgY /= subjectAreas.length;
+
+      final meanCropX = math.max(
+          0.0, math.min(1.0 - cropWidth, avgX - cropWidth / 2));
+      final meanCropY = math.max(
+          0.0, math.min(1.0 - cropHeight, avgY - cropHeight / 2));
 
       candidates.add(CropCoordinates(
-        x: cropX,
-        y: cropY,
+        x: meanCropX,
+        y: meanCropY,
         width: cropWidth,
         height: cropHeight,
-        confidence: 0.7,
-        strategy: strategyName,
+        confidence: 0.8, // Haute confiance pour englober tous les sujets équitablement
+        strategy: '${strategyName}_mean_subjects',
       ));
+
+      // b. Candidats centrés sur chaque sujet individuel
+      for (final subjectArea in subjectAreas) {
+        final cropX = math.max(
+            0.0, math.min(1.0 - cropWidth, subjectArea.dx - cropWidth / 2));
+        final cropY = math.max(
+            0.0, math.min(1.0 - cropHeight, subjectArea.dy - cropHeight / 2));
+
+        candidates.add(CropCoordinates(
+          x: cropX,
+          y: cropY,
+          width: cropWidth,
+          height: cropHeight,
+          confidence: 0.7,
+          strategy: strategyName,
+        ));
+      }
     }
 
     // 4. Candidats pour éviter les zones vides (ciel/eau)
@@ -375,7 +435,7 @@ class LandscapeAwareCropAnalyzer implements CropAnalyzer {
       return math.max(0.0, 1.0 - minDistance * 3);
     }
 
-    return 0.2; // Pénalité si l'horizon n'est pas visible
+    return 0.6; // Neutre/léger bonus si l'horizon n'est pas clair ou hors crop
   }
 
   /// Score l'inclusion de sujets importants
@@ -393,7 +453,7 @@ class LandscapeAwareCropAnalyzer implements CropAnalyzer {
       }
     }
 
-    if (subjects.isEmpty) return 0.5; // Neutre si pas de sujets détectés
+    if (subjects.isEmpty) return 0.8; // Très bon score par défaut si on n'a que le paysage
 
     return includedSubjects / subjects.length;
   }

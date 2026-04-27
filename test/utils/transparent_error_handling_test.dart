@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/utils/transparent_error_handling.dart';
+import 'package:dailywallpaper/core/utils/transparent_error_handling.dart';
 
 void main() {
   group('TransparentErrorHandling Unit Tests', () {
@@ -48,13 +48,13 @@ void main() {
 
       // Add data to stream
       controller.add('stream_data');
-      await tester.pump();
+      await tester.pump(Duration.zero); // Give stream time to emit
 
       // Should show data, not loading
       expect(find.text('stream_data'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
 
-      controller.close();
+      await controller.close();
     });
 
     testWidgets(

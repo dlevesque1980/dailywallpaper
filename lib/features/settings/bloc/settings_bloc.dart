@@ -1,0 +1,100 @@
+import 'dart:async';
+
+import 'package:dailywallpaper/data/repositories/image_repository.dart';
+import 'package:dailywallpaper/features/settings/bloc/bing_region_state.dart';
+import 'package:dailywallpaper/data/models/bing/bing_region_enum.dart';
+import 'package:dailywallpaper/core/preferences/pref_consts.dart';
+import 'package:dailywallpaper/core/preferences/pref_helper.dart';
+import 'package:dailywallpaper/services/smart_crop/smart_crop.dart';
+import 'package:rxdart/rxdart.dart';
+
+class SettingsBloc {
+  Stream<BingRegionState> _regions = Stream.empty();
+  Stream<List<RegionItem>> _thumbnail = Stream.empty();
+  Stream<bool> _includeLock = Stream.empty();
+  Stream<bool> _smartCropEnabled = Stream.empty();
+  var _regionQuery = BehaviorSubject<String>();
+  var _thumbnailQuery = BehaviorSubject<String>();
+  var _lockQuery = BehaviorSubject<String>();
+  var _smartCropEnabledQuery = BehaviorSubject<String>();
+
+  Stream<BingRegionState> get regions => _regions;
+  Stream<List<RegionItem>> get thumbnail => _thumbnail;
+
+  Sink<String> get regionQuery => _regionQuery;
+  Sink<String> get thumbnailQuery => _thumbnailQuery;
+  Sink<String> get lockQuery => _lockQuery;
+  Sink<String> get smartCropEnabledQuery => _smartCropEnabledQuery;
+  Stream<bool> get includeLock => _includeLock;
+  Stream<bool> get smartCropEnabled => _smartCropEnabled;
+
+  SettingsBloc() {
+    _regions = _regionQuery.asyncMap(_handlerBingRegion).asBroadcastStream();
+    _includeLock = _lockQuery
+        .distinct()
+        .asyncMap(_getIncludeLockSetting)
+        .asBroadcastStream();
+    _smartCropEnabled = _smartCropEnabledQuery
+        .distinct()
+        .asyncMap(_getSmartCropEnabledSetting)
+        .asBroadcastStream();
+    _thumbnail =
+        _thumbnailQuery.asyncMap(_handlerThumbnail).asBroadcastStream();
+  }
+
+  Future<bool> _getIncludeLockSetting(String value) async {
+    if (value != "")
+      await PrefHelper.setBool(sp_IncludeLockWallpaper, (value == "true"));
+    return await PrefHelper.getBool(sp_IncludeLockWallpaper);
+  }
+
+  Future<bool> _getSmartCropEnabledSetting(String value) async {
+    if (value != "") {
+      final enabled = value == "true";
+      if (enabled) {
+        // When enabling Smart Crop, use automatic configuration with default balanced level
+        await SmartCropProfileManager.setSmartCropLevel(
+            SmartCropProfileManager.defaultLevel);
+      } else {
+        // When disabling Smart Crop, set level to 0 (off)
+        await SmartCropProfileManager.setSmartCropLevel(0);
+      }
+    }
+    return await SmartCropPreferences.isSmartCropEnabled();
+  }
+
+  Stream<RegionItem> _getRegions() async* {
+    for (BingRegionEnum region in BingRegionEnum.values) {
+      var image = await ImageRepository.fetchThumbnailFromBing(
+          BingRegionEnum.definitionOf(region));
+      yield RegionItem(region, image.url);
+    }
+  }
+
+  Future<BingRegionState> _handlerBingRegion(String rg) async {
+    if (rg != "") PrefHelper.setString(sp_BingRegion, rg);
+    var choice = await _getChoice();
+    return new BingRegionState(choice);
+  }
+
+  Future<List<RegionItem>> _handlerThumbnail(String query) async {
+    var regions = <RegionItem>[];
+    await for (var region in _getRegions()) {
+      regions.add(region);
+    }
+
+    return regions;
+  }
+
+  Future<BingRegionEnum> _getChoice() async {
+    var val = await PrefHelper.getString(sp_BingRegion);
+    return BingRegionEnum.valueFromDefinition(val!);
+  }
+
+  void dispose() {
+    _lockQuery.close();
+    _regionQuery.close();
+    _thumbnailQuery.close();
+    _smartCropEnabledQuery.close();
+  }
+}

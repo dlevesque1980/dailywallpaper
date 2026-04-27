@@ -17,6 +17,7 @@ import 'utils/image_utils.dart';
 import 'utils/device_capability_detector.dart';
 import 'utils/battery_optimizer.dart';
 import 'utils/performance_monitor.dart';
+import 'utils/post_crop_scaler.dart';
 import 'engine/smart_crop_engine.dart';
 
 /// Main orchestrator class for intelligent image cropping
@@ -253,6 +254,11 @@ class SmartCropper {
       final stopwatch = Stopwatch()..start();
 
       try {
+        // Ensure engine is initialized before use
+        if (!_cropEngine.isInitialized) {
+          await _cropEngine.initialize();
+        }
+
         // Use the new SmartCropEngine for v2 functionality
         final result = await _cropEngine.analyzeCrop(
           image: image,
@@ -415,6 +421,12 @@ class SmartCropper {
 
     // Ajouter les analyseurs spécialisés seulement si pas en mode conservateur
     if (settings.aggressiveness != CropAggressiveness.conservative) {
+      // Analyseur de détection de visage
+      analyzers.add(FaceDetectionCropAnalyzer());
+
+      // Analyseur de détection d'objets (priorité élevée)
+      analyzers.add(ObjectDetectionCropAnalyzer());
+
       // Analyseur de détection d'oiseaux (priorité maximale pour les images Bing)
       analyzers.add(BirdDetectionCropAnalyzer());
 
@@ -490,6 +502,10 @@ class SmartCropper {
       case CropAggressiveness.conservative:
         // Favor bird detection and subject detection, reduce edge detection
         switch (strategy) {
+          case 'face_detection':
+            return 1.6;
+          case 'object_detection':
+            return 1.4;
           case 'bird_detection':
           case 'bird_detection_head_focus':
           case 'bird_detection_full_bird':
@@ -517,6 +533,10 @@ class SmartCropper {
       case CropAggressiveness.balanced:
         // Equal weighting for most strategies, preference for bird and subject detection
         switch (strategy) {
+          case 'face_detection':
+            return 1.4;
+          case 'object_detection':
+            return 1.2;
           case 'bird_detection':
           case 'bird_detection_head_focus':
           case 'bird_detection_full_bird':
@@ -536,6 +556,10 @@ class SmartCropper {
       case CropAggressiveness.aggressive:
         // Favor bird detection and subject detection for more dynamic crops
         switch (strategy) {
+          case 'face_detection':
+            return 1.7;
+          case 'object_detection':
+            return 1.5;
           case 'bird_detection':
           case 'bird_detection_head_focus':
           case 'bird_detection_full_bird':
@@ -564,6 +588,13 @@ class SmartCropper {
 
   /// Gets analyzer instance by strategy name
   static CropAnalyzer? _getAnalyzerByName(String strategyName) {
+    if (strategyName.startsWith('face_detection')) {
+      return FaceDetectionCropAnalyzer();
+    }
+    if (strategyName.startsWith('object_detection')) {
+      return ObjectDetectionCropAnalyzer();
+    }
+
     switch (strategyName) {
       case 'bird_detection':
       case 'bird_detection_head_focus':
@@ -919,33 +950,143 @@ class SmartCropper {
       final sourceWidth = sourceImage.width;
       final sourceHeight = sourceImage.height;
 
-      final cropX = (coordinates.x * sourceWidth).round();
-      final cropY = (coordinates.y * sourceHeight).round();
-      final cropWidth = (coordinates.width * sourceWidth).round();
-      final cropHeight = (coordinates.height * sourceHeight).round();
+      final cropX = coordinates.x * sourceWidth;
+      final cropY = coordinates.y * sourceHeight;
+      final cropWidth = coordinates.width * sourceWidth;
+      final cropHeight = coordinates.height * sourceHeight;
 
-      // Ensure crop bounds are within image bounds
-      final clampedX = math.max(0, math.min(cropX, sourceWidth - 1));
-      final clampedY = math.max(0, math.min(cropY, sourceHeight - 1));
-      final clampedWidth =
-          math.max(1, math.min(cropWidth, sourceWidth - clampedX));
-      final clampedHeight =
-          math.max(1, math.min(cropHeight, sourceHeight - clampedY));
+      if (cropWidth <= 0 || cropHeight <= 0) {
+        throw ArgumentError(
+            'Invalid crop dimensions: \$cropWidth x \$cropHeight');
+      }
 
-      // Create rectangles for crop and resize operation
-      final srcRect = ui.Rect.fromLTWH(
-        clampedX.toDouble(),
-        clampedY.toDouble(),
-        clampedWidth.toDouble(),
-        clampedHeight.toDouble(),
-      );
+      // 1. Find the intersection of the crop box with the actual image bounds
+      final srcLeftRaw = math.max(0.0, cropX);
+      final srcTopRaw = math.max(0.0, cropY);
+      final srcRightRaw = math.min(sourceWidth.toDouble(), cropX + cropWidth);
+      final srcBottomRaw =
+          math.min(sourceHeight.toDouble(), cropY + cropHeight);
 
+      if (srcRightRaw <= srcLeftRaw || srcBottomRaw <= srcTopRaw) {
+        // Crop box is completely outside the image. Unlikely, but fallback safely.
+        return await _resizeImage(sourceImage, targetSize);
+      }
+
+      // 2a. Letterbox rendering path: when the crop is intentionally wider than
+      // the target portrait ratio (strategy ends with '_letterbox'), render with
+      // aspect-fit inside the canvas + blurred background on the bars.
+      // This preserves a wider view of the scene instead of cropping it tighter.
+      if (coordinates.strategy.contains('_letterbox')) {
+        final double sW = srcRightRaw - srcLeftRaw;
+        final double sH = srcBottomRaw - srcTopRaw;
+        final double srcAspect = sW / sH;
+        final double targetAspect = targetSize.width / targetSize.height;
+
+        // Compute the letterboxed destination rect (aspect-fit, centred)
+        double fittedW, fittedH, fittedX, fittedY;
+        if (srcAspect > targetAspect) {
+          // Source is wider: pillar-box on left/right (landscape source → portrait target)
+          fittedH = targetSize.height;
+          fittedW = targetSize.height * srcAspect;
+          fittedX = (targetSize.width - fittedW) / 2;
+          fittedY = 0;
+        } else {
+          // Source is taller: letterbox top/bottom
+          fittedW = targetSize.width;
+          fittedH = targetSize.width / srcAspect;
+          fittedX = 0;
+          fittedY = (targetSize.height - fittedH) / 2;
+        }
+
+        final srcRect = ui.Rect.fromLTRB(srcLeftRaw, srcTopRaw, srcRightRaw, srcBottomRaw);
+        final dstRect = ui.Rect.fromLTWH(fittedX, fittedY, fittedW, fittedH);
+
+        var croppedImage = await _cropAndResizeWithCanvas(sourceImage, srcRect, dstRect, targetSize);
+        croppedImage = await PostCropScaler.scaleIfNeeded(croppedImage);
+        return croppedImage;
+      }
+
+      // 2. Standard path: adjust the crop box to match the target aspect ratio.
+      // Allow up to 25% aspect ratio distortion (squashing) to keep more of the subject.
+      final double sW = srcRightRaw - srcLeftRaw;
+      final double sH = srcBottomRaw - srcTopRaw;
+
+      final double targetAspect = targetSize.width / targetSize.height;
+      final double srcAspect = sW / sH;
+
+      double finalSrcWidth = sW;
+      double finalSrcHeight = sH;
+
+      const double maxDistortion = 1.25;
+
+      if (srcAspect > targetAspect * maxDistortion) {
+        // Source crop is STILL too wide even with allowed distortion. Reduce width.
+        finalSrcWidth = sH * (targetAspect * maxDistortion);
+      } else if (srcAspect < targetAspect / maxDistortion) {
+        // Source crop is STILL too tall even with allowed distortion. Reduce height.
+        finalSrcHeight = sW / (targetAspect / maxDistortion);
+      }
+
+      // Instead of just centering the reduced box, let's try to keep it within the original
+      // image bounds, and if the original crop was pushed against an edge (like right edge for the seal),
+      // we bias our cut to preserve that edge!
+
+      // First, calculate the center of the raw crop box
+      final double rawCenterX = srcLeftRaw + sW / 2.0;
+      final double rawCenterY = srcTopRaw + sH / 2.0;
+
+      // Default: center the new box
+      double srcLeft = rawCenterX - finalSrcWidth / 2.0;
+      double srcTop = rawCenterY - finalSrcHeight / 2.0;
+
+      // Bias logic: If the raw crop was covering the right side of the image more than the left,
+      // it means the subject extends to the right. Let's shift our inner crop towards that side!
+      if (sW > finalSrcWidth) {
+        // We are cutting horizontal space.
+        final double imageCenterX = sourceWidth / 2.0;
+        if (rawCenterX > imageCenterX) {
+          // Crop is on the right side of the image -> bias towards the right edge of the raw crop!
+          // We shift it right by 50% of the available slack
+          final double slack = (sW - finalSrcWidth) / 2.0;
+          srcLeft += slack * 0.8; // Shift 80% towards the right edge
+        } else if (rawCenterX < imageCenterX) {
+          // Crop is on the left -> bias left
+          final double slack = (sW - finalSrcWidth) / 2.0;
+          srcLeft -= slack * 0.8;
+        }
+      }
+
+      if (sH > finalSrcHeight) {
+        // We are cutting vertical space.
+        final double imageCenterY = sourceHeight / 2.0;
+        if (rawCenterY > imageCenterY) {
+          // Crop is on the bottom side -> bias towards bottom edge
+          final double slack = (sH - finalSrcHeight) / 2.0;
+          srcTop += slack * 0.8;
+        } else if (rawCenterY < imageCenterY) {
+          // Crop is on the top side -> bias towards top edge
+          final double slack = (sH - finalSrcHeight) / 2.0;
+          srcTop -= slack * 0.8;
+        }
+      }
+
+      final double srcRight = srcLeft + finalSrcWidth;
+      final double srcBottom = srcTop + finalSrcHeight;
+
+      final srcRect = ui.Rect.fromLTRB(srcLeft, srcTop, srcRight, srcBottom);
+
+      // 3. Map the perfect crop directly to the destination canvas
       final dstRect =
           ui.Rect.fromLTWH(0, 0, targetSize.width, targetSize.height);
 
       // Apply crop and resize in one operation
-      return await _cropAndResizeWithCanvas(
+      var croppedImage = await _cropAndResizeWithCanvas(
           sourceImage, srcRect, dstRect, targetSize);
+
+      // Apply post-crop scaling if needed
+      croppedImage = await PostCropScaler.scaleIfNeeded(croppedImage);
+
+      return croppedImage;
     } catch (e) {
       // On error, return a resized version of the original image
       return await _resizeImage(sourceImage, targetSize);
@@ -961,6 +1102,36 @@ class SmartCropper {
   ) async {
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
+
+    // If the destination rectangle doesn't cover the whole target canvas,
+    // we have "letterboxing" or "pillarboxing" (empty space).
+    // Let's draw a beautiful blurred background using the whole image
+    // so that the empty space looks premium.
+    final hasEmptySpace = dstRect.left > 0.1 ||
+        dstRect.top > 0.1 ||
+        dstRect.right < targetSize.width - 0.1 ||
+        dstRect.bottom < targetSize.height - 0.1;
+
+    if (hasEmptySpace) {
+      // Draw blurred background
+      final bgPaint = ui.Paint()
+        ..imageFilter = ui.ImageFilter.blur(sigmaX: 40.0, sigmaY: 40.0);
+
+      canvas.drawImageRect(
+        sourceImage,
+        ui.Rect.fromLTWH(
+            0, 0, sourceImage.width.toDouble(), sourceImage.height.toDouble()),
+        ui.Rect.fromLTWH(0, 0, targetSize.width, targetSize.height),
+        bgPaint,
+      );
+
+      // Overlay a dark tint to make the main image pop
+      canvas.drawRect(
+        ui.Rect.fromLTWH(0, 0, targetSize.width, targetSize.height),
+        ui.Paint()
+          ..color = const ui.Color(0x66000000), // Semi-transparent black
+      );
+    }
 
     // Draw the cropped and resized image
     canvas.drawImageRect(sourceImage, srcRect, dstRect, ui.Paint());
@@ -979,14 +1150,32 @@ class SmartCropper {
     return resultImage;
   }
 
-  /// Resizes an image to the target size
+  /// Resizes an image to the target size, using a center crop to avoid squashing
   static Future<ui.Image> _resizeImage(
       ui.Image sourceImage, ui.Size targetSize) async {
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
 
-    final srcRect = ui.Rect.fromLTWH(
-        0, 0, sourceImage.width.toDouble(), sourceImage.height.toDouble());
+    final double sW = sourceImage.width.toDouble();
+    final double sH = sourceImage.height.toDouble();
+
+    final double targetAspect = targetSize.width / targetSize.height;
+    final double srcAspect = sW / sH;
+
+    double finalSrcWidth = sW;
+    double finalSrcHeight = sH;
+
+    if (srcAspect > targetAspect) {
+      finalSrcWidth = sH * targetAspect;
+    } else if (srcAspect < targetAspect) {
+      finalSrcHeight = sW / targetAspect;
+    }
+
+    final double srcLeft = (sW - finalSrcWidth) / 2.0;
+    final double srcTop = (sH - finalSrcHeight) / 2.0;
+
+    final srcRect =
+        ui.Rect.fromLTWH(srcLeft, srcTop, finalSrcWidth, finalSrcHeight);
     final dstRect = ui.Rect.fromLTWH(0, 0, targetSize.width, targetSize.height);
 
     canvas.drawImageRect(sourceImage, srcRect, dstRect, ui.Paint());

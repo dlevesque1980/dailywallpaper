@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/bloc/history_bloc.dart';
-import 'package:dailywallpaper/bloc_provider/history_provider.dart';
+import 'package:dailywallpaper/features/history/bloc/history_bloc.dart';
+import 'package:dailywallpaper/features/history/bloc/history_provider.dart';
 
 void main() {
   group('HistoryProvider', () {

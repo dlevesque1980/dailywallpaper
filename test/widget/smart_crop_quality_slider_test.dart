@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/widget/smart_crop_quality_slider.dart';
+import 'package:dailywallpaper/widgets/smart_crop_quality_slider.dart';
 
 void main() {
   group('SmartCropQualitySlider', () {

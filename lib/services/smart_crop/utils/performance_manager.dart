@@ -118,6 +118,9 @@ class PerformanceManager {
 
   /// Monitors memory usage and triggers optimization
   void _startMemoryMonitoring() {
+    // Prevent periodic timer in test environment which causes pumpAndSettle to hang
+    if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+
     _memoryMonitorTimer =
         Timer.periodic(const Duration(seconds: 30), (timer) async {
       final memoryUsage = _getCurrentMemoryUsageMB();
@@ -226,6 +229,9 @@ class PerformanceManager {
 
   /// Starts metrics collection
   void _startMetricsCollection() {
+    // Prevent periodic timer in test environment which causes pumpAndSettle to hang
+    if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+
     // Periodic cleanup of old metrics
     Timer.periodic(const Duration(minutes: 5), (timer) {
       final cutoffTime = DateTime.now().subtract(const Duration(hours: 1));

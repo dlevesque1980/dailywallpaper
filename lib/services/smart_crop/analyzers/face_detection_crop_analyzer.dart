@@ -13,8 +13,8 @@ import '../models/crop_coordinates.dart';
 /// image processing techniques optimized for mobile performance.
 class FaceDetectionCropAnalyzer extends BaseCropAnalyzer {
   static const String _analyzerName = 'face_detection';
-  static const int _analyzerPriority = 900; // High priority for faces
-  static const double _analyzerWeight = 0.95; // Very high weight for faces
+  static const int _analyzerPriority = 400; // Lower priority for simple face heuristic
+  static const double _analyzerWeight = 0.40; // Reduced weight because heuristics have high false-positive rate
 
   FaceDetectionCropAnalyzer()
       : super(
@@ -91,6 +91,10 @@ class FaceDetectionCropAnalyzer extends BaseCropAnalyzer {
           'detection_confidence': bestFace.confidence,
           'primary_face_confidence': bestFace.confidence,
           'crop_area_ratio': cropCoordinates.width * cropCoordinates.height,
+          'subject_x': bestFace.bounds.left,
+          'subject_y': bestFace.bounds.top,
+          'subject_width': bestFace.bounds.width,
+          'subject_height': bestFace.bounds.height,
         },
       );
     } catch (e) {
@@ -144,7 +148,7 @@ class FaceDetectionCropAnalyzer extends BaseCropAnalyzer {
         final skinScore = _quickSkinToneCheck(
             imageData, width, height, startX, endX, startY, endY);
 
-        if (skinScore > 0.3) {
+        if (skinScore > 0.6) { // Increased threshold to avoid hallucinating faces in rocks/wood
           final centerX = (startX + endX) / 2 / width;
           final centerY = (startY + endY) / 2 / height;
           final size = math.sqrt((cellWidth * cellHeight) / (width * height));
@@ -196,13 +200,14 @@ class FaceDetectionCropAnalyzer extends BaseCropAnalyzer {
 
   /// Simple skin tone detection
   bool _isSkinToneSimple(int r, int g, int b) {
-    // Very basic skin tone detection for speed
+    // Stricter skin tone detection for speed to avoid rocks and blossoms
     return r > 95 &&
         g > 40 &&
         b > 20 &&
         r > g &&
-        r > b &&
+        g > b && // Humans typically have more green than blue in their skin tone
         (r - g) > 15 &&
+        (r - g) < 100 && // Cap the red-green difference
         r < 250; // Avoid pure white
   }
 

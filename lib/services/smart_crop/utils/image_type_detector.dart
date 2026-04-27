@@ -105,6 +105,11 @@ class ImageTypeDetector {
           false, // Les images Bing ont souvent des sujets décentrés
       maxProcessingTime:
           Duration(seconds: 4), // Plus de temps pour une meilleure analyse
+      enableSubjectScaling: true,
+      minSubjectCoverage: 0.60, // Softer: allows wider crop window with letterbox fill
+      maxScaleFactor: 3.0,
+      enableMlSubjectDetection: true,
+      allowLetterbox: true, // Blurred fill for wide landscape→portrait conversions
     );
   }
 
@@ -118,6 +123,11 @@ class ImageTypeDetector {
       enableCenterWeighting:
           true, // Les images NASA peuvent avoir des sujets centrés
       maxProcessingTime: Duration(seconds: 3),
+      enableSubjectScaling: true,
+      minSubjectCoverage: 0.60,
+      maxScaleFactor: 3.0,
+      enableMlSubjectDetection: true,
+      allowLetterbox: true,
     );
   }
 
@@ -131,5 +141,15 @@ class ImageTypeDetector {
       enableCenterWeighting: true,
       maxProcessingTime: Duration(seconds: 2),
     );
+  }
+
+  /// Détecte si un sujet est probablement un gros plan (macro)
+  static bool isMacroCloseUp(ui.Rect subjectBounds, ui.Size imageSize) {
+    final relWidth = subjectBounds.width / imageSize.width;
+    final relHeight = subjectBounds.height / imageSize.height;
+
+    // Si le sujet occupe plus de 40% de la largeur ou de la hauteur,
+    // c'est probablement un gros plan où un crop agressif serait dommageable.
+    return relWidth > 0.4 || relHeight > 0.4;
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'package:device_info_plus/device_info_plus.dart';
 
 /// Detects device capabilities and provides performance scaling recommendations
 class DeviceCapabilityDetector {
@@ -25,6 +26,7 @@ class DeviceCapabilityDetector {
   static Future<DeviceCapability> _assessDeviceCapability() async {
     try {
       final platform = _detectPlatform();
+      final isEmulator = await _detectEmulator();
       final memoryTier = await _assessMemoryTier();
       final processingTier = await _assessProcessingTier();
       final batteryOptimized = _shouldOptimizeForBattery();
@@ -33,6 +35,7 @@ class DeviceCapabilityDetector {
 
       return DeviceCapability(
         platform: platform,
+        isEmulator: isEmulator,
         memoryTier: memoryTier,
         processingTier: processingTier,
         overallTier: overallTier,
@@ -62,6 +65,23 @@ class DeviceCapabilityDetector {
       return DevicePlatform.linux;
     } else {
       return DevicePlatform.unknown;
+    }
+  }
+
+  /// Detects if the device is an emulator
+  static Future<bool> _detectEmulator() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (io.Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return !androidInfo.isPhysicalDevice;
+      } else if (io.Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return !iosInfo.isPhysicalDevice;
+      }
+      return false;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -187,6 +207,7 @@ class DeviceCapabilityDetector {
 /// Device capability assessment result
 class DeviceCapability {
   final DevicePlatform platform;
+  final bool isEmulator;
   final PerformanceTier memoryTier;
   final PerformanceTier processingTier;
   final PerformanceTier overallTier;
@@ -198,6 +219,7 @@ class DeviceCapability {
 
   const DeviceCapability({
     required this.platform,
+    required this.isEmulator,
     required this.memoryTier,
     required this.processingTier,
     required this.overallTier,
@@ -212,6 +234,7 @@ class DeviceCapability {
   factory DeviceCapability.conservative() {
     return const DeviceCapability(
       platform: DevicePlatform.unknown,
+      isEmulator: false,
       memoryTier: PerformanceTier.low,
       processingTier: PerformanceTier.low,
       overallTier: PerformanceTier.low,
@@ -243,6 +266,7 @@ class DeviceCapability {
   String toString() {
     return 'DeviceCapability('
         'platform: $platform, '
+        'isEmulator: $isEmulator, '
         'overallTier: $overallTier, '
         'batteryOptimized: $batteryOptimized, '
         'maxConcurrentAnalyzers: $maxConcurrentAnalyzers, '

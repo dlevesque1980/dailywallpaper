@@ -21,8 +21,8 @@ void main() {
       test('should have correct name and properties', () {
         expect(analyzer.name, equals('face_detection'));
         expect(analyzer.strategyName, equals('face_detection'));
-        expect(analyzer.priority, equals(900));
-        expect(analyzer.weight, equals(0.95));
+        expect(analyzer.priority, equals(400));
+        expect(analyzer.weight, equals(0.40));
         expect(analyzer.isEnabledByDefault, isTrue);
         expect(analyzer.minConfidenceThreshold, equals(0.1));
       });

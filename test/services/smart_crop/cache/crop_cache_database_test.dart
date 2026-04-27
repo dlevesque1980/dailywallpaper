@@ -9,10 +9,13 @@ void main() {
   group('CropCacheDatabase', () {
     late CropCacheDatabase database;
 
-    setUpAll(() {
-      // Initialize FFI for testing
+    setUpAll(() async {
+      // Initialize FFI for testing with no-isolate factory to avoid parallel DB locking
       sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      databaseFactory = databaseFactoryFfiNoIsolate;
+      // Use a unique in-memory path so this test file doesn't conflict with others
+      CropCacheDatabase.testDatabasePath = ':memory:';
+      await CropCacheDatabase.resetForTesting();
     });
 
     setUp(() async {

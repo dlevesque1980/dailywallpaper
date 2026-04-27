@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:dailywallpaper/api/nasa_service.dart';
+import 'package:dailywallpaper/data/repositories/nasa_service.dart';
 
 void main() {
   group('NASAService', () {

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/bloc/pexels_categories_bloc.dart';
-import 'package:dailywallpaper/bloc_state/pexels_categories_state.dart';
-import 'package:dailywallpaper/prefs/pref_consts.dart';
+import 'package:dailywallpaper/features/settings/bloc/pexels_categories_bloc.dart';
+import 'package:dailywallpaper/features/settings/bloc/pexels_categories_state.dart';
+import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 
 void main() {
   setUpAll(() {

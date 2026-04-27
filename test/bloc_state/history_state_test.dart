@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/bloc_state/history_state.dart';
-import 'package:dailywallpaper/models/image_item.dart';
+import 'package:dailywallpaper/features/history/bloc/history_state.dart';
+import 'package:dailywallpaper/data/models/image_item.dart';
 
 void main() {
   group('HistoryState', () {

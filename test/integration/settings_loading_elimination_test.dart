@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dailywallpaper/utils/transparent_error_handling.dart';
+import 'package:dailywallpaper/core/utils/transparent_error_handling.dart';
 
 void main() {
   group('Settings Loading Widget Elimination Tests', () {

@@ -14,7 +14,7 @@ import '../models/crop_coordinates.dart';
 class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
   static const String _analyzerName = 'object_detection';
   static const int _analyzerPriority = 800; // High priority for objects
-  static const double _analyzerWeight = 0.85; // High weight for objects
+  static const double _analyzerWeight = 0.85; // Balanced with subject detection for macro shots
 
   ObjectDetectionCropAnalyzer()
       : super(
@@ -94,6 +94,10 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
           'primary_object_confidence': primaryObject.confidence,
           'primary_object_importance': primaryObject.importance,
           'crop_area_ratio': cropCoordinates.width * cropCoordinates.height,
+          'subject_x': primaryObject.bounds.left,
+          'subject_y': primaryObject.bounds.top,
+          'subject_width': primaryObject.bounds.width,
+          'subject_height': primaryObject.bounds.height,
         },
       );
     } catch (e) {
@@ -139,7 +143,7 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
     // Filter by confidence and size
     final filteredObjects = mergedObjects
         .where(
-            (obj) => obj.confidence > 0.25 && obj.size > 0.03 && obj.size < 0.9)
+            (obj) => obj.confidence > 0.25 && obj.size > 0.01 && obj.size < 0.9)
         .toList();
 
     // Sort by importance and return top candidates
@@ -429,14 +433,20 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
     double weightedX = 0, weightedY = 0;
     double minX = 1.0, minY = 1.0, maxX = 0.0, maxY = 0.0;
     double maxConfidence = 0.0;
-    double totalSize = 0;
     ObjectType bestType = objects.first.type;
+
+    // Use a power-weighted center to bias towards the MOST important object
+    // instead of a flat average of all clusters.
+    double totalSaliencyWeight = 0;
 
     for (final obj in objects) {
       totalImportance += obj.importance;
-      weightedX += obj.center.dx * obj.importance;
-      weightedY += obj.center.dy * obj.importance;
-      totalSize += obj.size;
+      
+      // We use importance^2 to ensure the 'hero' subject dominates the center calculation
+      final saliencyWeight = math.pow(obj.importance, 2.0);
+      weightedX += obj.center.dx * saliencyWeight;
+      weightedY += obj.center.dy * saliencyWeight;
+      totalSaliencyWeight += saliencyWeight;
 
       minX = math.min(minX, obj.bounds.left);
       minY = math.min(minY, obj.bounds.top);
@@ -450,11 +460,11 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
     }
 
     return DetectedObject(
-      center:
-          ui.Offset(weightedX / totalImportance, weightedY / totalImportance),
+      center: ui.Offset(
+          weightedX / totalSaliencyWeight, weightedY / totalSaliencyWeight),
       bounds: ui.Rect.fromLTRB(minX, minY, maxX, maxY),
       confidence: maxConfidence,
-      size: totalSize / objects.length,
+      size: (maxX - minX) * (maxY - minY),
       type: bestType,
       importance: totalImportance,
     );
@@ -464,7 +474,8 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
   double _getPositionWeight(double x, double y) {
     final distanceFromCenter =
         math.sqrt(math.pow(x - 0.5, 2) + math.pow(y - 0.5, 2));
-    return math.max(0.3, 1.0 - distanceFromCenter);
+    // Aggressive center bias (matches SubjectDetectionCropAnalyzer)
+    return math.max(0.1, 1.0 - (distanceFromCenter * 2.5));
   }
 
   /// Creates a crop focused on a detected object
@@ -527,8 +538,7 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
       final intersection = cropRect.intersect(obj.bounds);
       final inclusionRatio = intersection.isEmpty
           ? 0.0
-          : (intersection.width * intersection.height) /
-              (obj.bounds.width * obj.bounds.height);
+          : 1.0; // Assume SubjectFitChecker will expand to fit the whole object!
 
       totalInclusion += inclusionRatio * obj.importance;
       totalImportance += obj.importance;

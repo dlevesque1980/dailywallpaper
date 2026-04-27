@@ -1,6 +1,6 @@
 import 'dart:convert';
 import '../models/crop_settings.dart';
-import '../../../prefs/pref_helper.dart';
+import 'package:dailywallpaper/core/preferences/pref_helper.dart';
 
 /// Quality profiles for crop analysis
 enum CropQualityProfile {

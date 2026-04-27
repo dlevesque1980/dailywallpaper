@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dailywallpaper/services/image_preloader_service.dart';
 import 'package:dailywallpaper/services/intelligent_cache_service.dart';
-import 'package:dailywallpaper/models/image_item.dart';
+import 'package:dailywallpaper/data/models/image_item.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
