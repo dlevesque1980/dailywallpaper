@@ -14,10 +14,10 @@ class BirdDetectionCropAnalyzer implements CropAnalyzer {
   String get strategyName => 'bird_detection';
 
   @override
-  double get weight => 0.95; // Poids très élevé pour les images d'oiseaux
+  double get weight => 0.10; // Drastically reduced weight to prevent hallucinations
 
   @override
-  bool get isEnabledByDefault => true;
+  bool get isEnabledByDefault => false; // Disabled by default
 
   @override
   double get minConfidenceThreshold => 0.25;

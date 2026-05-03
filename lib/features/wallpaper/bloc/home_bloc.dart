@@ -14,19 +14,20 @@ import 'package:setwallpaper/setwallpaper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dailywallpaper/services/smart_crop/smart_cropper.dart';
 import 'package:dailywallpaper/services/smart_crop/smart_crop_preferences.dart';
+import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/screen_utils.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/image_utils.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/image_type_detector.dart';
 import 'package:dailywallpaper/services/image_preloader_service.dart';
 
 class HomeBloc {
-  Stream<HomeState> _results = Stream.empty();
+  final _resultsController = BehaviorSubject<HomeState>();
   var _query = BehaviorSubject<String>();
   Stream<String> _wallpaper = Stream.empty();
   var _setWallpaper = BehaviorSubject<int>();
   var fetchingInitialData = false;
 
-  Stream<HomeState> get results => _results;
+  Stream<HomeState> get results => _resultsController.stream;
   Sink<String> get query => _query;
   Stream<String> get wallpaper => _wallpaper;
   Sink<int> get setWallpaper => _setWallpaper;
@@ -36,7 +37,10 @@ class HomeBloc {
   final ImagePreloaderService _preloaderService = ImagePreloaderService();
 
   HomeBloc() {
-    _results = _query.distinct().asyncMap(_imageHandler).asBroadcastStream();
+    _query.distinct().listen((q) async {
+      final newState = await _imageHandler(q);
+      _resultsController.add(newState);
+    });
     _wallpaper = _setWallpaper.asyncMap(_updateWallpaper).asBroadcastStream();
   }
 
@@ -103,7 +107,7 @@ class HomeBloc {
 
     bool forceRefresh = query.contains('refresh=');
     debugPrint('Loading images concurrently... forceRefresh: $forceRefresh');
-    
+
     // Launch all API requests concurrently
     var bingFuture = _bingHandler(query);
     var pexelsFutures = _fetchPexelsParallel();
@@ -134,14 +138,38 @@ class HomeBloc {
       debugPrint('NASA image is null - not available');
     }
 
-    // Démarrer le préchargement intelligent des images
-    unawaited(_preloaderService.preloadImages(list, 0));
+    // 1. Démarrer le préchargement et le smart crop via le service dédié (prioritaire)
+    // On attend que les images prioritaires soient prêtes (avec un timeout de sécurité)
+    try {
+      await _preloaderService
+          .preloadImages(list, 0)
+          .timeout(const Duration(seconds: 45));
+    } catch (e) {
+      debugPrint('Warning: Preloading timed out or failed ($e). Proceeding with available data.');
+    }
 
-    // Start background smart crop processing for all images (legacy)
-    _processImagesWithSmartCrop(list);
-
+    // 2. Notifier l'état initial
     state = HomeState(list, 0);
+    _resultsController.add(state!);
+
+    // 3. Traiter les images restantes de manière séquentielle si nécessaire
+    // (Mais on laisse le service de préchargement faire le gros du travail)
     return state!;
+  }
+
+  void _updateImageCropResult(String imageIdent, CropResult result) {
+    if (state == null) return;
+
+    final updatedList = state!.list.map((item) {
+      if (item.imageIdent == imageIdent) {
+        // Return a copy with the updated crop result
+        return item.copyWith(smartCropResult: result);
+      }
+      return item;
+    }).toList();
+
+    state = HomeState(updatedList, state!.imageIndex);
+    _resultsController.add(state!);
   }
 
   /// Process images with smart crop in the background
@@ -162,12 +190,18 @@ class HomeBloc {
       debugPrint(
           'Starting background smart crop processing for ${images.length} images');
 
-      // Process each image in the background
+      // Process each image in the background sequentially to avoid peak CPU load
       for (final imageItem in images) {
         // Optimiser les paramètres selon la source de l'image
         final optimizedSettings =
             _getOptimizedCropSettings(imageItem, baseCropSettings);
-        _processImageWithSmartCrop(imageItem, screenSize, optimizedSettings);
+
+        // Wait for each image to be processed before starting the next one
+        await _processImageWithSmartCrop(
+            imageItem, screenSize, optimizedSettings);
+
+        // Add a tiny delay between images to allow the UI thread to remain responsive
+        await Future.delayed(const Duration(milliseconds: 50));
       }
     } catch (e) {
       debugPrint('Error in background smart crop processing: $e');
@@ -175,7 +209,7 @@ class HomeBloc {
   }
 
   /// Process a single image with smart crop in the background
-  void _processImageWithSmartCrop(
+  Future<void> _processImageWithSmartCrop(
     ImageItem imageItem,
     ui.Size screenSize,
     dynamic cropSettings,
@@ -217,8 +251,13 @@ class HomeBloc {
 
       if (result.success) {
         debugPrint(
-            'Smart crop completed successfully for: ${imageItem.imageIdent}');
+            'Smart crop completed successfully for: ${imageItem.imageIdent} (strategy: ${result.cropResult.bestCrop.strategy})');
+
+        // Cache the pre-rendered image for immediate zero-flicker display
+        SmartCropper.cacheProcessedImage(imageItem.imageIdent, result.image);
+
         // The result is automatically cached by SmartCropper
+        _updateImageCropResult(imageItem.imageIdent, result.cropResult);
       } else {
         debugPrint(
             'Smart crop failed for: ${imageItem.imageIdent}, error: ${result.error}');
@@ -246,10 +285,12 @@ class HomeBloc {
 
     // Get current date string for daily wallpaper logic
     var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
-    
+
     // Launch all Pexels category requests concurrently
-    var futures = categories.map((category) => _fetchSinglePexels(category, dateStr)).toList();
-    
+    var futures = categories
+        .map((category) => _fetchSinglePexels(category, dateStr))
+        .toList();
+
     var results = await Future.wait(futures);
     // Filter out nulls and return the list
     return results.whereType<ImageItem>().toList();
@@ -331,6 +372,23 @@ class HomeBloc {
 
       if (isSmartCropEnabled) {
         debugPrint('Smart crop is enabled, processing image for wallpaper');
+
+        // First, check if we have bytes captured from the carousel render
+        // (pixel-perfect match between preview and applied wallpaper)
+        final renderedBytes = SmartCropper.getRenderedBytes(image.imageIdent);
+        if (renderedBytes != null) {
+          debugPrint(
+              'Using captured carousel render bytes for wallpaper (${renderedBytes.length} bytes)');
+          if (setLocked) {
+            message = await Setwallpaper.instance
+                .setBothWallpaperFromBytes(renderedBytes);
+          } else {
+            message = await Setwallpaper.instance
+                .setSystemWallpaperFromBytes(renderedBytes);
+          }
+          return message;
+        }
+
         final baseCropSettings = await SmartCropPreferences.getCropSettings();
         final optimizedSettings =
             _getOptimizedCropSettings(image, baseCropSettings);
@@ -478,6 +536,7 @@ class HomeBloc {
   }
 
   void dispose() {
+    _resultsController.close();
     _preloaderService.clearCache();
     _query.close();
     _setWallpaper.close();

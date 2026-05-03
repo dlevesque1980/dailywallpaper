@@ -10,8 +10,7 @@ dependencies:
   cupertino_icons: ^1.0.4
   rxdart: ^0.28.0
   setwallpaper:
-    git: 
-      url: https://github.com/dlevesque1980/setwallpaper.git
+    path: ../setwallpaper
   fluttertoast: ^8.0.8
   sqflite: ^2.0.1
   shared_preferences: ^2.0.9

@@ -63,13 +63,6 @@ class SettingsBloc {
     return await SmartCropPreferences.isSmartCropEnabled();
   }
 
-  Stream<RegionItem> _getRegions() async* {
-    for (BingRegionEnum region in BingRegionEnum.values) {
-      var image = await ImageRepository.fetchThumbnailFromBing(
-          BingRegionEnum.definitionOf(region));
-      yield RegionItem(region, image.url);
-    }
-  }
 
   Future<BingRegionState> _handlerBingRegion(String rg) async {
     if (rg != "") PrefHelper.setString(sp_BingRegion, rg);
@@ -78,12 +71,19 @@ class SettingsBloc {
   }
 
   Future<List<RegionItem>> _handlerThumbnail(String query) async {
-    var regions = <RegionItem>[];
-    await for (var region in _getRegions()) {
-      regions.add(region);
-    }
+    // Fetch all thumbnails in parallel to avoid long waiting times
+    final futures = BingRegionEnum.values.map((region) async {
+      try {
+        final image = await ImageRepository.fetchThumbnailFromBing(
+            BingRegionEnum.definitionOf(region));
+        return RegionItem(region, image.url);
+      } catch (e) {
+        // Fallback for regions that fail to load
+        return RegionItem(region, "");
+      }
+    });
 
-    return regions;
+    return await Future.wait(futures);
   }
 
   Future<BingRegionEnum> _getChoice() async {
