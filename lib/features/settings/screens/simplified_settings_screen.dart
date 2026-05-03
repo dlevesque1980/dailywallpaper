@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
 import 'package:multi_select_flutter/util/multi_select_item.dart';
 import 'package:multi_select_flutter/util/multi_select_list_type.dart';
+import 'package:dailywallpaper/services/smart_crop/utils/device_capability_detector.dart';
 
 /// Simplified Settings Screen with only essential options
 ///
@@ -337,6 +338,82 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
                 currentLevel: _currentSmartCropLevel,
                 onLevelChanged: _onSmartCropLevelChanged,
               ),
+
+              const SizedBox(height: 20),
+
+              // ML Status Info
+              FutureBuilder<DeviceCapability>(
+                future: DeviceCapabilityDetector.getDeviceCapability(),
+                builder: (context, capabilitySnapshot) {
+                  if (capabilitySnapshot.hasData) {
+                    final cap = capabilitySnapshot.data!;
+                    final mlStatus =
+                        cap.isEmulator ? "Simulated (Emulator)" : "Active";
+                    final mlColor =
+                        cap.isEmulator ? Colors.orange[700] : Colors.green[700];
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 12.0),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8.0),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.psychology,
+                                  size: 20.0, color: mlColor),
+                              const SizedBox(width: 10.0),
+                              const Text(
+                                "ML Engine Status",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.0,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                mlStatus,
+                                style: TextStyle(
+                                  color: mlColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.0,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6.0),
+                          Text(
+                            "Model: Subject Segmentation v8 (Mobile f16)",
+                            style: TextStyle(
+                              fontSize: 12.0,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          if (cap.isEmulator)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                "⚠️ Real ML is disabled on emulator to avoid crashes.",
+                                style: TextStyle(
+                                  fontSize: 11.0,
+                                  color: Colors.orange[900],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+              const SizedBox(height: 30),
             ],
           ),
         ),

@@ -48,6 +48,38 @@ class SmartCropper {
   static int _maxConcurrentAnalyzers = 3;
   static const Duration _isolateTimeout = Duration(seconds: 10);
 
+  /// Memory cache for processed (cropped) images to avoid flickering
+  static final Map<String, ui.Image> _processedCache = {};
+
+  /// Stores a processed image in the memory cache
+  static void cacheProcessedImage(String key, ui.Image image) {
+    _processedCache[key] = image;
+  }
+
+  /// Retrieves a processed image from the memory cache
+  static ui.Image? getProcessedImage(String key) {
+    return _processedCache[key];
+  }
+
+  /// Memory cache for rendered bytes (carousel render at physical screen resolution)
+  /// indexed by imageIdent, used to ensure pixel-perfect match between preview and applied wallpaper
+  static final Map<String, Uint8List> _renderedBytesCache = {};
+
+  /// Stores rendered bytes (PNG/raw) from the carousel render into the memory cache
+  static void cacheRenderedBytes(String key, Uint8List bytes) {
+    _renderedBytesCache[key] = bytes;
+  }
+
+  /// Retrieves rendered bytes from the memory cache, or null if not yet captured
+  static Uint8List? getRenderedBytes(String key) {
+    return _renderedBytesCache[key];
+  }
+
+  /// Clears the rendered bytes cache (memory management)
+  static void clearRenderedBytesCache() {
+    _renderedBytesCache.clear();
+  }
+
   /// Gets the cache manager instance
   static CropCacheManager get _cache {
     _cacheManager ??= CropCacheManager();
@@ -250,6 +282,19 @@ class SmartCropper {
     ui.Size targetSize,
     CropSettings settings,
   ) async {
+    // Check persistent cache first to avoid redundant analysis
+    final cachedCrop =
+        await _cache.getCachedCrop(imageUrl, targetSize, settings);
+    if (cachedCrop != null) {
+      return _createEnhancedCropResult(
+        bestCrop: cachedCrop,
+        allScores: [],
+        processingTime: Duration.zero,
+        fromCache: true,
+        analyzerMetadata: {'cached_db': true},
+      );
+    }
+
     return await _withPerformanceMonitoring('analyzeCrop', () async {
       final stopwatch = Stopwatch()..start();
 
@@ -286,6 +331,10 @@ class SmartCropper {
           'analyzers_executed': result.performanceMetrics.analyzersExecuted,
           'version': '2.0',
         });
+
+        // Save to persistent cache for future use
+        unawaited(_cache.cacheCrop(
+            imageUrl, targetSize, settings, finalResult.bestCrop));
 
         return finalResult;
       } catch (e) {
@@ -998,10 +1047,12 @@ class SmartCropper {
           fittedY = (targetSize.height - fittedH) / 2;
         }
 
-        final srcRect = ui.Rect.fromLTRB(srcLeftRaw, srcTopRaw, srcRightRaw, srcBottomRaw);
+        final srcRect =
+            ui.Rect.fromLTRB(srcLeftRaw, srcTopRaw, srcRightRaw, srcBottomRaw);
         final dstRect = ui.Rect.fromLTWH(fittedX, fittedY, fittedW, fittedH);
 
-        var croppedImage = await _cropAndResizeWithCanvas(sourceImage, srcRect, dstRect, targetSize);
+        var croppedImage = await _cropAndResizeWithCanvas(
+            sourceImage, srcRect, dstRect, targetSize);
         croppedImage = await PostCropScaler.scaleIfNeeded(croppedImage);
         return croppedImage;
       }
@@ -1115,7 +1166,7 @@ class SmartCropper {
     if (hasEmptySpace) {
       // Draw blurred background
       final bgPaint = ui.Paint()
-        ..imageFilter = ui.ImageFilter.blur(sigmaX: 40.0, sigmaY: 40.0);
+        ..imageFilter = ui.ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0);
 
       canvas.drawImageRect(
         sourceImage,

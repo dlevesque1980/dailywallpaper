@@ -1,8 +1,9 @@
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:dailywallpaper/services/smart_crop/smart_cropper.dart';
-import 'package:dailywallpaper/services/smart_crop/smart_crop_preferences.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/screen_utils.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/image_utils.dart';
 import 'package:dailywallpaper/services/image_preloader_service.dart';
@@ -25,6 +26,7 @@ class Carousel extends StatefulWidget {
 
 class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
   TabController? _controller;
+  PageController? _pageController;
   int _numOfTab = 0;
 
   // Cache for processed images to avoid reprocessing
@@ -77,6 +79,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
     _disposeImageCache();
 
     if (_controller != null) _controller!.dispose();
+    if (_pageController != null) _pageController!.dispose();
     super.dispose();
   }
 
@@ -99,219 +102,190 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
   }
 
   Widget tabViewChild(ImageItem image) {
-    // Check if we have a cached widget first
-    final cacheKey = '${image.url}_${image.imageIdent}';
-    if (_widgetCache.containsKey(cacheKey)) {
-      return _widgetCache[cacheKey]!;
+    // 1. Zero Flicker Path: Check if HomeBloc already pre-rendered this image
+    final cachedImage = SmartCropper.getProcessedImage(image.imageIdent);
+    if (cachedImage != null) {
+      // Trigger capture if bytes are not yet cached (non-blocking)
+      if (SmartCropper.getRenderedBytes(image.imageIdent) == null) {
+        unawaited(Future.microtask(
+            () => _captureRenderedImage(cachedImage, image.imageIdent)));
+      }
+      return _buildSmartCroppedImageWidget(cachedImage);
     }
 
-    return FutureBuilder<Widget>(
-      future: _buildImageWidgetWithCache(image),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          // Show loading state during crop processing with optimized placeholder
-          return _buildPlaceholderWidget(image);
-        } else if (snapshot.hasError) {
-          debugPrint(
-              'Error building image widget for ${image.url}: ${snapshot.error}');
-          // Fallback to standard cropping on error
-          return _buildStandardImageWidget(image);
-        } else {
-          final widget = snapshot.data ?? _buildStandardImageWidget(image);
-          // Cache the built widget for reuse
-          _widgetCache[cacheKey] = widget;
-          return widget;
-        }
-      },
+    // 2. Transition Path: Show standard and fade in smart crop later
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Level 1: Standard BoxFit.cover image (always present)
+        _buildStandardImageWidget(image),
+
+        // Level 2: Smart cropped image (fades in when ready)
+        if (image.smartCropResult != null)
+          FutureBuilder<ui.Image>(
+            key: ValueKey(
+                '${image.url}_${image.smartCropResult!.bestCrop.strategy}'),
+            future: _loadAndCropImage(image),
+            builder: (context, snapshot) {
+              final bool isReady = snapshot.hasData;
+
+              // Double check if it got cached while we were waiting
+              if (isReady) {
+                SmartCropper.cacheProcessedImage(
+                    image.imageIdent, snapshot.data!);
+                // Trigger capture of the rendered image non-blockingly
+                if (SmartCropper.getRenderedBytes(image.imageIdent) == null) {
+                  unawaited(Future.microtask(() =>
+                      _captureRenderedImage(snapshot.data!, image.imageIdent)));
+                }
+              }
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  AnimatedOpacity(
+                    opacity: isReady ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeIn,
+                    child: isReady
+                        ? _buildSmartCroppedImageWidget(snapshot.data!)
+                        : const SizedBox.expand(),
+                  ),
+                  if (!isReady)
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white70),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+      ],
     );
   }
 
-  /// Build optimized placeholder widget
-  Widget _buildPlaceholderWidget(ImageItem image) {
-    return Container(
-      color: Colors.grey[900],
-      child: Stack(
-        children: [
-          // Low-quality placeholder image
-          Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(image.url),
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(
-                  Colors.black.withValues(alpha: 0.3),
-                  BlendMode.darken,
-                ),
-              ),
-            ),
-          ),
-          // Loading indicator
-          Container(
-            alignment: Alignment.center,
-            child: CircularProgressIndicator(
-              backgroundColor: Colors.black26,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-            ),
-          ),
-        ],
-      ),
+  Future<ui.Image> _loadAndCropImage(ImageItem image) async {
+    final result = image.smartCropResult!;
+    final sourceImage = await ImageUtils.loadImageFromUrl(image.url);
+    if (sourceImage == null) throw Exception('Failed to load source image');
+
+    final screenSize = ScreenUtils.getPhysicalScreenSize();
+    final targetSize = ScreenUtils.calculateTargetSize(
+      ui.Size(sourceImage.width.toDouble(), sourceImage.height.toDouble()),
+      screenSize.width / screenSize.height,
+      maxDimension: math.max(screenSize.width, screenSize.height).round(),
+    );
+
+    return await SmartCropper.applyCropAndResize(
+      sourceImage,
+      result.bestCrop,
+      targetSize,
     );
   }
 
-  /// Build image widget with caching and lazy loading optimization
-  Future<Widget> _buildImageWidgetWithCache(ImageItem image) async {
-    final cacheKey = '${image.url}_${image.imageIdent}';
-
-    // Vérifier d'abord le service de préchargement
-    final preloadedImage = _preloaderService.getProcessedImage(image);
-    if (preloadedImage != null) {
-      debugPrint('Utilisation image préchargée pour ${image.imageIdent}');
-      return _buildSmartCroppedImageWidget(preloadedImage);
-    }
-
-    // Vérifier si on a une image brute préchargée
-    final rawPreloadedImage = _preloaderService.getPreloadedImage(image);
-    if (rawPreloadedImage != null) {
-      debugPrint('Utilisation image brute préchargée pour ${image.imageIdent}');
-      // Traiter rapidement l'image préchargée
-      return _buildImageWidgetFromPreloaded(image, rawPreloadedImage);
-    }
-
-    // Check if we're already processing this image
-    if (_processingImages.contains(cacheKey)) {
-      // Wait a bit and return cached result if available
-      await Future.delayed(Duration(milliseconds: 100));
-      if (_imageCache.containsKey(cacheKey)) {
-        return _buildSmartCroppedImageWidget(_imageCache[cacheKey]!);
-      }
-    }
-
-    // Check if we have a cached processed image
-    if (_imageCache.containsKey(cacheKey)) {
-      return _buildSmartCroppedImageWidget(_imageCache[cacheKey]!);
-    }
-
-    // Mark as processing
-    _processingImages.add(cacheKey);
-
+  /// Captures the carousel render at physical screen resolution and caches the bytes.
+  ///
+  /// Replicates the exact same aspect-fit drawImageRect logic used in
+  /// [_SmartCroppedImagePainter.paint()] so the cached bytes are pixel-perfect
+  /// matches of what the user sees in the carousel.
+  Future<void> _captureRenderedImage(
+      ui.Image croppedImage, String imageIdent) async {
     try {
-      final result = await _buildImageWidget(image);
-      return result;
-    } finally {
-      _processingImages.remove(cacheKey);
-    }
-  }
-
-  Future<Widget> _buildImageWidget(ImageItem image) async {
-    try {
-      // Check if smart crop is enabled
-      final isSmartCropEnabled =
-          await SmartCropPreferences.isSmartCropEnabled();
-
-      if (!isSmartCropEnabled) {
-        // Use standard BoxFit.cover if smart crop is disabled
-        return _buildStandardImageWidget(image);
-      }
-
-      // Get crop settings and physical screen size (including system bars)
-      final cropSettings = await SmartCropPreferences.getCropSettings();
       final screenSize = ScreenUtils.getPhysicalScreenSize();
+      final width = screenSize.width;
+      final height = screenSize.height;
 
-      // Load the image for smart cropping
-      final sourceImage = await ImageUtils.loadImageFromUrl(image.url);
+      if (width <= 0 || height <= 0) return;
 
-      if (sourceImage == null) {
-        // Fallback to standard widget if image loading fails
-        return _buildStandardImageWidget(image);
+      // Replicate the aspect-fit logic from _SmartCroppedImagePainter.paint()
+      final imageAspectRatio = croppedImage.width / croppedImage.height;
+      final containerAspectRatio = width / height;
+
+      double drawWidth, drawHeight;
+      double offsetX = 0, offsetY = 0;
+
+      if (imageAspectRatio > containerAspectRatio) {
+        // Image is wider than container — fit to width, letterbox top/bottom
+        drawWidth = width;
+        drawHeight = drawWidth / imageAspectRatio;
+        offsetY = (height - drawHeight) / 2;
+      } else {
+        // Image is taller than container — fit to height, letterbox left/right
+        drawHeight = height;
+        drawWidth = drawHeight * imageAspectRatio;
+        offsetX = (width - drawWidth) / 2;
       }
 
-      // Calculate target size based on physical screen dimensions (including system bars)
-      final targetSize = ScreenUtils.calculateTargetSize(
-        ui.Size(sourceImage.width.toDouble(), sourceImage.height.toDouble()),
-        screenSize.width / screenSize.height,
-        maxDimension: screenSize.width > screenSize.height
-            ? screenSize.width.round()
-            : screenSize.height.round(),
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      // Fill background with black (letterbox bars)
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, width, height),
+        Paint()..color = const Color(0xFF000000),
       );
 
-      // Process image with smart crop
-      final result = await SmartCropper.processImage(
-        image.url,
-        sourceImage,
-        targetSize,
-        cropSettings,
-      );
+      final destRect = Rect.fromLTWH(offsetX, offsetY, drawWidth, drawHeight);
+      final srcRect = Rect.fromLTWH(
+          0, 0, croppedImage.width.toDouble(), croppedImage.height.toDouble());
 
-      if (result.success) {
-        // Cache the processed image for reuse
-        final cacheKey = '${image.url}_${image.imageIdent}';
-        _imageCache[cacheKey] = result.image;
+      canvas.drawImageRect(croppedImage, srcRect, destRect, Paint());
 
-        // Use the smart cropped image
-        return _buildSmartCroppedImageWidget(result.image);
-      } else {
-        // Fallback to standard cropping if smart crop fails
-        return _buildStandardImageWidget(image);
+      final picture = recorder.endRecording();
+      final renderedImage =
+          await picture.toImage(width.round(), height.round());
+
+      final byteData =
+          await renderedImage.toByteData(format: ui.ImageByteFormat.png);
+      renderedImage.dispose();
+
+      if (byteData != null) {
+        SmartCropper.cacheRenderedBytes(
+            imageIdent, byteData.buffer.asUint8List());
       }
     } catch (e) {
-      // Fallback to standard cropping on any error
-      debugPrint('Smart crop error for ${image.url}: $e');
-      return _buildStandardImageWidget(image);
+      // Non-blocking — silently ignore errors to avoid impacting carousel UX
+      debugPrint('_captureRenderedImage error for $imageIdent: $e');
     }
   }
 
   Widget _buildStandardImageWidget(ImageItem image) {
-    return Container(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: NetworkImage(image.url),
-          fit: BoxFit.cover,
+    return Image.network(
+      image.url,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: Colors.black87,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white54),
+              strokeWidth: 2,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) => Container(
+        color: Colors.black87,
+        child: const Center(
+          child: Icon(Icons.error_outline, color: Colors.white24, size: 48),
         ),
       ),
     );
-  }
-
-  /// Construit un widget à partir d'une image préchargée
-  Future<Widget> _buildImageWidgetFromPreloaded(
-      ImageItem image, ui.Image preloadedImage) async {
-    try {
-      final isSmartCropEnabled =
-          await SmartCropPreferences.isSmartCropEnabled();
-
-      if (!isSmartCropEnabled) {
-        return _buildSmartCroppedImageWidget(preloadedImage);
-      }
-
-      final cropSettings = await SmartCropPreferences.getCropSettings();
-      final screenSize = ScreenUtils.getPhysicalScreenSize();
-
-      final targetSize = ScreenUtils.calculateTargetSize(
-        ui.Size(
-            preloadedImage.width.toDouble(), preloadedImage.height.toDouble()),
-        screenSize.width / screenSize.height,
-        maxDimension: screenSize.width > screenSize.height
-            ? screenSize.width.round()
-            : screenSize.height.round(),
-      );
-
-      final result = await SmartCropper.processImage(
-        image.url,
-        preloadedImage,
-        targetSize,
-        cropSettings,
-      );
-
-      if (result.success) {
-        final cacheKey = '${image.url}_${image.imageIdent}';
-        _imageCache[cacheKey] = result.image;
-        return _buildSmartCroppedImageWidget(result.image);
-      } else {
-        return _buildSmartCroppedImageWidget(preloadedImage);
-      }
-    } catch (e) {
-      debugPrint('Erreur traitement image préchargée: $e');
-      return _buildSmartCroppedImageWidget(preloadedImage);
-    }
   }
 
   Widget _buildSmartCroppedImageWidget(ui.Image croppedImage) {
@@ -325,7 +299,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.childrenCount != _numOfTab) {
+    if (widget.childrenCount != _numOfTab || _pageController == null) {
       int oldIndex = _controller?.index ?? 0;
 
       // Clear cache when image list changes (e.g., date change)
@@ -333,10 +307,14 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
 
       _numOfTab = widget.childrenCount;
 
-      // Dispose old controller if it exists
+      // Dispose old controllers if they exist
       if (_controller != null) {
         _controller!.removeListener(this._onChange);
         _controller!.dispose();
+      }
+
+      if (_pageController != null) {
+        _pageController!.dispose();
       }
 
       _controller =
@@ -350,14 +328,26 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
       } else {
         _controller!.index = oldIndex;
       }
+
+      _pageController = PageController(initialPage: _controller!.index);
     }
-    return Stack(children: <Widget>[
-      TabBarView(
-        children: List<Widget>.generate(
-            widget.list.length, (i) => tabViewChild(widget.list[i])),
-        controller: this._controller,
-      ),
-    ]);
+
+    return PageView.builder(
+      controller: _pageController,
+      itemCount: widget.list.length,
+      onPageChanged: (index) {
+        // Sync TabController index when PageView changes
+        if (_controller!.index != index) {
+          _controller!.index = index;
+          // IMPORTANT: Manually notify listeners/parent of the index change
+          // This ensures HomeScreen.notifierIndex is updated for the Crop Info button
+          _onChange();
+        }
+      },
+      itemBuilder: (context, index) {
+        return tabViewChild(widget.list[index]);
+      },
+    );
   }
 }
 

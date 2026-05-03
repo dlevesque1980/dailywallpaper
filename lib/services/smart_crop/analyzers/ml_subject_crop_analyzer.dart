@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'dart:io' as io;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_subject_segmentation/google_mlkit_subject_segmentation.dart';
 
@@ -32,10 +33,13 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
   static const String _analyzerName = 'ml_subject_detection';
   static const int _analyzerPriority = 180;
   static const double _analyzerWeight = 0.85;
-  static const int _maxImageDimension = 512;
+  static const int _maxImageDimension = 256;
 
   @override
   double get minConfidenceThreshold => 0.4;
+
+  @override
+  bool get isEnabledByDefault => true;
 
   final MlSubjectCache _cache;
 
@@ -157,16 +161,21 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
       print('[ML] Starting segmentation for $imageUrl...');
       final result = await segmenter.processImage(inputImage);
 
-      // 4. Compute subject bounds from the foreground confidence mask.
-      final bounds = _computeSubjectBounds(
-        result.foregroundConfidenceMask,
-        resizedSize,
-      );
+      // 4. Compute subject bounds and confidence from the foreground confidence mask.
+      // Use compute() to offload the heavy double loop over 65k+ pixels to a worker isolate.
+      final detectionResult = await compute(_computeSubjectDetectionIsolate, {
+        'mask': result.foregroundConfidenceMask,
+        'width': resizedSize.width.toInt(),
+        'height': resizedSize.height.toInt(),
+      });
 
-      if (bounds == null) {
+      if (detectionResult == null) {
         print('[ML] No subject detected for $imageUrl');
         return _noDetectionScore(imageSize, targetAspectRatio);
       }
+
+      final bounds = detectionResult.bounds;
+      final confidence = detectionResult.confidence;
 
       print('[ML] Subject found at ${bounds.x}, ${bounds.y}');
 
@@ -175,7 +184,7 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
         await _cache.saveSubjectBounds(imageUrl, bounds);
       }
 
-      return _scoreFromBounds(bounds, imageSize, targetAspectRatio);
+      return _scoreFromBounds(bounds, imageSize, targetAspectRatio, confidence);
     } on PlatformException catch (e) {
       // ML Kit not available on this platform.
       print('[ML] PlatformException: ${e.message}');
@@ -203,23 +212,21 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
     // Artificial delay to simulate processing
     await Future.delayed(const Duration(milliseconds: 150));
 
+    // Simulation fallback: return a full-frame box (standard center crop)
+    // with a near-zero score so it only acts as an ultimate fallback
+    // and never overrides real CPU-based analyzers.
     final bounds = SubjectBounds(
-      x: 0.3,
-      y: 0.3,
-      width: 0.4,
-      height: 0.4,
+      x: 0.0,
+      y: 0.0,
+      width: 1.0,
+      height: 1.0,
     );
-
-    // Persist to cache so we don't simulate every time if caching is enabled
-    if (imageUrl != null) {
-      await _cache.saveSubjectBounds(imageUrl, bounds);
-    }
 
     final coords =
         _cropCoordinatesFromBounds(bounds, imageSize, targetAspectRatio);
     return CropScore(
       coordinates: coords,
-      score: 0.5, // Lower score for simulation
+      score: 0.1, // Very low score for simulation so real analyzers win
       strategy: 'ml_subject_simulation',
       metrics: {
         'subject_x': bounds.x,
@@ -262,7 +269,14 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
 
   /// Converts a [ui.Image] to an [InputImage] suitable for ML Kit.
   Future<InputImage> _toInputImage(ui.Image image) async {
+    // Yield to UI thread before heavy encoding
+    await Future.delayed(Duration.zero);
+    
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    
+    // Yield again after encoding
+    await Future.delayed(Duration.zero);
+    
     if (byteData == null) {
       throw StateError('Failed to encode image to PNG');
     }
@@ -276,105 +290,20 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
   }
 
   // ---------------------------------------------------------------------------
-  // Mask → bounds computation
-  // ---------------------------------------------------------------------------
-
-  /// Computes the bounding box of all foreground pixels (confidence > 0.5) in
-  /// [mask], normalised to [0.0, 1.0] relative to [imageSize].
-  ///
-  /// Also computes a density-weighted centroid so the crop is biased toward the
-  /// densest (most confident) region — the hero subject — rather than the
-  /// midpoint of the full cluster bounding box.
-  ///
-  /// Returns `null` when no foreground pixel is found.
-  SubjectBounds? _computeSubjectBounds(
-    List<double>? mask,
-    ui.Size imageSize,
-  ) {
-    if (mask == null || mask.isEmpty) return null;
-
-    final width = imageSize.width.toInt();
-    final height = imageSize.height.toInt();
-
-    if (mask.length != width * height) return null;
-
-    // --- Pass 1: global foreground bounding box ---
-    int minX = width, minY = height, maxX = 0, maxY = 0;
-    bool found = false;
-
-    // --- Density weighted centroid accumulators ---
-    double weightedSumX = 0.0;
-    double weightedSumY = 0.0;
-    double totalWeight = 0.0;
-
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        final confidence = mask[y * width + x];
-        if (confidence > 0.5) {
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
-          found = true;
-
-          // Accumulate weighted centroid (weight = confidence^2 to emphasise peaks)
-          final w = confidence * confidence;
-          weightedSumX += x * w;
-          weightedSumY += y * w;
-          totalWeight += w;
-        }
-      }
-    }
-
-    if (!found) return null;
-
-    // Normalised full bounds
-    final normMinX = minX / width;
-    final normMinY = minY / height;
-    final normMaxX = (maxX + 1) / width;
-    final normMaxY = (maxY + 1) / height;
-    final normBoundsW = normMaxX - normMinX;
-    final normBoundsH = normMaxY - normMinY;
-
-    // Density-weighted centroid (normalised)
-    final centroidX = totalWeight > 0 ? (weightedSumX / totalWeight) / width : normMinX + normBoundsW / 2;
-    final centroidY = totalWeight > 0 ? (weightedSumY / totalWeight) / height : normMinY + normBoundsH / 2;
-
-    // --- Pass 2: build a tighter bounds centred on the density peak ---
-    // Use a neighbourhood that is at most 60% of the full bounds width/height,
-    // clamped to [minX..maxX] / [minY..maxY].
-    // This cuts off distant outlier blossoms and focuses on the hero flower.
-    final halfW = math.min(normBoundsW / 2, normBoundsW * 0.60);
-    final halfH = math.min(normBoundsH / 2, normBoundsH * 0.60);
-
-    final tightMinX = math.max(normMinX, centroidX - halfW);
-    final tightMinY = math.max(normMinY, centroidY - halfH);
-    final tightMaxX = math.min(normMaxX, centroidX + halfW);
-    final tightMaxY = math.min(normMaxY, centroidY + halfH);
-
-    // Use the tighter bounds as the subject region so the crop centers on the hero
-    return SubjectBounds(
-      x: tightMinX,
-      y: tightMinY,
-      width: tightMaxX - tightMinX,
-      height: tightMaxY - tightMinY,
-    );
-  }
-
-  // ---------------------------------------------------------------------------
   // CropScore builders
   // ---------------------------------------------------------------------------
 
   CropScore _scoreFromBounds(
     SubjectBounds bounds,
     ui.Size imageSize,
-    double targetAspectRatio,
-  ) {
+    double targetAspectRatio, [
+    double confidence = 0.75, // Default base score for ML
+  ]) {
     final coords =
         _cropCoordinatesFromBounds(bounds, imageSize, targetAspectRatio);
     return CropScore(
       coordinates: coords,
-      score: 0.9,
+      score: confidence,
       strategy: _analyzerName,
       metrics: {
         'subject_x': bounds.x,
@@ -478,4 +407,116 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
         ? 1.0
         : imageAspectRatio / targetAspectRatio;
   }
+}
+
+/// Result of a subject detection pass
+class _DetectionResult {
+  final SubjectBounds bounds;
+  final double confidence;
+  _DetectionResult(this.bounds, this.confidence);
+}
+
+/// Top-level function for [compute] support.
+/// Computes the bounding box and a confidence score for the detected subject.
+_DetectionResult? _computeSubjectDetectionIsolate(Map<String, dynamic> params) {
+  final List<double>? mask = params['mask'];
+  final int width = params['width'];
+  final int height = params['height'];
+
+  if (mask == null || mask.isEmpty) return null;
+  if (mask.length != width * height) return null;
+
+  // --- Pass 1: global foreground bounding box ---
+  int minX = width, minY = height, maxX = 0, maxY = 0;
+  bool found = false;
+
+  // --- Density weighted centroid accumulators ---
+  double weightedSumX = 0.0;
+  double weightedSumY = 0.0;
+  double totalWeight = 0.0;
+  double sumConfidence = 0.0;
+  int foregroundPixels = 0;
+
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      final confidence = mask[y * width + x];
+      if (confidence > 0.5) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+        found = true;
+
+        // Accumulate weighted centroid (weight = confidence^2 to emphasise peaks)
+        final w = confidence * confidence;
+        weightedSumX += x * w;
+        weightedSumY += y * w;
+        totalWeight += w;
+        sumConfidence += confidence;
+        foregroundPixels++;
+      }
+    }
+  }
+
+  if (!found) return null;
+
+  // Normalised full bounds
+  final normMinX = minX / width;
+  final normMinY = minY / height;
+  final normMaxX = (maxX + 1) / width;
+  final normMaxY = (maxY + 1) / height;
+  final normBoundsW = normMaxX - normMinX;
+  final normBoundsH = normMaxY - normMinY;
+
+  // Density-weighted centroid (normalised)
+  final centroidX = totalWeight > 0
+      ? (weightedSumX / totalWeight) / width
+      : normMinX + normBoundsW / 2;
+  final centroidY = totalWeight > 0
+      ? (weightedSumY / totalWeight) / height
+      : normMinY + normBoundsH / 2;
+
+  // --- Pass 2: build a tighter bounds centred on the density peak ---
+  final halfW = math.min(normBoundsW / 2, normBoundsW * 0.60);
+  final halfH = math.min(normBoundsH / 2, normBoundsH * 0.60);
+
+  final tightMinX = math.max(normMinX, centroidX - halfW);
+  final tightMinY = math.max(normMinY, centroidY - halfH);
+  final tightMaxX = math.min(normMaxX, centroidX + halfW);
+  final tightMaxY = math.min(normMaxY, centroidY + halfH);
+
+  final bounds = SubjectBounds(
+    x: tightMinX,
+    y: tightMinY,
+    width: tightMaxX - tightMinX,
+    height: tightMaxY - tightMinY,
+  );
+
+  // --- Confidence Calculation ---
+  // 1. Average confidence of foreground pixels (base reliability)
+  final avgConfidence = sumConfidence / foregroundPixels;
+
+  // 2. Size score: prefer subjects between 5% and 50% of the image.
+  final area = normBoundsW * normBoundsH;
+  double sizeMultiplier = 1.0;
+  if (area < 0.01) {
+    sizeMultiplier = 0.3;
+  } else if (area < 0.04) {
+    sizeMultiplier = 0.7;
+  } else if (area > 0.85) {
+    sizeMultiplier = 0.6;
+  }
+
+  // 3. Centrality bias
+  double edgePenalty = 1.0;
+  bool touchesEdge =
+      normMinX < 0.01 || normMaxX > 0.99 || normMinY < 0.01 || normMaxY > 0.99;
+  if (touchesEdge) {
+    edgePenalty = area < 0.1 ? 0.7 : 0.9;
+  }
+
+  final finalConfidence =
+      (avgConfidence * sizeMultiplier * edgePenalty).clamp(0.0, 1.0);
+
+  return _DetectionResult(bounds, finalConfidence);
 }

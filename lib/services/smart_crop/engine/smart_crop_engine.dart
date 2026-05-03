@@ -292,6 +292,9 @@ class SmartCropEngine {
       for (final analyzer in analyzers) {
         if (completer.isCompleted) break;
 
+        // Yield to the UI thread before each analyzer to keep the spinner fluid
+        await Future.delayed(Duration.zero);
+
         // Check if we've exceeded timeout
         if (context.hasExceededTimeout) {
           final fallbackCrop = _createEnhancedFallbackCrop(
@@ -507,13 +510,13 @@ class SmartCropEngine {
         if (baseStrategy == 'ml_subject_detection' || baseStrategy == 'subject_detection') {
           switch (settings.aggressiveness) {
             case CropAggressiveness.conservative:
-              aggressivenessMultiplier = 1.3;
+              aggressivenessMultiplier = 1.0;
               break;
             case CropAggressiveness.balanced:
-              aggressivenessMultiplier = 1.4;
+              aggressivenessMultiplier = 1.1;
               break;
             case CropAggressiveness.aggressive:
-              aggressivenessMultiplier = 1.5;
+              aggressivenessMultiplier = 1.2;
               break;
           }
         }
@@ -537,9 +540,28 @@ class SmartCropEngine {
       }
     }
 
-    // Sort by weighted score and return the best
+    // Sort by weighted score
     weightedScores.sort((a, b) => b.score.compareTo(a.score));
-    return weightedScores.first.coordinates;
+
+    final bestCandidate = weightedScores.first;
+
+    // Stability consensus: check if we should prefer a safe center crop
+    // if the "smart" crop is only marginally better.
+    final centerCandidate = weightedScores.firstWhere(
+      (s) => s.strategy == 'center_weighted',
+      orElse: () => bestCandidate,
+    );
+
+    if (bestCandidate.strategy != 'center_weighted' &&
+        bestCandidate.score < centerCandidate.score * 1.15) {
+      // The "smart" improvement is too small to risk a potential bad jump/crop.
+      // Stick to the safe center weighting.
+      return centerCandidate.coordinates.copyWith(
+        strategy: '${centerCandidate.strategy}_consensus',
+      );
+    }
+
+    return bestCandidate.coordinates;
   }
 
   /// Creates an enhanced fallback crop using the fallback strategies system

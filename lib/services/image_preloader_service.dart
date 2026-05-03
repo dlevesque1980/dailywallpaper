@@ -50,12 +50,17 @@ class ImagePreloaderService {
       futures.add(_preloadSingleImage(imageItem, priority));
     }
 
-    // Attendre que les images prioritaires soient chargées
-    await Future.wait(futures.take(3)); // Les 3 premières priorités
-
-    // Continuer le chargement des autres en arrière-plan
-    if (futures.length > 3) {
-      unawaited(Future.wait(futures.skip(3)));
+    // Attendre que TOUTES les images soient chargées et traitées
+    // On traite les images de manière séquentielle pour ne pas saturer le thread UI
+    // et permettre au loader de continuer de tourner de façon fluide.
+    for (final entry in priorities.entries) {
+      // Yield BEFORE starting work on an image
+      await Future.delayed(Duration.zero);
+      
+      await _preloadSingleImage(entry.key, entry.value);
+      
+      // Yield AFTER working on an image
+      await Future.delayed(const Duration(milliseconds: 50));
     }
   }
 
@@ -105,10 +110,11 @@ class ImagePreloaderService {
       if (image != null) {
         _preloadedImages[cacheKey] = image;
 
-        // Démarrer le traitement smart crop en arrière-plan pour les images prioritaires
-        if (priority <= 3) {
-          unawaited(_preprocessImage(imageItem, image));
-        }
+        // Traiter le smart crop immédiatement pour garantir que l'image est prête
+        // Yield before preprocessing to allow UI updates
+        await Future.delayed(Duration.zero);
+        await _preprocessImage(imageItem, image);
+        await Future.delayed(Duration.zero);
       }
     } catch (e) {
       debugPrint('Erreur préchargement image ${imageItem.url}: $e');
@@ -179,7 +185,12 @@ class ImagePreloaderService {
         cropSettings,
       );
 
-      return result.success ? result.image : sourceImage;
+      if (result.success) {
+        // Essential: Populate the global processed cache so Carousel can see it
+        SmartCropper.cacheProcessedImage(imageItem.imageIdent, result.image);
+        return result.image;
+      }
+      return sourceImage;
     } catch (e) {
       debugPrint('Erreur smart crop ${imageItem.url}: $e');
       return sourceImage;

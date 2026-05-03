@@ -109,6 +109,76 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  void _showCropInfo(BuildContext context, ImageItem image) {
+    final result = image.smartCropResult;
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Analysis in progress...')),
+      );
+      return;
+    }
+
+    final crop = result.bestCrop;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Crop Analysis'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoRow('Strategy', crop.strategy),
+            _infoRow('Confidence', '${(crop.confidence * 100).toStringAsFixed(1)}%'),
+            _infoRow('Target Aspect', (crop.width / crop.height).toStringAsFixed(2)),
+            Divider(),
+            Text('Coordinates (Normalized)', style: TextStyle(fontWeight: FontWeight.bold)),
+            _infoRow('X / Y', '${crop.x.toStringAsFixed(3)} / ${crop.y.toStringAsFixed(3)}'),
+            _infoRow('W / H', '${crop.width.toStringAsFixed(3)} / ${crop.height.toStringAsFixed(3)}'),
+            if (crop.subjectBounds != null) ...[
+               Divider(),
+               Text('Subject Detection', style: TextStyle(fontWeight: FontWeight.bold)),
+               _infoRow('Bounds', '${crop.subjectBounds!.width.toStringAsFixed(2)}x${crop.subjectBounds!.height.toStringAsFixed(2)}'),
+            ]
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[600])),
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -136,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           systemNavigationBarIconBrightness: Brightness.light,
         ),
         child: Scaffold(
+            backgroundColor: Colors.black,
             extendBodyBehindAppBar: true,
             appBar: PreferredSize(
               preferredSize: Size.fromHeight(kToolbarHeight),
@@ -267,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 stream: homeBloc!.results,
                 initialData: homeBloc!.initialData(notifierIndex.value),
                 builder: (context, snapshot) {
-                  if (snapshot.hasData) {
+                  if (snapshot.hasData && snapshot.data!.list.isNotEmpty) {
                     // Check if current index is out of bounds and adjust if needed
                     if (notifierIndex.value >= snapshot.data!.list.length) {
                       // Schedule index correction after build
@@ -278,12 +349,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       });
                     }
 
-                    return Carousel(
-                      list: snapshot.data!.list,
-                      onChange: this._onChange,
+                    return Stack(
+                      children: [
+                        Carousel(
+                          list: snapshot.data!.list,
+                          onChange: this._onChange,
+                        ),
+                        // Analysis Info Button (Crop Info)
+                        Positioned(
+                          bottom: 24,
+                          left: 24,
+                          child: FloatingActionButton.small(
+                            heroTag: 'crop_info',
+                            backgroundColor: Colors.black.withValues(alpha: 0.4),
+                            elevation: 0,
+                            child: Icon(Icons.center_focus_strong, color: Colors.white70),
+                            onPressed: () {
+                              int safeIndex = notifierIndex.value;
+                              if (safeIndex < snapshot.data!.list.length) {
+                                _showCropInfo(context, snapshot.data!.list[safeIndex]);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     );
                   } else {
-                    return Center(child: CircularProgressIndicator());
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Optimizing wallpapers...',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Analyzing for the best crop',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   }
                 })));
   }
