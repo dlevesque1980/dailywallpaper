@@ -1,21 +1,25 @@
 import 'package:dailywallpaper/features/wallpaper/bloc/home_bloc.dart';
+import 'package:dailywallpaper/features/wallpaper/bloc/home_event.dart';
 import 'package:dailywallpaper/features/history/bloc/history_bloc.dart';
+import 'package:dailywallpaper/features/history/bloc/history_event.dart';
 import 'package:dailywallpaper/features/settings/bloc/settings_bloc.dart';
+import 'package:dailywallpaper/features/settings/bloc/settings_event.dart';
 import 'package:dailywallpaper/features/settings/bloc/pexels_categories_bloc.dart';
-import 'package:dailywallpaper/features/settings/bloc/settings_provider.dart';
-import 'package:dailywallpaper/features/history/bloc/history_provider.dart';
+import 'package:dailywallpaper/features/settings/bloc/pexels_categories_event.dart';
 import 'package:dailywallpaper/features/wallpaper/screens/home_screen.dart';
 import 'package:dailywallpaper/features/history/screens/history_screen.dart';
-import 'package:dailywallpaper/features/wallpaper/bloc/home_provider.dart';
 import 'package:dailywallpaper/features/settings/screens/simplified_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:dailywallpaper/l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Configure system UI overlay style globally - transparent pour voir le wallpaper
+  // Configure system UI overlay style globally
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Color.fromRGBO(0, 0, 0, 0.8),
     statusBarIconBrightness: Brightness.light,
@@ -24,48 +28,49 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  // Optionnel: Mode plein écran pour une expérience immersive maximale
+  // Full screen mode for maximum immersive experience
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   await dotenv.load(fileName: ".env");
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  Widget homeProvider() {
-    return HomeProvider(homeBloc: HomeBloc(), child: HomeScreen());
-  }
-
-  Widget settingsProvider() {
-    return SettingsProvider(
-      settingsBloc: SettingsBloc(),
-      pexelsCategoriesBloc: PexelsCategoriesBloc(),
-      child: SimplifiedSettingsScreen(),
-    );
-  }
-
-  Widget historyProvider() {
-    return HistoryProvider(
-      historyBloc: HistoryBloc(),
-      child: HistoryScreen(),
-    );
-  }
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    WidgetsFlutterBinding.ensureInitialized();
-
-    return MaterialApp(
-      initialRoute: '/',
-      routes: {
-        // When we navigate to the "/" route, build the FirstScreen Widget
-        '/': (context) => homeProvider(),
-        // When we navigate to the "/second" route, build the SecondScreen Widget
-        '/settings': (context) => settingsProvider(),
-        '/older': (context) => historyProvider(),
-      },
-      title: 'Daily Wallpaper',
-      theme: ThemeData(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<HomeBloc>(
+          create: (context) => HomeBloc()..add(const HomeEvent.started()),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const HomeScreen(),
+          '/settings': (context) => MultiBlocProvider(
+            providers: [
+              BlocProvider<SettingsBloc>(
+                create: (context) => SettingsBloc()..add(const SettingsEvent.started()),
+              ),
+              BlocProvider<PexelsCategoriesBloc>(
+                create: (context) => PexelsCategoriesBloc()..add(const PexelsCategoriesEvent.started()),
+              ),
+            ],
+            child: SimplifiedSettingsScreen(),
+          ),
+          '/older': (context) => BlocProvider<HistoryBloc>(
+            create: (context) => HistoryBloc()..add(const HistoryEvent.started()),
+            child: HistoryScreen(),
+          ),
+        },
+        title: 'Daily Wallpaper',
+        theme: ThemeData(),
+      ),
     );
   }
 }

@@ -1,0 +1,127 @@
+Resolving dependencies...
+Downloading packages...
+Failed to decode advisories for http from https://pub.dev.
+FormatException: advisoriesUpdated must be a String
+package:pub/src/source/hosted.dart 670                        HostedSource._extractAdvisoryDetailsForPackage
+package:pub/src/source/hosted.dart 622                        HostedSource._fetchAdvisories
+===== asynchronous gap ===========================
+package:pub/src/source/hosted.dart 839                        HostedSource._getAdvisories
+===== asynchronous gap ===========================
+package:pub/src/source/hosted.dart 1120                       HostedSource.getAdvisoriesForPackageVersion
+===== asynchronous gap ===========================
+package:pub/src/solver/report.dart 425                        SolveReport._reportPackage
+===== asynchronous gap ===========================
+package:pub/src/solver/report.dart 221                        SolveReport._reportChanges
+===== asynchronous gap ===========================
+package:pub/src/solver/report.dart 76                         SolveReport.show
+===== asynchronous gap ===========================
+package:pub/src/entrypoint.dart 642                           Entrypoint.acquireDependencies
+===== asynchronous gap ===========================
+package:pub/src/command/get.dart 79                           GetCommand.runProtected
+===== asynchronous gap ===========================
+dart:async/future_impl.dart 96                                _AsyncCompleter.complete
+===== asynchronous gap ===========================
+package:pub/src/command.dart 197                              PubCommand.run
+===== asynchronous gap ===========================
+package:args/command_runner.dart 236                          CommandRunner.runCommand
+===== asynchronous gap ===========================
+package:dartdev/dartdev.dart 265                              DartdevRunner.runCommand
+===== asynchronous gap ===========================
+package:dartdev/dartdev.dart 51                               runDartdev
+===== asynchronous gap ===========================
+/Volumes/Work/s/w/ir/x/w/sdk/pkg/dartdev/bin/dartdev.dart 13  main
+Failed to decode advisories for shared_preferences_android from https://pub.dev.
+FormatException: advisoriesUpdated must be a String
+package:pub/src/source/hosted.dart 670                        HostedSource._extractAdvisoryDetailsForPackage
+package:pub/src/source/hosted.dart 622                        HostedSource._fetchAdvisories
+===== asynchronous gap ===========================
+package:pub/src/source/hosted.dart 839                        HostedSource._getAdvisories
+===== asynchronous gap ===========================
+package:pub/src/source/hosted.dart 1120                       HostedSource.getAdvisoriesForPackageVersion
+===== asynchronous gap ===========================
+package:pub/src/solver/report.dart 425                        SolveReport._reportPackage
+===== asynchronous gap ===========================
+package:pub/src/solver/report.dart 221                        SolveReport._reportChanges
+===== asynchronous gap ===========================
+package:pub/src/solver/report.dart 76                         SolveReport.show
+===== asynchronous gap ===========================
+package:pub/src/entrypoint.dart 642                           Entrypoint.acquireDependencies
+===== asynchronous gap ===========================
+package:pub/src/command/get.dart 79                           GetCommand.runProtected
+===== asynchronous gap ===========================
+dart:async/future_impl.dart 96                                _AsyncCompleter.complete
+===== asynchronous gap ===========================
+package:pub/src/command.dart 197                              PubCommand.run
+===== asynchronous gap ===========================
+package:args/command_runner.dart 236                          CommandRunner.runCommand
+===== asynchronous gap ===========================
+package:dartdev/dartdev.dart 265                              DartdevRunner.runCommand
+===== asynchronous gap ===========================
+package:dartdev/dartdev.dart 51                               runDartdev
+===== asynchronous gap ===========================
+/Volumes/Work/s/w/ir/x/w/sdk/pkg/dartdev/bin/dartdev.dart 13  main
+  _fe_analyzer_shared 93.0.0 (100.0.0 available)
+  analyzer 10.0.1 (13.0.0 available)
+  build_runner 2.14.1 (2.15.0 available)
+  built_value 8.12.5 (8.12.6 available)
+  built_value_generator 8.12.5 (8.12.6 available)
+  dart_style 3.1.7 (3.1.9 available)
+  device_info_plus 10.1.2 (13.1.0 available)
+  device_info_plus_platform_interface 7.0.3 (8.1.0 available)
+  flutter_dotenv 5.2.1 (6.0.1 available)
+  fluttertoast 8.2.14 (9.0.0 available)
+  json_serializable 6.13.1 (6.13.2 available)
+  matcher 0.12.19 (0.12.20 available)
+  meta 1.17.0 (1.18.2 available)
+  native_toolchain_c 0.17.6 (0.18.0 available)
+  test 1.30.0 (1.31.1 available)
+  test_api 0.7.10 (0.7.12 available)
+  test_core 0.6.16 (0.6.18 available)
+  vector_math 2.2.0 (2.3.0 available)
+  win32 5.15.0 (6.1.0 available)
+  win32_registry 1.1.5 (3.0.3 available)
+Got dependencies!
+20 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing dailywallpaper...                                     
+
+warning • The URI 'package:flutter_lints/flutter.yaml' included in '/Users/didierlevesque/Projects/dailywallpaper/analysis_options.yaml' can't be found when analyzing '/Users/didierlevesque/Projects/dailywallpaper' • analysis_options.yaml:10:10 • include_file_not_found
+warning • The declaration '_$BingImageToJson' isn't referenced • lib/data/models/bing/bing_image.g.dart:25:22 • unused_element
+warning • The declaration '_$BingImagesToJson' isn't referenced • lib/data/models/bing/bing_images.g.dart:15:22 • unused_element
+  error • Target of URI doesn't exist: 'package:dailywallpaper/features/settings/bloc/settings_provider.dart' • lib/features/settings/screens/settings_screen.dart:3:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'package:dailywallpaper/widgets/bing_region_image_setting.dart' • lib/features/settings/screens/settings_screen.dart:7:8 • uri_does_not_exist
+  error • The method 'dispose' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:54:18 • undefined_method
+  error • The method 'dispose' isn't defined for the type 'PexelsCategoriesBloc' • lib/features/settings/screens/settings_screen.dart:55:26 • undefined_method
+  error • The getter 'thumbnailQuery' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:73:56 • undefined_getter
+  error • The getter 'thumbnail' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:74:34 • undefined_getter
+  error • The method 'BingImageRegionSetting' isn't defined for the type '_LegacySettingsScreenState' • lib/features/settings/screens/settings_screen.dart:83:34 • undefined_method
+  error • Undefined name 'SettingsProvider' • lib/features/settings/screens/settings_screen.dart:106:20 • undefined_identifier
+  error • Undefined name 'SettingsProvider' • lib/features/settings/screens/settings_screen.dart:107:28 • undefined_identifier
+  error • The getter 'lockQuery' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:130:61 • undefined_getter
+  error • The getter 'includeLock' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:131:40 • undefined_getter
+  error • The getter 'lockQuery' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:149:68 • undefined_getter
+  error • The getter 'regions' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:158:40 • undefined_getter
+  error • The getter 'regionQuery' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:159:61 • undefined_getter
+  error • The getter 'categoriesQuery' isn't defined for the type 'PexelsCategoriesBloc' • lib/features/settings/screens/settings_screen.dart:202:44 • undefined_getter
+  error • The getter 'categories' isn't defined for the type 'PexelsCategoriesBloc' • lib/features/settings/screens/settings_screen.dart:203:48 • undefined_getter
+  error • The getter 'availableCategories' isn't defined for the type 'PexelsCategoriesState' • lib/features/settings/screens/settings_screen.dart:214:49 • undefined_getter
+  error • The getter 'categoriesQuery' isn't defined for the type 'PexelsCategoriesBloc' • lib/features/settings/screens/settings_screen.dart:230:52 • undefined_getter
+  error • The getter 'smartCropEnabledQuery' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:255:36 • undefined_getter
+  error • The getter 'smartCropEnabled' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:256:40 • undefined_getter
+  error • The getter 'smartCropEnabledQuery' isn't defined for the type 'SettingsBloc' • lib/features/settings/screens/settings_screen.dart:278:42 • undefined_getter
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' • lib/services/smart_crop/analyzers/edge_detection_crop_analyzer.dart:3:8 • unnecessary_import
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' • lib/services/smart_crop/analyzers/entropy_based_crop_analyzer.dart:3:8 • unnecessary_import
+warning • The name SubjectResultOptions is shown, but isn't used • lib/services/smart_crop/analyzers/ml_subject_crop_analyzer.dart:9:96 • unused_shown_name
+warning • The library 'package:google_mlkit_subject_segmentation/google_mlkit_subject_segmentation.dart' doesn't export a member with the shown name 'SubjectBounds' • lib/services/smart_crop/analyzers/ml_subject_crop_analyzer.dart:9:118 • undefined_shown_name
+warning • The name SubjectSegmentationResult is shown, but isn't used • lib/services/smart_crop/analyzers/ml_subject_crop_analyzer.dart:9:145 • unused_shown_name
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' • lib/services/smart_crop/analyzers/subject_detection_crop_analyzer.dart:3:8 • unnecessary_import
+warning • The value of the local variable 'absSubjectBoundsPadded' isn't used • lib/services/smart_crop/utils/subject_fit_checker.dart:66:11 • unused_local_variable
+  error • The getter 'wallpaper' isn't defined for the type 'HomeBloc' • lib/widgets/buttonstate.dart:27:42 • undefined_getter
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/widgets/smart_crop_quality_slider.dart:304:19 • deprecated_member_use
+warning • Unused import: 'package:dailywallpaper/services/smart_crop/registry/analyzer_registry.dart' • tool/crop_inspector.dart:6:8 • unused_import
+warning • Unused import: 'package:dailywallpaper/services/smart_crop/analyzers/landscape_aware_crop_analyzer.dart' • tool/crop_inspector.dart:7:8 • unused_import
+warning • Unused import: 'package:dailywallpaper/services/smart_crop/analyzers/subject_detection_crop_analyzer.dart' • tool/crop_inspector.dart:8:8 • unused_import
+warning • The operand can't be 'null', so the condition is always 'true' • tool/crop_inspector.dart:103:34 • unnecessary_null_comparison
+warning • The '!' will have no effect because the receiver can't be null • tool/crop_inspector.dart:104:54 • unnecessary_non_null_assertion
+
+38 issues found. (ran in 2.5s)

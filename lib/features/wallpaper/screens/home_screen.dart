@@ -1,23 +1,25 @@
 import 'package:dailywallpaper/features/wallpaper/bloc/home_bloc.dart';
-import 'package:dailywallpaper/features/wallpaper/bloc/home_provider.dart';
+import 'package:dailywallpaper/features/wallpaper/bloc/home_event.dart';
+import 'package:dailywallpaper/features/wallpaper/bloc/home_state.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/widgets/carousel.dart';
 import 'package:dailywallpaper/widgets/wallpaper_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_html/flutter_html.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:dailywallpaper/l10n/app_localizations.dart';
+import 'package:dailywallpaper/widgets/crop_info_dialog.dart';
+import 'package:dailywallpaper/widgets/image_info_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
-  HomeScreen() : super(key: const Key('__homeScreen__'));
+  const HomeScreen({Key? key}) : super(key: key);
   @override
-  _HomeScreenState createState() => new _HomeScreenState();
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  ValueNotifier<int> notifierIndex = new ValueNotifier(0);
-  HomeBloc? homeBloc;
-  Stream<String>? wallpaperMessage;
+  final ValueNotifier<int> _currentIndex = ValueNotifier(0);
 
   @override
   void initState() {
@@ -26,173 +28,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeDependencies() {
-    if (homeBloc == null) {
-      homeBloc = HomeProvider.of(context);
-    }
-    super.didChangeDependencies();
-  }
-
-  @override
   void dispose() {
+    _currentIndex.dispose();
     WidgetsBinding.instance.removeObserver(this);
-    homeBloc?.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Handle app lifecycle changes if needed
-  }
-
   void _onChange(int index, bool refresh) {
-    // Only update if not during build
+    if (_currentIndex.value != index) {
+      _currentIndex.value = index;
+    }
     if (refresh) {
-      // Defer setState to avoid calling during build
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          setState(() {
-            // Refresh the UI when needed
-          });
+          setState(() {});
         }
       });
     } else {
-      // Safe to update index immediately for normal tab changes
-      if (notifierIndex.value != index) {
-        notifierIndex.value = index;
-        // Notifier le HomeBloc du changement d'index pour le préchargement
-        homeBloc?.onIndexChanged(index);
-      }
+      context.read<HomeBloc>().add(HomeEvent.indexChanged(index));
     }
   }
 
   void _showImageInfo(BuildContext context, ImageItem image) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  image.description,
-                  style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 16.0),
-                Html(
-                  data: image.copyright,
-                  style: {
-                    "body": Style(
-                      fontSize: FontSize(15.0),
-                      margin: Margins.zero,
-                      padding: HtmlPaddings.zero,
-                    ),
-                    "a": Style(
-                      color: Colors.blue,
-                      textDecoration: TextDecoration.underline,
-                    ),
-                  },
-                  onLinkTap: (url, attributes, element) async {
-                    if (url != null) {
-                      await _launchUrl(url);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (BuildContext context) => ImageInfoBottomSheet(image: image),
     );
   }
 
   void _showCropInfo(BuildContext context, ImageItem image) {
-    final result = image.smartCropResult;
-    if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Analysis in progress...')),
-      );
-      return;
-    }
-
-    final crop = result.bestCrop;
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.auto_awesome, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('Crop Analysis'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _infoRow('Strategy', crop.strategy),
-            _infoRow('Confidence', '${(crop.confidence * 100).toStringAsFixed(1)}%'),
-            _infoRow('Target Aspect', (crop.width / crop.height).toStringAsFixed(2)),
-            Divider(),
-            Text('Coordinates (Normalized)', style: TextStyle(fontWeight: FontWeight.bold)),
-            _infoRow('X / Y', '${crop.x.toStringAsFixed(3)} / ${crop.y.toStringAsFixed(3)}'),
-            _infoRow('W / H', '${crop.width.toStringAsFixed(3)} / ${crop.height.toStringAsFixed(3)}'),
-            if (crop.subjectBounds != null) ...[
-               Divider(),
-               Text('Subject Detection', style: TextStyle(fontWeight: FontWeight.bold)),
-               _infoRow('Bounds', '${crop.subjectBounds!.width.toStringAsFixed(2)}x${crop.subjectBounds!.height.toStringAsFixed(2)}'),
-            ]
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('CLOSE'),
-          ),
-        ],
-      ),
+      builder: (context) => CropInfoDialog(image: image),
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(color: Colors.grey[600])),
-          const SizedBox(width: 16),
-          Flexible(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _launchUrl(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(
-        uri,
-        mode: LaunchMode.inAppBrowserView,
-        browserConfiguration: const BrowserConfiguration(
-          showTitle: true,
-        ),
-      );
-    } else {
-      // Fallback to external browser if in-app browser fails
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  String _translateMessage(BuildContext context, String message) {
+    final l10n = AppLocalizations.of(context)!;
+    if (message == 'wallpaperSetSuccess') return l10n.wallpaperSetSuccess;
+    if (message.startsWith('failedToSetWallpaper')) {
+      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      return '${l10n.failedToSetWallpaper}$detail';
     }
+    if (message.startsWith('failedToFetchWallpapers')) {
+      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      return '${l10n.failedToFetchWallpapers}$detail';
+    }
+    if (message.startsWith('failedToRefreshWallpapers')) {
+      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      return '${l10n.failedToRefreshWallpapers}$detail';
+    }
+    return message;
   }
 
   @override
@@ -209,198 +95,208 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             backgroundColor: Colors.black,
             extendBodyBehindAppBar: true,
             appBar: PreferredSize(
-              preferredSize: Size.fromHeight(kToolbarHeight),
-              child: ValueListenableBuilder(
-                valueListenable: notifierIndex,
-                builder: (context, value, child) {
-                  return StreamBuilder(
-                    stream: homeBloc!.results,
-                    builder: (context, snapshot) {
-                      String title = "Daily Wallpaper";
-                      if (snapshot.hasData && snapshot.data!.list.isNotEmpty) {
-                        // Ensure index is within bounds
-                        int safeIndex = notifierIndex.value;
-                        if (safeIndex >= snapshot.data!.list.length) {
-                          safeIndex = snapshot.data!.list.length - 1;
-                        }
-                        title = snapshot.data!.list[safeIndex].source;
-                      }
+              preferredSize: const Size.fromHeight(kToolbarHeight),
+              child: BlocBuilder<HomeBloc, HomeState>(
+                builder: (context, state) {
+                  String title = AppLocalizations.of(context)!.appTitle;
+                  state.mapOrNull(loaded: (loadedState) {
+                    if (loadedState.list.isNotEmpty) {
+                      title = loadedState.list[loadedState.imageIndex].source;
+                    }
+                  });
 
-                      return AppBar(
-                        title: Text(
-                          title,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(1.0, 1.0),
-                                blurRadius: 3.0,
-                                color: Colors.black.withValues(alpha: 0.5),
-                              ),
-                            ],
-                          ),
-                        ),
-                        backgroundColor: Colors.transparent,
-                        elevation: 0.0,
-                        actions: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.info_outline,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(1.0, 1.0),
-                                  blurRadius: 3.0,
-                                  color: Colors.black.withValues(alpha: 0.5),
-                                ),
-                              ],
-                            ),
-                            onPressed: () {
-                              if (snapshot.hasData &&
-                                  snapshot.data!.list.isNotEmpty) {
-                                // Ensure index is within bounds
-                                int safeIndex = notifierIndex.value;
-                                if (safeIndex >= snapshot.data!.list.length) {
-                                  safeIndex = snapshot.data!.list.length - 1;
-                                }
-                                _showImageInfo(
-                                    context, snapshot.data!.list[safeIndex]);
-                              }
-                            },
-                          ),
-                          PopupMenuButton<String>(
-                            onSelected: (choice) {
-                              if (choice == '/settings') {
-                                // Navigate to settings with callback when returning
-                                Navigator.pushNamed(context, choice).then((_) {
-                                  // This will be called when returning from settings (including swipe back)
-                                  print(
-                                      'Returned from settings, refreshing...');
-                                  homeBloc?.refresh();
-                                });
-                              } else {
-                                Navigator.pushNamed(context, choice);
-                              }
-                            },
-                            icon: Icon(
-                              Icons.more_vert,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(1.0, 1.0),
-                                  blurRadius: 3.0,
-                                  color: Colors.black.withValues(alpha: 0.5),
-                                ),
-                              ],
-                            ),
-                            itemBuilder: (BuildContext context) =>
-                                <PopupMenuItem<String>>[
-                              PopupMenuItem<String>(
-                                value: '/settings',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.settings, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('Settings'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: '/older',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.history, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('History'),
-                                  ],
-                                ),
-                              ),
-                            ],
+                  return AppBar(
+                    title: Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                        shadows: [
+                          Shadow(
+                            offset: const Offset(1.0, 1.0),
+                            blurRadius: 3.0,
+                            color: Colors.black.withValues(alpha: 0.5),
                           ),
                         ],
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-            floatingActionButton: ValueListenableBuilder(
-                valueListenable: notifierIndex,
-                builder: (context, value, child) {
-                  return WallpaperButton(
-                    onPressed: () =>
-                        homeBloc!.setWallpaper.add(notifierIndex.value),
-                    wallpaperStream: homeBloc!.wallpaper,
-                  );
-                }),
-            body: StreamBuilder(
-                stream: homeBloc!.results,
-                initialData: homeBloc!.initialData(notifierIndex.value),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data!.list.isNotEmpty) {
-                    // Check if current index is out of bounds and adjust if needed
-                    if (notifierIndex.value >= snapshot.data!.list.length) {
-                      // Schedule index correction after build
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          notifierIndex.value = snapshot.data!.list.length - 1;
-                        }
-                      });
-                    }
-
-                    return Stack(
-                      children: [
-                        Carousel(
-                          list: snapshot.data!.list,
-                          onChange: this._onChange,
+                      ),
+                    ),
+                    backgroundColor: Colors.transparent,
+                    elevation: 0.0,
+                    actions: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.info_outline,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              offset: const Offset(1.0, 1.0),
+                              blurRadius: 3.0,
+                              color: Colors.black.withValues(alpha: 0.5),
+                            ),
+                          ],
                         ),
-                        // Analysis Info Button (Crop Info)
-                        Positioned(
-                          bottom: 24,
-                          left: 24,
-                          child: FloatingActionButton.small(
-                            heroTag: 'crop_info',
-                            backgroundColor: Colors.black.withValues(alpha: 0.4),
-                            elevation: 0,
-                            child: Icon(Icons.center_focus_strong, color: Colors.white70),
-                            onPressed: () {
-                              int safeIndex = notifierIndex.value;
-                              if (safeIndex < snapshot.data!.list.length) {
-                                _showCropInfo(context, snapshot.data!.list[safeIndex]);
+                        onPressed: () {
+                          state.mapOrNull(loaded: (loadedState) {
+                            if (loadedState.list.isNotEmpty) {
+                              _showImageInfo(context, loadedState.list[_currentIndex.value]);
+                            }
+                          });
+                        },
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (choice) {
+                          if (choice == '/settings') {
+                            Navigator.pushNamed(context, choice).then((_) {
+                              context.read<HomeBloc>().add(const HomeEvent.refreshRequested());
+                            });
+                          } else if (choice == 'crop_info') {
+                            state.mapOrNull(loaded: (loadedState) {
+                              if (loadedState.list.isNotEmpty) {
+                                _showCropInfo(context, loadedState.list[_currentIndex.value]);
                               }
-                            },
-                          ),
+                            });
+                          } else {
+                            Navigator.pushNamed(context, choice);
+                          }
+                        },
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              offset: const Offset(1.0, 1.0),
+                              blurRadius: 3.0,
+                              color: Colors.black.withValues(alpha: 0.5),
+                            ),
+                          ],
                         ),
-                      ],
-                    );
-                  } else {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text(
-                            'Optimizing wallpapers...',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                              letterSpacing: 1.2,
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuItem<String>>[
+                          PopupMenuItem<String>(
+                            value: 'crop_info',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.center_focus_strong, size: 20),
+                                const SizedBox(width: 8),
+                                Text(AppLocalizations.of(context)!.cropAnalysis),
+                              ],
                             ),
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Analyzing for the best crop',
-                            style: TextStyle(
-                              color: Colors.white38,
-                              fontSize: 12,
+                          PopupMenuItem<String>(
+                            value: '/settings',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.settings, size: 20),
+                                const SizedBox(width: 8),
+                                Text(AppLocalizations.of(context)!.settings),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: '/older',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.history, size: 20),
+                                const SizedBox(width: 8),
+                                Text(AppLocalizations.of(context)!.history),
+                              ],
                             ),
                           ),
                         ],
                       ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            floatingActionButton: BlocConsumer<HomeBloc, HomeState>(
+              listenWhen: (previous, current) {
+                return current.mapOrNull(
+                  loaded: (curr) {
+                    final prev = previous.mapOrNull(loaded: (p) => p);
+                    return prev != null && 
+                           curr.wallpaperMessage != null && 
+                           curr.wallpaperMessage != prev.wallpaperMessage;
+                  }
+                ) ?? false;
+              },
+              listener: (context, state) {
+                state.mapOrNull(loaded: (loadedState) {
+                  if (loadedState.wallpaperMessage != null) {
+                    Fluttertoast.showToast(
+                      msg: _translateMessage(context, loadedState.wallpaperMessage!),
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
                     );
                   }
+                });
+              },
+              builder: (context, state) {
+                bool isSetting = false;
+                bool isSuccess = false;
+
+                state.mapOrNull(loaded: (loadedState) {
+                  isSetting = loadedState.isSettingWallpaper;
+                  isSuccess = loadedState.wallpaperMessage != null && 
+                             (loadedState.wallpaperMessage == 'wallpaperSetSuccess');
+                });
+
+                return WallpaperButton(
+                  onPressed: () {
+                    context.read<HomeBloc>().add(const HomeEvent.wallpaperUpdateRequested());
+                  },
+                  isSettingWallpaper: isSetting,
+                  isSuccess: isSuccess,
+                );
+              },
+            ),
+            body: BlocBuilder<HomeBloc, HomeState>(
+                builder: (context, state) {
+                  return state.map(
+                    initial: (_) => _buildLoadingState(),
+                    loading: (_) => _buildLoadingState(),
+                    loaded: (loadedState) {
+                      if (loadedState.list.isNotEmpty) {
+                        return Carousel(
+                          list: loadedState.list,
+                          onChange: _onChange,
+                        );
+                      } else {
+                        return Center(child: Text(AppLocalizations.of(context)!.noWallpapersFound, style: const TextStyle(color: Colors.white)));
+                      }
+                    },
+                    error: (errorState) => Center(
+                      child: Text(_translateMessage(context, errorState.message), style: const TextStyle(color: Colors.red)),
+                    ),
+                  );
                 })));
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(
+            AppLocalizations.of(context)!.optimizingWallpapers,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            AppLocalizations.of(context)!.analyzingForCrop,
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

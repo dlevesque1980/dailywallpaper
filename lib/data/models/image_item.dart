@@ -21,17 +21,27 @@ class ImageItem {
     copyright = map["Copyright"]!;
   }
 
-  /// Create a copy of this ImageItem with an updated crop result
-  ImageItem copyWith({CropResult? smartCropResult}) {
+  /// Create a copy of this ImageItem with updated fields
+  ImageItem copyWith({
+    String? source,
+    String? url,
+    String? description,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? imageIdent,
+    String? triggerUrl,
+    String? copyright,
+    CropResult? smartCropResult,
+  }) {
     final item = ImageItem(
-      source,
-      url,
-      description,
-      startTime,
-      endTime,
-      imageIdent,
-      triggerUrl,
-      copyright,
+      source ?? this.source,
+      url ?? this.url,
+      description ?? this.description,
+      startTime ?? this.startTime,
+      endTime ?? this.endTime,
+      imageIdent ?? this.imageIdent,
+      triggerUrl ?? this.triggerUrl,
+      copyright ?? this.copyright,
     );
     item.smartCropResult = smartCropResult ?? this.smartCropResult;
     return item;

@@ -21,6 +21,14 @@ class CropScore {
     required this.metrics,
   });
 
+  /// Factory for an empty score
+  factory CropScore.empty(String strategy) => CropScore(
+    coordinates: CropCoordinates.empty(strategy),
+    score: 0.0,
+    strategy: strategy,
+    metrics: const {},
+  );
+
   /// Creates a copy with modified values
   CropScore copyWith({
     CropCoordinates? coordinates,

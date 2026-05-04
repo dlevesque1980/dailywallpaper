@@ -1,11 +1,12 @@
 import 'dart:async';
 
+import 'package:dailywallpaper/core/database/image_storage.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/core/utils/datetime_helper.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-class DatabaseHelper {
+class DatabaseHelper implements ImageStorage {
   static final DatabaseHelper _instance = new DatabaseHelper.internal();
   factory DatabaseHelper() => _instance;
 

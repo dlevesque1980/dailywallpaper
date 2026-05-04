@@ -1,25 +1,20 @@
-class PexelsCategoriesState {
-  final List<String> _availableCategories;
-  final List<String> _selectedCategories;
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 
-  List<String> get availableCategories => _availableCategories;
-  List<String> get selectedCategories => _selectedCategories;
+part 'pexels_categories_state.freezed.dart';
 
-  PexelsCategoriesState(this._availableCategories, this._selectedCategories);
+@freezed
+sealed class PexelsCategoriesState with _$PexelsCategoriesState {
+  const factory PexelsCategoriesState({
+    required List<String> allCategories,
+    required List<String> selectedCategories,
+    @Default(false) bool isLoading,
+    String? error,
+  }) = _PexelsCategoriesState;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PexelsCategoriesState &&
-          runtimeType == other.runtimeType &&
-          _availableCategories == other._availableCategories &&
-          _selectedCategories == other._selectedCategories;
-
-  @override
-  int get hashCode => _availableCategories.hashCode ^ _selectedCategories.hashCode;
-
-  @override
-  String toString() {
-    return 'PexelsCategoriesState{availableCategories: $_availableCategories, selectedCategories: $_selectedCategories}';
-  }
+  factory PexelsCategoriesState.initial() => PexelsCategoriesState(
+        allCategories: defaultPexelsCategories,
+        selectedCategories: defaultPexelsCategories.take(3).toList(),
+        isLoading: true,
+      );
 }
