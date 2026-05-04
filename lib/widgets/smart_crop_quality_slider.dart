@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dailywallpaper/services/smart_crop/smart_crop_profile_manager.dart';
-import 'package:dailywallpaper/services/smart_crop/smart_crop_preferences.dart';
+import 'package:dailywallpaper/l10n/app_localizations.dart';
 
 /// Custom slider widget for Smart Crop quality selection
 ///
@@ -15,11 +15,19 @@ class SmartCropQualitySlider extends StatefulWidget {
 
   /// Whether the slider is enabled
   final bool enabled;
+  
+  /// Subject scaling enabled
+  final bool subjectScalingEnabled;
+  
+  /// Callback when scaling toggled
+  final Function(bool value) onScalingToggled;
 
   const SmartCropQualitySlider({
     Key? key,
     required this.currentLevel,
     required this.onLevelChanged,
+    required this.subjectScalingEnabled,
+    required this.onScalingToggled,
     this.enabled = true,
   }) : super(key: key);
 
@@ -30,8 +38,6 @@ class SmartCropQualitySlider extends StatefulWidget {
 class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
   late int _currentLevel;
   bool _isChanging = false;
-  bool _subjectScalingEnabled = true;
-  bool _isLoadingScaling = true;
 
   /// Colors for each quality level
   static const Map<int, Color> _levelColors = {
@@ -53,17 +59,6 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
   void initState() {
     super.initState();
     _currentLevel = widget.currentLevel.clamp(0, 3);
-    _loadScalingPreference();
-  }
-
-  Future<void> _loadScalingPreference() async {
-    final settings = await SmartCropPreferences.getCropSettings();
-    if (mounted) {
-      setState(() {
-        _subjectScalingEnabled = settings.enableSubjectScaling;
-        _isLoadingScaling = false;
-      });
-    }
   }
 
   @override
@@ -80,8 +75,11 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
   Color get _currentColor => _levelColors[_currentLevel] ?? Colors.grey;
 
   /// Gets the current level description
-  String get _currentDescription =>
-      SmartCropProfileManager.getLevelDescription(_currentLevel);
+  String _getCurrentDescription(BuildContext context) {
+     // Ideally, these should be in AppLocalizations too, but they are in ProfileManager for now.
+     // We will leave them there but we could localize them later.
+     return SmartCropProfileManager.getLevelDescription(_currentLevel);
+  }
 
   /// Handles slider value change
   void _onSliderChanged(double value) {
@@ -95,28 +93,11 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
   }
 
   /// Handles slider change end - applies the new level
-  Future<void> _onSliderChangeEnd(double value) async {
+  void _onSliderChangeEnd(double value) {
     final newLevel = value.round().clamp(0, 3);
 
     if (newLevel != widget.currentLevel) {
-      try {
-        await SmartCropProfileManager.setSmartCropLevel(newLevel);
-        widget.onLevelChanged(newLevel);
-      } catch (e) {
-        // Revert to previous level on error
-        setState(() {
-          _currentLevel = widget.currentLevel;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to update Smart Crop level: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+      widget.onLevelChanged(newLevel);
     }
 
     setState(() {
@@ -124,17 +105,10 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
     });
   }
 
-  Future<void> _onSubjectScalingToggled(bool value) async {
-    setState(() {
-      _subjectScalingEnabled = value;
-    });
-    
-    final settings = await SmartCropPreferences.getCropSettings();
-    await SmartCropPreferences.setCropSettings(settings.copyWith(enableSubjectScaling: value));
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -272,7 +246,7 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
 
                     // Description
                     Text(
-                      _currentDescription,
+                      _getCurrentDescription(context),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.grey[600],
                             height: 1.3,
@@ -283,23 +257,23 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
               ),
               
               // Subject scaling toggle
-              if (!_isLoadingScaling && _currentLevel > 0)
+              if (_currentLevel > 0)
                 SwitchListTile(
                   title: Text(
-                    'Zoom auto pour préserver le sujet',
+                    'Zoom auto pour préserver le sujet', // TODO: Localize
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                   ),
                   subtitle: Text(
-                    "Si le sujet principal est trop grand pour le cadre, zoom arrière pour l'inclure entièrement.",
+                    "Si le sujet principal est trop grand pour le cadre, zoom arrière pour l'inclure entièrement.", // TODO: Localize
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[600],
                           height: 1.3,
                         ),
                   ),
-                  value: _subjectScalingEnabled,
-                  onChanged: widget.enabled ? _onSubjectScalingToggled : null,
+                  value: widget.subjectScalingEnabled,
+                  onChanged: widget.enabled ? widget.onScalingToggled : null,
                   contentPadding: EdgeInsets.zero,
                   activeColor: _currentColor,
                 ),

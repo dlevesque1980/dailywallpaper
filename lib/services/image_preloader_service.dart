@@ -7,9 +7,11 @@ import 'smart_crop/smart_crop_preferences.dart';
 import 'smart_crop/utils/screen_utils.dart';
 import 'smart_crop/utils/image_utils.dart';
 
+import 'package:dailywallpaper/services/image_preloader.dart';
+
 /// Service de préchargement intelligent des images
 /// Gère le chargement parallèle et la mise en cache optimisée
-class ImagePreloaderService {
+class ImagePreloaderService implements ImagePreloader {
   static final ImagePreloaderService _instance =
       ImagePreloaderService._internal();
   factory ImagePreloaderService() => _instance;
@@ -188,6 +190,8 @@ class ImagePreloaderService {
       if (result.success) {
         // Essential: Populate the global processed cache so Carousel can see it
         SmartCropper.cacheProcessedImage(imageItem.imageIdent, result.image);
+        // Save the crop result in the imageItem so the UI can display it
+        imageItem.smartCropResult = result.cropResult;
         return result.image;
       }
       return sourceImage;

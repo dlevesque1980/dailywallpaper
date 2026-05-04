@@ -37,6 +37,16 @@ class CropCoordinates {
     this.scalingApplied = false,
   });
 
+  /// Factory for an empty/default crop
+  factory CropCoordinates.empty(String strategy) => CropCoordinates(
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+    confidence: 0,
+    strategy: strategy,
+  );
+
   /// Creates a copy with modified values
   CropCoordinates copyWith({
     double? x,

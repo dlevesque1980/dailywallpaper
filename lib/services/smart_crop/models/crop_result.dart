@@ -31,6 +31,18 @@ class PerformanceMetrics {
     required this.cacheHitRate,
   });
 
+  /// Creates an empty metrics object for cache hits or fallbacks
+  factory PerformanceMetrics.empty() {
+    return const PerformanceMetrics(
+      totalTime: Duration.zero,
+      analyzerTimes: {},
+      memoryUsage: 0,
+      analyzersExecuted: 0,
+      analyzersSkipped: 0,
+      cacheHitRate: 1.0,
+    );
+  }
+
   /// Creates a copy with modified values
   PerformanceMetrics copyWith({
     Duration? totalTime,
@@ -142,6 +154,9 @@ class CropResult {
     required this.performanceMetrics,
     required this.scoringBreakdown,
   });
+
+  /// Returns true if the analysis succeeded without critical errors
+  bool get success => !analyzerMetadata.containsKey('error');
 
   /// Creates a copy with modified values
   CropResult copyWith({

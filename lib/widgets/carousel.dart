@@ -6,7 +6,7 @@ import 'dart:math' as math;
 import 'package:dailywallpaper/services/smart_crop/smart_cropper.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/screen_utils.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/image_utils.dart';
-import 'package:dailywallpaper/services/image_preloader_service.dart';
+
 
 @immutable
 class Carousel extends StatefulWidget {
@@ -21,7 +21,7 @@ class Carousel extends StatefulWidget {
       : assert(list.length > 1);
 
   @override
-  State createState() => new _CarouselState();
+  State createState() => _CarouselState();
 }
 
 class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
@@ -36,12 +36,11 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
   // Track which images are currently being processed to avoid duplicate work
   final Set<String> _processingImages = {};
 
-  // Service de préchargement
-  final ImagePreloaderService _preloaderService = ImagePreloaderService();
+
 
   ///Actual index of the displaying Widget
   int get actualIndex => _controller!.index;
-  ValueNotifier<int> notifierIndex = new ValueNotifier(0);
+  ValueNotifier<int> notifierIndex = ValueNotifier(0);
 
   ///Returns the calculated value of the next index.
   int get nextIndex {
@@ -67,10 +66,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
 
   void _onChange() {
     notifierIndex.value = _controller!.index;
-    this.widget.onChange(_controller!.index, false);
-
-    // Notifier le changement d'index pour le préchargement
-    _preloaderService.preloadImages(widget.list, _controller!.index);
+    widget.onChange(_controller!.index, false);
   }
 
   @override
@@ -309,7 +305,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
 
       // Dispose old controllers if they exist
       if (_controller != null) {
-        _controller!.removeListener(this._onChange);
+        _controller!.removeListener(_onChange);
         _controller!.dispose();
       }
 
@@ -318,8 +314,8 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
       }
 
       _controller =
-          new TabController(length: widget.childrenCount, vsync: this);
-      _controller!.addListener(this._onChange);
+          TabController(length: widget.childrenCount, vsync: this);
+      _controller!.addListener(_onChange);
 
       // Adjust index if it's out of bounds
       if (oldIndex >= widget.childrenCount) {

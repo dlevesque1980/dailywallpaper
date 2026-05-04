@@ -1,100 +1,126 @@
-import 'dart:async';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:dailywallpaper/data/models/bing/bing_region_enum.dart';
 import 'package:dailywallpaper/data/repositories/image_repository.dart';
 import 'package:dailywallpaper/features/settings/bloc/bing_region_state.dart';
-import 'package:dailywallpaper/data/models/bing/bing_region_enum.dart';
+import 'package:dailywallpaper/features/settings/bloc/settings_event.dart';
+import 'package:dailywallpaper/features/settings/bloc/settings_state.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
-import 'package:dailywallpaper/core/preferences/pref_helper.dart';
+import 'package:dailywallpaper/core/preferences/pref_helper_adapter.dart';
+import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
 import 'package:dailywallpaper/services/smart_crop/smart_crop.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:dailywallpaper/services/smart_crop/utils/device_capability_detector.dart';
 
-class SettingsBloc {
-  Stream<BingRegionState> _regions = Stream.empty();
-  Stream<List<RegionItem>> _thumbnail = Stream.empty();
-  Stream<bool> _includeLock = Stream.empty();
-  Stream<bool> _smartCropEnabled = Stream.empty();
-  var _regionQuery = BehaviorSubject<String>();
-  var _thumbnailQuery = BehaviorSubject<String>();
-  var _lockQuery = BehaviorSubject<String>();
-  var _smartCropEnabledQuery = BehaviorSubject<String>();
+class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
+  final PreferencesReader _prefHelper;
+  final ImageRepository _imageRepository;
 
-  Stream<BingRegionState> get regions => _regions;
-  Stream<List<RegionItem>> get thumbnail => _thumbnail;
-
-  Sink<String> get regionQuery => _regionQuery;
-  Sink<String> get thumbnailQuery => _thumbnailQuery;
-  Sink<String> get lockQuery => _lockQuery;
-  Sink<String> get smartCropEnabledQuery => _smartCropEnabledQuery;
-  Stream<bool> get includeLock => _includeLock;
-  Stream<bool> get smartCropEnabled => _smartCropEnabled;
-
-  SettingsBloc() {
-    _regions = _regionQuery.asyncMap(_handlerBingRegion).asBroadcastStream();
-    _includeLock = _lockQuery
-        .distinct()
-        .asyncMap(_getIncludeLockSetting)
-        .asBroadcastStream();
-    _smartCropEnabled = _smartCropEnabledQuery
-        .distinct()
-        .asyncMap(_getSmartCropEnabledSetting)
-        .asBroadcastStream();
-    _thumbnail =
-        _thumbnailQuery.asyncMap(_handlerThumbnail).asBroadcastStream();
+  SettingsBloc({
+    PreferencesReader? prefHelper,
+    ImageRepository? imageRepository,
+  })  : _prefHelper = prefHelper ?? PrefHelperAdapter(),
+        _imageRepository = imageRepository ?? ImageRepository(),
+        super(SettingsState.initial()) {
+    on<SettingsEventStarted>(_onStarted);
+    on<SettingsEventRegionChanged>(_onRegionChanged);
+    on<SettingsEventLockWallpaperToggled>(_onLockWallpaperToggled);
+    on<SettingsEventSmartCropToggled>(_onSmartCropToggled);
+    on<SettingsEventSmartCropLevelChanged>(_onSmartCropLevelChanged);
+    on<SettingsEventSubjectScalingToggled>(_onSubjectScalingToggled);
   }
 
-  Future<bool> _getIncludeLockSetting(String value) async {
-    if (value != "")
-      await PrefHelper.setBool(sp_IncludeLockWallpaper, (value == "true"));
-    return await PrefHelper.getBool(sp_IncludeLockWallpaper);
-  }
+  Future<void> _onStarted(SettingsEventStarted event, Emitter<SettingsState> emit) async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      final regionStr = await _prefHelper.getStringWithDefault(sp_BingRegion, BingRegionEnum.definitionOf(BingRegionEnum.US));
+      final selectedRegion = BingRegionEnum.valueFromDefinition(regionStr);
+      final includeLock = await _prefHelper.getBoolWithDefault(sp_IncludeLockWallpaper, true);
+      
+      final smartCropEnabled = await SmartCropPreferences.isSmartCropEnabled();
+      final smartCropLevel = await SmartCropProfileManager.getCurrentLevel();
+      final cropSettings = await SmartCropPreferences.getCropSettings();
+      
+      final deviceCapability = await DeviceCapabilityDetector.getDeviceCapability();
+      final thumbnails = await _fetchThumbnails();
 
-  Future<bool> _getSmartCropEnabledSetting(String value) async {
-    if (value != "") {
-      final enabled = value == "true";
-      if (enabled) {
-        // When enabling Smart Crop, use automatic configuration with default balanced level
-        await SmartCropProfileManager.setSmartCropLevel(
-            SmartCropProfileManager.defaultLevel);
-      } else {
-        // When disabling Smart Crop, set level to 0 (off)
-        await SmartCropProfileManager.setSmartCropLevel(0);
+      if (!isClosed) {
+        emit(state.copyWith(
+          selectedRegion: selectedRegion,
+          includeLockWallpaper: includeLock,
+          isSmartCropEnabled: smartCropEnabled,
+          smartCropLevel: smartCropLevel,
+          enableSubjectScaling: cropSettings.enableSubjectScaling,
+          deviceCapability: deviceCapability,
+          thumbnails: thumbnails,
+          isLoading: false,
+        ));
+      }
+    } catch (e) {
+      if (!isClosed) {
+        emit(state.copyWith(isLoading: false, error: 'failedToLoadSettings: $e'));
       }
     }
-    return await SmartCropPreferences.isSmartCropEnabled();
   }
 
-
-  Future<BingRegionState> _handlerBingRegion(String rg) async {
-    if (rg != "") PrefHelper.setString(sp_BingRegion, rg);
-    var choice = await _getChoice();
-    return new BingRegionState(choice);
+  Future<void> _onRegionChanged(SettingsEventRegionChanged event, Emitter<SettingsState> emit) async {
+    await _prefHelper.setString(sp_BingRegion, BingRegionEnum.definitionOf(event.region));
+    if (!isClosed) {
+      emit(state.copyWith(selectedRegion: event.region));
+    }
   }
 
-  Future<List<RegionItem>> _handlerThumbnail(String query) async {
-    // Fetch all thumbnails in parallel to avoid long waiting times
+  Future<void> _onLockWallpaperToggled(SettingsEventLockWallpaperToggled event, Emitter<SettingsState> emit) async {
+    await _prefHelper.setBool(sp_IncludeLockWallpaper, event.value);
+    if (!isClosed) {
+      emit(state.copyWith(includeLockWallpaper: event.value));
+    }
+  }
+
+  Future<void> _onSmartCropToggled(SettingsEventSmartCropToggled event, Emitter<SettingsState> emit) async {
+    if (event.value) {
+      await SmartCropProfileManager.setSmartCropLevel(SmartCropProfileManager.defaultLevel);
+    } else {
+      await SmartCropProfileManager.setSmartCropLevel(0);
+    }
+    
+    final newLevel = await SmartCropProfileManager.getCurrentLevel();
+    
+    if (!isClosed) {
+      emit(state.copyWith(
+        isSmartCropEnabled: event.value,
+        smartCropLevel: newLevel,
+      ));
+    }
+  }
+
+  Future<void> _onSmartCropLevelChanged(SettingsEventSmartCropLevelChanged event, Emitter<SettingsState> emit) async {
+    await SmartCropProfileManager.setSmartCropLevel(event.level);
+    if (!isClosed) {
+      emit(state.copyWith(
+        smartCropLevel: event.level,
+        isSmartCropEnabled: event.level > 0,
+      ));
+    }
+  }
+
+  Future<void> _onSubjectScalingToggled(SettingsEventSubjectScalingToggled event, Emitter<SettingsState> emit) async {
+    final settings = await SmartCropPreferences.getCropSettings();
+    await SmartCropPreferences.setCropSettings(settings.copyWith(enableSubjectScaling: event.value));
+    if (!isClosed) {
+      emit(state.copyWith(enableSubjectScaling: event.value));
+    }
+  }
+
+  Future<List<RegionItem>> _fetchThumbnails() async {
     final futures = BingRegionEnum.values.map((region) async {
       try {
-        final image = await ImageRepository.fetchThumbnailFromBing(
+        final image = await _imageRepository.fetchThumbnailFromBing(
             BingRegionEnum.definitionOf(region));
         return RegionItem(region, image.url);
       } catch (e) {
-        // Fallback for regions that fail to load
         return RegionItem(region, "");
       }
     });
 
     return await Future.wait(futures);
-  }
-
-  Future<BingRegionEnum> _getChoice() async {
-    var val = await PrefHelper.getString(sp_BingRegion);
-    return BingRegionEnum.valueFromDefinition(val!);
-  }
-
-  void dispose() {
-    _lockQuery.close();
-    _regionQuery.close();
-    _thumbnailQuery.close();
-    _smartCropEnabledQuery.close();
   }
 }

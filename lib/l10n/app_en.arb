@@ -1,0 +1,68 @@
+{
+  "@@locale": "en",
+  "appTitle": "Daily Wallpaper",
+  "analysisInProgress": "Analysis in progress...",
+  "cropAnalysis": "Crop Analysis",
+  "strategy": "Strategy",
+  "confidence": "Confidence",
+  "targetAspect": "Target Aspect",
+  "coordinatesNormalized": "Coordinates (Normalized)",
+  "subjectDetection": "Subject Detection",
+  "bounds": "Bounds",
+  "close": "CLOSE",
+  "optimizingWallpapers": "Optimizing wallpapers...",
+  "analyzingForCrop": "Analyzing for the best crop",
+  "settings": "Settings",
+  "history": "History",
+  "noWallpapersFound": "No wallpapers found",
+  "errorLoadingImagesForDate": "Error loading images for selected date",
+  "retry": "Retry",
+  "noImagesAvailable": "No images available",
+  "noWallpapersDownloadedToday": "No wallpapers have been downloaded yet today.\nCheck back later or visit the Home page to download today's images.",
+  "noWallpapersSavedForDate": "No wallpapers were saved for {date}.",
+  "@noWallpapersSavedForDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "goToHome": "Go to Home",
+  "viewRecentImages": "View Recent Images",
+  "noHistoricalImagesFound": "No historical images found in the database.",
+  "databaseError": "Database Error",
+  "connectionError": "Connection Error",
+  "error": "Error",
+  "databaseErrorMessage": "There was a problem accessing the image database. This might be a temporary issue.",
+  "networkErrorMessage": "Unable to connect to the server. Please check your internet connection and try again.",
+  "unexpectedErrorMessage": "An unexpected error occurred while loading images. Please try again.",
+  "loadingImagesForDate": "Loading images for {date}...",
+  "@loadingImagesForDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "home": "Home",
+  "today": "today",
+  "yesterday": "yesterday",
+  "setLockScreenWallpaper": "Set lock screen wallpaper",
+  "applyWallpaperToLockScreen": "Apply wallpaper to lock screen",
+  "bingRegion": "Bing region",
+  "selectPreferredRegion": "Select your preferred region for Bing images",
+  "pexelsCategories": "Pexels Categories",
+  "selectAtLeastOneCategory": "Please select at least one category",
+  "noMoreThanFiveCategories": "No more than 5 categories",
+  "mlEngineStatus": "ML Engine Status",
+  "simulatedEmulator": "Simulated (Emulator)",
+  "active": "Active",
+  "modelSubjectSegmentation": "Model: Subject Segmentation v8 (Mobile f16)",
+  "realMlDisabledEmulator": "⚠️ Real ML is disabled on emulator to avoid crashes.",
+  "selectRegion": "Select Region",
+  "wallpaperSetSuccess": "Wallpaper set successfully",
+  "failedToSetWallpaper": "Failed to set wallpaper",
+  "failedToFetchWallpapers": "Failed to fetch wallpapers",
+  "failedToRefreshWallpapers": "Failed to refresh wallpapers",
+  "invalidImageIndex": "Invalid image index"
+}

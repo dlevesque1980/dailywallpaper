@@ -1,38 +1,36 @@
-import 'dart:async';
-
-import 'package:dailywallpaper/features/settings/bloc/pexels_categories_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 import 'package:dailywallpaper/core/preferences/pref_helper.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:dailywallpaper/features/settings/bloc/pexels_categories_event.dart';
+import 'package:dailywallpaper/features/settings/bloc/pexels_categories_state.dart';
 
-class PexelsCategoriesBloc {
-  Stream<PexelsCategoriesState> _categories = Stream.empty();
-  var _categoriesQuery = BehaviorSubject<List<String>>();
-
-  Stream<PexelsCategoriesState> get categories => _categories;
-  Sink<List<String>> get categoriesQuery => _categoriesQuery;
-
-  PexelsCategoriesBloc() {
-    _categories =
-        _categoriesQuery.asyncMap(_categoriesHandler).asBroadcastStream();
+class PexelsCategoriesBloc extends Bloc<PexelsCategoriesEvent, PexelsCategoriesState> {
+  PexelsCategoriesBloc() : super(PexelsCategoriesState.initial()) {
+    on<PexelsCategoriesEventStarted>(_onStarted);
+    on<PexelsCategoriesEventCategoriesChanged>(_onCategoriesChanged);
   }
 
-  Future<PexelsCategoriesState> _categoriesHandler(List<String> categories) async {
-    // Save selected categories if provided
-    if (categories.isNotEmpty) {
-      await PrefHelper.setStringList(sp_PexelsCategories, categories);
+  Future<void> _onStarted(PexelsCategoriesEventStarted event, Emitter<PexelsCategoriesState> emit) async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      final selectedCategories = await PrefHelper.getStringListWithDefault(
+        sp_PexelsCategories,
+        defaultPexelsCategories.take(3).toList(),
+      );
+      
+      emit(state.copyWith(
+        selectedCategories: selectedCategories,
+        isLoading: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: 'Failed to load categories: $e'));
     }
-    
-    // Get current selected categories or use defaults
-    var selectedCategories = await PrefHelper.getStringListWithDefault(
-      sp_PexelsCategories, 
-      defaultPexelsCategories.take(3).toList(), // Default to first 3 categories
-    );
-    
-    return PexelsCategoriesState(defaultPexelsCategories, selectedCategories);
   }
 
-  void dispose() {
-    _categoriesQuery.close();
+  Future<void> _onCategoriesChanged(PexelsCategoriesEventCategoriesChanged event, Emitter<PexelsCategoriesState> emit) async {
+    if (event.categories.isNotEmpty) {
+      await PrefHelper.setStringList(sp_PexelsCategories, event.categories);
+      emit(state.copyWith(selectedCategories: event.categories));
+    }
   }
 }
