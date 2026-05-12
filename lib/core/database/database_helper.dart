@@ -23,7 +23,7 @@ class DatabaseHelper implements ImageStorage {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, "wallpaper.db");
 
-    var database = await openDatabase(path, version: 1, onCreate: _onCreate);
+    var database = await openDatabase(path, version: 3, onCreate: _onCreate, onUpgrade: _onUpgrade);
 
     return database;
   }
@@ -31,15 +31,27 @@ class DatabaseHelper implements ImageStorage {
   void _onCreate(Database db, int version) async {
     // When creating the db, create the table
     await db.execute(
-        "CREATE TABLE DailyImages (id INTEGER PRIMARY KEY, Source TEXT, Url TEXT, Description text, StartTime TEXT, EndTime TEXT, ImageIdent TEXT, TriggerUrl TEXT, Copyright TEXT)");
+        "CREATE TABLE DailyImages (id INTEGER PRIMARY KEY, Source TEXT, Url TEXT, Description text, StartTime TEXT, EndTime TEXT, ImageIdent TEXT, TriggerUrl TEXT, Copyright TEXT, DisplayOrder INTEGER DEFAULT 0)");
 
     // Create indexes for better performance on history queries
     await db.execute("CREATE INDEX idx_start_time ON DailyImages(StartTime)");
     await db.execute("CREATE INDEX idx_image_ident ON DailyImages(ImageIdent)");
-    await db.execute(
-        "CREATE INDEX idx_date_start_time ON DailyImages(date(StartTime))");
+    // No longer using non-deterministic index on date()
 
     print("Created tables and indexes");
+  }
+
+  void _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute("ALTER TABLE DailyImages ADD COLUMN DisplayOrder INTEGER DEFAULT 0");
+      // Populate DisplayOrder with id for existing records
+      await db.execute("UPDATE DailyImages SET DisplayOrder = id");
+      print("Upgraded database to version 2");
+    }
+    if (oldVersion < 3) {
+      await db.execute("DROP INDEX IF EXISTS idx_date_start_time");
+      print("Upgraded database to version 3");
+    }
   }
 
   Future<bool> insertImage(ImageItem image) async {
@@ -48,7 +60,7 @@ class DatabaseHelper implements ImageStorage {
 
     var id = await theDb.transaction((txn) async {
       var id = await txn.rawInsert(
-          'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright) VALUES(?,?,?,?,?,?,?,?)',
+          'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright, DisplayOrder) VALUES(?,?,?,?,?,?,?,?,?)',
           [
             image.url,
             image.source,
@@ -57,7 +69,8 @@ class DatabaseHelper implements ImageStorage {
             image.endTime.toString(),
             image.imageIdent,
             image.triggerUrl,
-            image.copyright
+            image.copyright,
+            image.displayOrder
           ]);
       return id;
     });
@@ -84,7 +97,7 @@ class DatabaseHelper implements ImageStorage {
     if (theDb == null) return [];
 
     List<Map> list = await theDb.rawQuery(
-        "SELECT * FROM DailyImages ORDER BY StartTime DESC LIMIT ?", [limit]);
+        "SELECT * FROM DailyImages ORDER BY StartTime DESC, DisplayOrder ASC LIMIT ?", [limit]);
 
     return list.map((map) => ImageItem.fromMap(map)).toList();
   }
@@ -103,11 +116,11 @@ class DatabaseHelper implements ImageStorage {
     var theDb = await db;
     if (theDb == null) return [];
 
-    var startOfDay = DateTimeHelper.startDayDate(date);
+    var startOfDay = DateTimeHelper.startDayDate(date).toUtc();
     var endOfDay = startOfDay.add(Duration(days: 1));
 
     List<Map> list = await theDb.rawQuery(
-        "SELECT * FROM DailyImages WHERE StartTime >= ? AND StartTime < ? ORDER BY id",
+        "SELECT * FROM DailyImages WHERE StartTime >= ? AND StartTime < ? ORDER BY DisplayOrder ASC",
         [startOfDay.toString(), endOfDay.toString()]);
 
     return list.map((map) => ImageItem.fromMap(map)).toList();
@@ -128,7 +141,7 @@ class DatabaseHelper implements ImageStorage {
     if (theDb == null) return [];
 
     List<Map> list = await theDb.rawQuery(
-        "SELECT DISTINCT date(StartTime) as date FROM DailyImages ORDER BY date DESC");
+        "SELECT DISTINCT date(StartTime, 'localtime') as date FROM DailyImages ORDER BY date DESC");
 
     return list.map((map) => DateTime.parse(map['date'])).toList();
   }
@@ -139,7 +152,7 @@ class DatabaseHelper implements ImageStorage {
     if (theDb == null) return {};
 
     List<Map> list = await theDb.rawQuery(
-        "SELECT date(StartTime) as date, COUNT(*) as count FROM DailyImages GROUP BY date(StartTime) ORDER BY date DESC");
+        "SELECT date(StartTime, 'localtime') as date, COUNT(*) as count FROM DailyImages GROUP BY date(StartTime, 'localtime') ORDER BY date DESC");
 
     Map<DateTime, int> result = {};
     for (var map in list) {
@@ -160,11 +173,11 @@ class DatabaseHelper implements ImageStorage {
     var theDb = await db;
     if (theDb == null) return [];
 
-    var startOfDay = DateTimeHelper.startDayDate(date);
+    var startOfDay = DateTimeHelper.startDayDate(date).toUtc();
     var endOfDay = startOfDay.add(Duration(days: 1));
 
     List<Map> list = await theDb.rawQuery(
-        "SELECT * FROM DailyImages WHERE StartTime >= ? AND StartTime < ? ORDER BY id LIMIT ? OFFSET ?",
+        "SELECT * FROM DailyImages WHERE StartTime >= ? AND StartTime < ? ORDER BY DisplayOrder ASC LIMIT ? OFFSET ?",
         [startOfDay.toString(), endOfDay.toString(), limit, offset]);
 
     return list.map((map) => ImageItem.fromMap(map)).toList();
@@ -181,7 +194,7 @@ class DatabaseHelper implements ImageStorage {
 
         for (final image in images) {
           batch.rawInsert(
-              'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright) VALUES(?,?,?,?,?,?,?,?)',
+              'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright, DisplayOrder) VALUES(?,?,?,?,?,?,?,?,?)',
               [
                 image.url,
                 image.source,
@@ -190,7 +203,8 @@ class DatabaseHelper implements ImageStorage {
                 image.endTime.toString(),
                 image.imageIdent,
                 image.triggerUrl,
-                image.copyright
+                image.copyright,
+                image.displayOrder
               ]);
         }
 
@@ -209,7 +223,7 @@ class DatabaseHelper implements ImageStorage {
     if (theDb == null) return [];
 
     List<Map> list = await theDb.rawQuery(
-        "SELECT date(StartTime) as date, COUNT(*) as count FROM DailyImages GROUP BY date(StartTime) ORDER BY date DESC");
+        "SELECT date(StartTime, 'localtime') as date, COUNT(*) as count FROM DailyImages GROUP BY date(StartTime, 'localtime') ORDER BY date DESC");
 
     return list
         .map((map) => {
@@ -224,7 +238,7 @@ class DatabaseHelper implements ImageStorage {
     var theDb = await db;
     if (theDb == null) return false;
 
-    var startOfDay = DateTimeHelper.startDayDate(date);
+    var startOfDay = DateTimeHelper.startDayDate(date).toUtc();
     var endOfDay = startOfDay.add(Duration(days: 1));
 
     List<Map> list = await theDb.rawQuery(

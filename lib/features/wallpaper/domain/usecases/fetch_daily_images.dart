@@ -70,6 +70,7 @@ class FetchDailyImagesUseCase {
 
     if (image == null) {
       image = await _imageRepository.fetchFromBing(region);
+      image.displayOrder = 0;
       await _dbHelper.insertImage(image);
     }
     return image;
@@ -79,17 +80,18 @@ class FetchDailyImagesUseCase {
     var categories = await _prefHelper.getStringListWithDefault(
         sp_PexelsCategories, defaultPexelsCategories.take(3).toList());
 
-    var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
+    var dateStr = DateTimeHelper.formatDateKey(DateTime.now());
 
-    var futures = categories
-        .map((category) => _fetchSinglePexels(category, dateStr, forceRefresh: forceRefresh))
-        .toList();
+    var futures = <Future<ImageItem?>>[];
+    for (int i = 0; i < categories.length; i++) {
+      futures.add(_fetchSinglePexels(categories[i], dateStr, i + 1, forceRefresh: forceRefresh));
+    }
 
     var results = await Future.wait(futures);
     return results.whereType<ImageItem>().toList();
   }
 
-  Future<ImageItem?> _fetchSinglePexels(String category, String dateStr, {bool forceRefresh = false}) async {
+  Future<ImageItem?> _fetchSinglePexels(String category, String dateStr, int order, {bool forceRefresh = false}) async {
     try {
       var imageIdent = 'pexels.$category.$dateStr';
       ImageItem? pexelsImage;
@@ -103,6 +105,7 @@ class FetchDailyImagesUseCase {
       if (pexelsImage == null) {
         pexelsImage = await _imageRepository.fetchFromPexels(category);
         pexelsImage.imageIdent = imageIdent;
+        pexelsImage.displayOrder = order;
         await _dbHelper.insertImage(pexelsImage);
       }
       return pexelsImage;
@@ -113,8 +116,8 @@ class FetchDailyImagesUseCase {
   }
 
   Future<ImageItem?> _nasaHandler({bool forceRefresh = false}) async {
-    var dateStr = DateTimeHelper.startDayDate(DateTime.now()).toString();
-    var imageIdent = 'nasa.apod.$dateStr';
+    var dateStr = DateTimeHelper.formatDateKey(DateTime.now());
+    var imageIdent = 'nasa.$dateStr';
 
     try {
       ImageItem? nasaImage;
@@ -127,7 +130,9 @@ class FetchDailyImagesUseCase {
 
       if (nasaImage == null) {
         nasaImage = await _imageRepository.fetchFromNASA();
+        // Use the ident from service if possible, but ensure consistency
         nasaImage.imageIdent = imageIdent;
+        nasaImage.displayOrder = 999;
         await _dbHelper.insertImage(nasaImage);
       }
 

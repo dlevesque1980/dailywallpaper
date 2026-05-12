@@ -23,4 +23,8 @@ class DateTimeHelper {
       return DateFormat('MMM d, y').format(date);
     }
   }
+
+  static String formatDateKey(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
 }

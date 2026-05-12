@@ -35,9 +35,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _onChange(int index, bool refresh) {
+    // Always update the local index tracker so Info/Crop buttons reference the correct image.
     if (_currentIndex.value != index) {
       _currentIndex.value = index;
     }
+
+    // Block BLoC update while wallpaper is being set.
+    // The GL surface momentarily drops to Size(0,0) during Android theme changes,
+    // causing PageView to falsely report a jump to page 0.
+    final blocState = context.read<HomeBloc>().state;
+    bool isSetting = false;
+    blocState.mapOrNull(loaded: (loadedState) {
+      isSetting = loadedState.isSettingWallpaper;
+    });
+
+    if (isSetting) {
+      debugPrint('Ignoring fake PageView swipe to $index because wallpaper is currently being set.');
+      return;
+    }
+
     if (refresh) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -48,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context.read<HomeBloc>().add(HomeEvent.indexChanged(index));
     }
   }
+
 
   void _showImageInfo(BuildContext context, ImageItem image) {
     showModalBottomSheet<void>(
@@ -259,6 +276,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       if (loadedState.list.isNotEmpty) {
                         return Carousel(
                           list: loadedState.list,
+                          initialPage: loadedState.imageIndex,
                           onChange: _onChange,
                         );
                       } else {

@@ -5,10 +5,13 @@ class ImageItem {
   String? triggerUrl="";
   DateTime startTime=DateTime.fromMicrosecondsSinceEpoch(0), endTime= DateTime.fromMicrosecondsSinceEpoch(0);
   
+  /// Order of the image in the list
+  int displayOrder = 0;
+
   /// Result of the smart crop analysis for this image
   CropResult? smartCropResult;
  
-  ImageItem(this.source, this.url, this.description, this.startTime, this.endTime, this.imageIdent, this.triggerUrl, this.copyright);
+  ImageItem(this.source, this.url, this.description, this.startTime, this.endTime, this.imageIdent, this.triggerUrl, this.copyright, {this.displayOrder = 0});
 
   ImageItem.fromMap(Map map) {
     source = map["Source"]!;
@@ -19,6 +22,7 @@ class ImageItem {
     imageIdent = map["ImageIdent"]!;
     triggerUrl = map["TriggerUrl"];
     copyright = map["Copyright"]!;
+    displayOrder = map["DisplayOrder"] ?? 0;
   }
 
   /// Create a copy of this ImageItem with updated fields
@@ -32,6 +36,7 @@ class ImageItem {
     String? triggerUrl,
     String? copyright,
     CropResult? smartCropResult,
+    int? displayOrder,
   }) {
     final item = ImageItem(
       source ?? this.source,
@@ -42,6 +47,7 @@ class ImageItem {
       imageIdent ?? this.imageIdent,
       triggerUrl ?? this.triggerUrl,
       copyright ?? this.copyright,
+      displayOrder: displayOrder ?? this.displayOrder,
     );
     item.smartCropResult = smartCropResult ?? this.smartCropResult;
     return item;

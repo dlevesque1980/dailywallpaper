@@ -1,34 +1,11 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'dart:math' as math;
-import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import '../models/crop_coordinates.dart';
 
 /// Utility functions for image processing and crop operations
 class ImageUtils {
-  /// Loads an image from a URL
-  /// 
-  /// [url] The URL of the image to load
-  /// 
-  /// Returns a ui.Image or null if loading fails
-  static Future<ui.Image?> loadImageFromUrl(String url) async {
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final bytes = response.bodyBytes;
-        final codec = await ui.instantiateImageCodec(bytes);
-        final frame = await codec.getNextFrame();
-        return frame.image;
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   /// Downscales an image while preserving aspect ratio for analysis
   /// 
   /// [image] The source image to downscale
@@ -306,106 +283,6 @@ class ImageUtils {
       return byteData.buffer.asUint8List();
     } catch (e) {
       return null;
-    }
-  }
-
-  /// Saves a ui.Image to a temporary file
-  /// 
-  /// [image] The image to save
-  /// [filename] The filename for the temporary file
-  /// 
-  /// Returns the path to the saved file or null if saving fails
-  static Future<String?> saveImageToTemp(ui.Image image, String filename) async {
-    try {
-      // Get temporary directory
-      final tempDir = await getTemporaryDirectory();
-      final filePath = '${tempDir.path}/$filename';
-      
-      // Convert image to bytes
-      final bytes = await imageToBytes(image);
-      if (bytes == null) {
-        return null;
-      }
-      
-      // Write to file
-      final file = File(filePath);
-      await file.writeAsBytes(bytes);
-      
-      return filePath;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Saves a ui.Image to the app's documents directory (permanent storage)
-  /// 
-  /// [image] The image to save
-  /// [filename] The filename for the file
-  /// 
-  /// Returns the path to the saved file or null if saving fails
-  static Future<String?> saveImageToPermanent(ui.Image image, String filename) async {
-    try {
-      // Get application documents directory
-      final appDir = await getApplicationDocumentsDirectory();
-      
-      // Create wallpapers subdirectory if it doesn't exist
-      final wallpaperDir = Directory('${appDir.path}/wallpapers');
-      if (!await wallpaperDir.exists()) {
-        await wallpaperDir.create(recursive: true);
-      }
-      
-      final filePath = '${wallpaperDir.path}/$filename';
-      
-      // Convert image to bytes (use JPEG for smaller file size)
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) {
-        return null;
-      }
-      
-      // Write to file
-      final file = File(filePath);
-      await file.writeAsBytes(byteData.buffer.asUint8List());
-      
-      return filePath;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Cleans up old wallpaper files to save storage space
-  /// 
-  /// [maxAge] Maximum age of files to keep (default: 7 days)
-  /// 
-  /// Returns the number of files deleted
-  static Future<int> cleanupOldWallpapers({Duration maxAge = const Duration(days: 7)}) async {
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final wallpaperDir = Directory('${appDir.path}/wallpapers');
-      
-      if (!await wallpaperDir.exists()) {
-        return 0;
-      }
-      
-      final cutoffTime = DateTime.now().subtract(maxAge);
-      int deletedCount = 0;
-      
-      await for (final entity in wallpaperDir.list()) {
-        if (entity is File) {
-          final stat = await entity.stat();
-          if (stat.modified.isBefore(cutoffTime)) {
-            try {
-              await entity.delete();
-              deletedCount++;
-            } catch (e) {
-              // Continue with other files if one fails to delete
-            }
-          }
-        }
-      }
-      
-      return deletedCount;
-    } catch (e) {
-      return 0;
     }
   }
 }
