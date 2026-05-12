@@ -33,3 +33,7 @@ const List<String> defaultPexelsCategories = [
   "abstract", // Formes et couleurs pour l'analyse
   "minimal" // Compositions simples mais efficaces
 ];
+// UI State Persistence
+const String sp_LastViewedIndex = "lastviewedindex";
+const String sp_LastSetWallpaperId = "lastsetwallpaperid";
+const String sp_LastSetWallpaperTime = "lastsetwallpapertime";

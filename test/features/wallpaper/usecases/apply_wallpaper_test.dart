@@ -4,6 +4,7 @@ import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/features/wallpaper/domain/usecases/apply_wallpaper.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import '../../../fakes/fake_wallpaper_service.dart';
 import '../../../fakes/fake_preferences_reader.dart';
 import '../../../fakes/fake_crop_render_cache.dart';
@@ -16,6 +17,19 @@ void main() {
   late FakePreferencesReader fakePrefs;
   late FakeCropRenderCache fakeCropCache;
   late ApplyWallpaperUseCase useCase;
+
+  setUpAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'getTemporaryDirectory') {
+          return '.';
+        }
+        return null;
+      },
+    );
+  });
 
   setUp(() {
     fakeWallpaperService = FakeWallpaperService();
@@ -48,7 +62,7 @@ void main() {
       final result = await useCase(mockImage);
 
       // Assert
-      expect(result, 'Wallpaper set successfully');
+      expect(result, 'wallpaperSetSuccess');
       expect(fakeWallpaperService.lastSetUrl, mockImage.url);
     });
 
@@ -72,10 +86,9 @@ void main() {
         // Act
         await useCase(mockImage);
 
-        // Assert: Service receives EXACTLY the bytes from carousel
-        expect(fakeWallpaperService.lastSetBytes, carouselBytes);
-        // lastSetUrl should remain null if setBothWallpaper (URL path) was NEVER called
-        expect(fakeWallpaperService.lastSetUrl, isNull);
+        // Assert: Service receives a file URL pointing to the written bytes
+        expect(fakeWallpaperService.lastSetUrl, startsWith('file://./temp_wallpaper_'));
+        expect(fakeWallpaperService.lastSetBytes, isNull);
       });
 
       test('should fallback to URL when carousel bytes are missing', () async {

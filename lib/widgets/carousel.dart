@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:dailywallpaper/services/smart_crop/smart_cropper.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/screen_utils.dart';
 import 'package:dailywallpaper/services/smart_crop/utils/image_utils.dart';
+import 'package:dailywallpaper/services/image_cache_service.dart';
 
 
 @immutable
@@ -13,12 +14,13 @@ class Carousel extends StatefulWidget {
   ///All the [Widget] on this Carousel.
   final List<ImageItem> list;
   final Function onChange;
+  final int initialPage;
 
   ///Returns [children]`s [lenght].
   int get childrenCount => list.length;
 
-  Carousel({required this.list, required this.onChange})
-      : assert(list.length > 1);
+  Carousel({required this.list, required this.onChange, this.initialPage = 0})
+      : assert(list.length > 0);
 
   @override
   State createState() => _CarouselState();
@@ -176,7 +178,14 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
 
   Future<ui.Image> _loadAndCropImage(ImageItem image) async {
     final result = image.smartCropResult!;
-    final sourceImage = await ImageUtils.loadImageFromUrl(image.url);
+    final imageCache = ImageCacheServiceImpl();
+    
+    // Try to load from disk first (performance optimization)
+    var sourceImage = await imageCache.loadSourceImage(image.imageIdent);
+    if (sourceImage == null) {
+      sourceImage = await imageCache.loadImageFromUrl(image.url);
+    }
+    
     if (sourceImage == null) throw Exception('Failed to load source image');
 
     final screenSize = ScreenUtils.getPhysicalScreenSize();
@@ -296,7 +305,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     if (widget.childrenCount != _numOfTab || _pageController == null) {
-      int oldIndex = _controller?.index ?? 0;
+      int oldIndex = _controller?.index ?? widget.initialPage;
 
       // Clear cache when image list changes (e.g., date change)
       _clearCacheIfNeeded();
@@ -328,20 +337,30 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
       _pageController = PageController(initialPage: _controller!.index);
     }
 
-    return PageView.builder(
-      controller: _pageController,
-      itemCount: widget.list.length,
-      onPageChanged: (index) {
-        // Sync TabController index when PageView changes
-        if (_controller!.index != index) {
-          _controller!.index = index;
-          // IMPORTANT: Manually notify listeners/parent of the index change
-          // This ensures HomeScreen.notifierIndex is updated for the Crop Info button
-          _onChange();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Prevent Flutter PageView bug during Android surface recreation
+        // When the width temporarily drops to 0, PageView calculates its page as 0
+        if (constraints.maxWidth == 0 || constraints.maxHeight == 0) {
+          return const SizedBox.shrink();
         }
-      },
-      itemBuilder: (context, index) {
-        return tabViewChild(widget.list[index]);
+
+        return PageView.builder(
+          controller: _pageController,
+          itemCount: widget.list.length,
+          onPageChanged: (index) {
+            // Sync TabController index when PageView changes
+            if (_controller!.index != index) {
+              _controller!.index = index;
+              // IMPORTANT: Manually notify listeners/parent of the index change
+              // This ensures HomeScreen.notifierIndex is updated for the Crop Info button
+              _onChange();
+            }
+          },
+          itemBuilder: (context, index) {
+            return tabViewChild(widget.list[index]);
+          },
+        );
       },
     );
   }

@@ -8,14 +8,19 @@ import 'smart_crop/utils/screen_utils.dart';
 import 'smart_crop/utils/image_utils.dart';
 
 import 'package:dailywallpaper/services/image_preloader.dart';
+import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/services/image_cache_service.dart';
 
 /// Service de préchargement intelligent des images
 /// Gère le chargement parallèle et la mise en cache optimisée
 class ImagePreloaderService implements ImagePreloader {
   static final ImagePreloaderService _instance =
-      ImagePreloaderService._internal();
+      ImagePreloaderService._internal(ImageCacheServiceImpl());
   factory ImagePreloaderService() => _instance;
-  ImagePreloaderService._internal();
+  
+  final ImageCacheService _imageCache;
+  
+  ImagePreloaderService._internal(this._imageCache);
 
   // Cache des images préchargées
   final Map<String, ui.Image> _preloadedImages = {};
@@ -125,10 +130,23 @@ class ImagePreloaderService implements ImagePreloader {
     }
   }
 
-  /// Charge une image depuis l'URL
+  /// Charge une image (depuis le cache local ou l'URL)
   Future<ui.Image?> _loadImage(ImageItem imageItem) async {
     try {
-      return await ImageUtils.loadImageFromUrl(imageItem.url);
+      // 1. Try to load from local cache
+      final localImage = await _imageCache.loadSourceImage(imageItem.imageIdent);
+      if (localImage != null) {
+        return localImage;
+      }
+      
+      // 2. If not found locally, download, save, and load
+      final savedPath = await _imageCache.downloadAndSaveSourceImage(imageItem.url, imageItem.imageIdent);
+      if (savedPath != null) {
+        return await _imageCache.loadSourceImage(imageItem.imageIdent);
+      }
+      
+      // 3. Fallback to direct URL load if saving failed
+      return await _imageCache.loadImageFromUrl(imageItem.url);
     } catch (e) {
       debugPrint('Erreur chargement image ${imageItem.url}: $e');
       return null;
@@ -161,7 +179,7 @@ class ImagePreloaderService implements ImagePreloader {
     }
   }
 
-  /// Traite une image avec smart crop
+  /// Traite une image avec smart crop (ou charge depuis le cache)
   Future<ui.Image?> _processImageWithSmartCrop(
       ImageItem imageItem, ui.Image sourceImage) async {
     try {
@@ -169,6 +187,24 @@ class ImagePreloaderService implements ImagePreloader {
           await SmartCropPreferences.isSmartCropEnabled();
       if (!isSmartCropEnabled) return sourceImage;
 
+      // 1. Check local cache for processed image AND crop metadata
+      final cachedProcessedImage = await _imageCache.loadProcessedImage(imageItem.imageIdent);
+      final cachedCropResultJson = await _imageCache.loadCropResultJson(imageItem.imageIdent);
+      
+      if (cachedProcessedImage != null && cachedCropResultJson != null) {
+        try {
+          imageItem.smartCropResult = CropResult.deserialize(cachedCropResultJson);
+          
+          // Populate the global processed cache so Carousel can see it
+          SmartCropper.cacheProcessedImage(imageItem.imageIdent, cachedProcessedImage);
+          return cachedProcessedImage;
+        } catch (e) {
+          debugPrint('Failed to deserialize cached crop result: $e');
+          // If deserialization fails, proceed to re-crop
+        }
+      }
+
+      // 2. Perform Smart Crop if cache missed
       final cropSettings = await SmartCropPreferences.getCropSettings();
       final screenSize = ScreenUtils.getPhysicalScreenSize();
 
@@ -192,6 +228,11 @@ class ImagePreloaderService implements ImagePreloader {
         SmartCropper.cacheProcessedImage(imageItem.imageIdent, result.image);
         // Save the crop result in the imageItem so the UI can display it
         imageItem.smartCropResult = result.cropResult;
+        
+        // Save to local permanent cache for next time
+        await _imageCache.saveProcessedImage(result.image, imageItem.imageIdent);
+        await _imageCache.saveCropResult(result.cropResult, imageItem.imageIdent);
+        
         return result.image;
       }
       return sourceImage;
