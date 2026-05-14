@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_coordinates.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_coordinates.dart';
 
 void main() {
   group('Crop Analysis Functional Tests', () {

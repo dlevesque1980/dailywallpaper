@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
 
 abstract class ImageCacheService {
   Future<String?> downloadAndSaveSourceImage(String url, String imageIdent, {http.Client? client});

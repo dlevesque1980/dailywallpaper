@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dailywallpaper/services/smart_crop/smart_crop_profile_manager.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_crop_profile_manager.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
 
 /// Custom slider widget for Smart Crop quality selection

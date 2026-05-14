@@ -14,6 +14,10 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
 import 'package:dailywallpaper/widgets/crop_info_dialog.dart';
 import 'package:dailywallpaper/widgets/image_info_sheet.dart';
+import 'package:dailywallpaper/features/history/screens/widgets/history_empty_state.dart';
+import 'package:dailywallpaper/features/history/screens/widgets/history_error_state.dart';
+import 'package:dailywallpaper/features/history/screens/widgets/history_app_bar.dart';
+import 'package:dailywallpaper/features/history/screens/widgets/history_wallpaper_fab.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({Key? key}) : super(key: key);
@@ -144,173 +148,7 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
     return message;
   }
 
-  Widget _buildEmptyState(HistoryState state) {
-    final isToday = _isToday(state.selectedDate);
-    final formattedDate = _formatSelectedDate(state.selectedDate);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.image_not_supported_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              AppLocalizations.of(context)!.noImagesAvailable,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isToday
-                  ? AppLocalizations.of(context)!.noWallpapersDownloadedToday
-                  : AppLocalizations.of(context)!.noWallpapersSavedForDate(formattedDate),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[500],
-              ),
-            ),
-            if (state.availableDates.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              if (isToday) ...[
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/');
-                  },
-                  icon: const Icon(Icons.home),
-                  label: Text(AppLocalizations.of(context)!.goToHome),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              ElevatedButton.icon(
-                onPressed: () {
-                  final mostRecentDate = state.availableDates.reduce(
-                    (a, b) => a.isAfter(b) ? a : b,
-                  );
-                  _onDateSelected(mostRecentDate);
-                },
-                icon: const Icon(Icons.calendar_today),
-                label: Text(AppLocalizations.of(context)!.viewRecentImages),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-              ),
-            ] else ...[
-              const SizedBox(height: 24),
-              Text(
-                AppLocalizations.of(context)!.noHistoricalImagesFound,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[400],
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              if (isToday) ...[
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/');
-                  },
-                  icon: const Icon(Icons.home),
-                  label: Text(AppLocalizations.of(context)!.goToHome),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-              ],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(HistoryState state, String error) {
-    final isDatabaseError = error.toLowerCase().contains('database') || error.toLowerCase().contains('sql');
-    final isNetworkError = error.toLowerCase().contains('network') || error.toLowerCase().contains('connection');
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isDatabaseError
-                  ? Icons.storage_outlined
-                  : isNetworkError
-                      ? Icons.wifi_off_outlined
-                      : Icons.error_outline,
-              size: 80,
-              color: Colors.red[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              isDatabaseError
-                  ? AppLocalizations.of(context)!.databaseError
-                  : isNetworkError
-                      ? AppLocalizations.of(context)!.connectionError
-                      : AppLocalizations.of(context)!.error,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: Colors.red[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _translateMessage(context, error),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    _onDateSelected(state.selectedDate);
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: Text(AppLocalizations.of(context)!.retry),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/');
-                  },
-                  icon: const Icon(Icons.home),
-                  label: Text(AppLocalizations.of(context)!.home),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -324,175 +162,15 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
       ),
       child: Scaffold(
         extendBodyBehindAppBar: true,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: BlocBuilder<HistoryBloc, HistoryState>(
-            builder: (context, state) {
-              return AppBar(
-                title: DateSelector(
-                  selectedDate: state.selectedDate,
-                  availableDates: state.availableDates,
-                  onDateSelected: _onDateSelected,
-                  isLoading: state.mapOrNull(loading: (_) => true) ?? false,
-                ),
-                backgroundColor: Colors.transparent,
-                elevation: 0.0,
-                iconTheme: IconThemeData(
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      offset: const Offset(1.0, 1.0),
-                      blurRadius: 3.0,
-                      color: Colors.black.withValues(alpha: 0.5),
-                    ),
-                  ],
-                ),
-                actions: [
-                  ValueListenableBuilder(
-                    valueListenable: notifierIndex,
-                    builder: (context, value, child) {
-                      return IconButton(
-                        icon: Icon(
-                          Icons.info_outline,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              offset: const Offset(1.0, 1.0),
-                              blurRadius: 3.0,
-                              color: Colors.black.withValues(alpha: 0.5),
-                            ),
-                          ],
-                        ),
-                        onPressed: () {
-                          state.mapOrNull(loaded: (loadedState) {
-                            if (loadedState.images.isNotEmpty) {
-                              int safeIndex = notifierIndex.value;
-                              if (safeIndex >= loadedState.images.length) {
-                                safeIndex = loadedState.images.length - 1;
-                              }
-                              _showImageInfo(context, loadedState.images[safeIndex]);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (choice) {
-                      if (choice == 'crop_info') {
-                        state.mapOrNull(loaded: (loadedState) {
-                          if (loadedState.images.isNotEmpty) {
-                            int safeIndex = notifierIndex.value;
-                            if (safeIndex >= loadedState.images.length) {
-                              safeIndex = loadedState.images.length - 1;
-                            }
-                            _showCropInfo(context, loadedState.images[safeIndex]);
-                          }
-                        });
-                      } else {
-                        Navigator.pushNamed(context, choice);
-                      }
-                    },
-                    icon: Icon(
-                      Icons.more_vert,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          offset: const Offset(1.0, 1.0),
-                          blurRadius: 3.0,
-                          color: Colors.black.withValues(alpha: 0.5),
-                        ),
-                      ],
-                    ),
-                    itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
-                          PopupMenuItem<String>(
-                            value: 'crop_info',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.center_focus_strong, size: 20),
-                                const SizedBox(width: 8),
-                                Text(AppLocalizations.of(context)!.cropAnalysis),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: '/settings',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.settings, size: 20),
-                                const SizedBox(width: 8),
-                                Text(AppLocalizations.of(context)!.settings),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: '/',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.home, size: 20),
-                                const SizedBox(width: 8),
-                                Text(AppLocalizations.of(context)!.home),
-                              ],
-                            ),
-                          ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          ),
+        appBar: HistoryAppBar(
+          notifierIndex: notifierIndex,
+          onDateSelected: _onDateSelected,
+          onShowImageInfo: _showImageInfo,
+          onShowCropInfo: _showCropInfo,
         ),
-        floatingActionButton: ValueListenableBuilder(
-          valueListenable: notifierIndex,
-          builder: (context, value, child) {
-            return BlocConsumer<HistoryBloc, HistoryState>(
-              listenWhen: (previous, current) {
-                return current.mapOrNull(
-                  loaded: (curr) {
-                    final prev = previous.mapOrNull(loaded: (p) => p);
-                    return prev != null && 
-                           curr.wallpaperMessage != null && 
-                           curr.wallpaperMessage != prev.wallpaperMessage;
-                  }
-                ) ?? false;
-              },
-              listener: (context, state) {
-                state.mapOrNull(loaded: (loadedState) {
-                  if (loadedState.wallpaperMessage != null) {
-                    Fluttertoast.showToast(
-                      msg: _translateMessage(context, loadedState.wallpaperMessage!),
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                    );
-                  }
-                });
-              },
-              builder: (context, state) {
-                bool hasImages = false;
-                bool isSetting = false;
-                bool isSuccess = false;
-
-                state.mapOrNull(loaded: (loadedState) {
-                  hasImages = loadedState.images.isNotEmpty;
-                  isSetting = loadedState.isSettingWallpaper;
-                  isSuccess = loadedState.wallpaperMessage != null && 
-                             (loadedState.wallpaperMessage == 'wallpaperSetSuccess');
-                });
-
-                if (!hasImages) {
-                  return const SizedBox.shrink();
-                }
-
-                return WallpaperButton(
-                  onPressed: () {
-                    context.read<HistoryBloc>().add(HistoryEvent.wallpaperUpdateRequested(notifierIndex.value));
-                  },
-                  isSettingWallpaper: isSetting,
-                  isSuccess: isSuccess,
-                );
-              },
-            );
-          },
+        floatingActionButton: HistoryWallpaperFab(
+          notifierIndex: notifierIndex,
+          translateMessage: _translateMessage,
         ),
         body: BlocBuilder<HistoryBloc, HistoryState>(
           builder: (context, state) {
@@ -516,7 +194,12 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
               ),
               loaded: (loadedState) {
                 if (loadedState.images.isEmpty) {
-                  return _buildEmptyState(state);
+                  return HistoryEmptyState(
+                    state: state,
+                    isToday: _isToday(state.selectedDate),
+                    formattedDate: _formatSelectedDate(state.selectedDate),
+                    onDateSelected: _onDateSelected,
+                  );
                 }
 
                 if (notifierIndex.value >= loadedState.images.length) {
@@ -532,7 +215,12 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
                   onChange: _onChange,
                 );
               },
-              error: (errorState) => _buildErrorState(state, errorState.message),
+              error: (errorState) => HistoryErrorState(
+                state: state,
+                error: errorState.message,
+                translatedMessage: _translateMessage(context, errorState.message),
+                onRetry: _onDateSelected,
+              ),
             );
           },
         ),

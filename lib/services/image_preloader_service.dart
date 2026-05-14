@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
-import 'smart_crop/smart_cropper.dart';
-import 'smart_crop/smart_crop_preferences.dart';
-import 'smart_crop/utils/screen_utils.dart';
-import 'smart_crop/utils/image_utils.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_cropper.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_crop_preferences.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/screen_utils.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/image_utils.dart';
 
 import 'package:dailywallpaper/services/image_preloader.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
 import 'package:dailywallpaper/services/image_cache_service.dart';
 
 /// Service de préchargement intelligent des images

@@ -11,6 +11,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
 import 'package:dailywallpaper/widgets/crop_info_dialog.dart';
 import 'package:dailywallpaper/widgets/image_info_sheet.dart';
+import 'package:dailywallpaper/features/wallpaper/screens/widgets/home_loading_state.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -270,8 +271,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             body: BlocBuilder<HomeBloc, HomeState>(
                 builder: (context, state) {
                   return state.map(
-                    initial: (_) => _buildLoadingState(),
-                    loading: (_) => _buildLoadingState(),
+                    initial: (_) => const HomeLoadingState(),
+                    loading: (_) => const HomeLoadingState(),
                     loaded: (loadedState) {
                       if (loadedState.list.isNotEmpty) {
                         return Carousel(
@@ -290,31 +291,5 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 })));
   }
 
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.optimizingWallpapers,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.analyzingForCrop,
-            style: const TextStyle(
-              color: Colors.white38,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 }

@@ -1,4 +1,4 @@
-import 'package:dailywallpaper/services/smart_crop/models/crop_coordinates.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_coordinates.dart';
 import 'dart:ui' as ui;
 
 class FakeCropCacheService {

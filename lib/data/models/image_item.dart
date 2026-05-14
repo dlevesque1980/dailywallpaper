@@ -1,4 +1,4 @@
-import '../../services/smart_crop/models/crop_result.dart';
+import '../../features/smart_crop/models/crop_result.dart';
 
 class ImageItem {
   String url ="", description="", imageIdent="", copyright="", source="";

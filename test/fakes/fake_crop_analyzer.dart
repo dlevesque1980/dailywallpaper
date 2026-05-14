@@ -1,8 +1,8 @@
 import 'dart:ui' as ui;
-import 'package:dailywallpaper/services/smart_crop/interfaces/crop_analyzer.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_score.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_settings.dart';
-import 'package:dailywallpaper/services/smart_crop/interfaces/analysis_context.dart';
+import 'package:dailywallpaper/features/smart_crop/interfaces/crop_analyzer.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_score.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_settings.dart';
+import 'package:dailywallpaper/features/smart_crop/interfaces/analysis_context.dart';
 
 class FakeCropAnalyzer extends CropAnalyzerV2 {
   final String _name;

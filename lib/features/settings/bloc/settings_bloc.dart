@@ -7,8 +7,8 @@ import 'package:dailywallpaper/features/settings/bloc/settings_state.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 import 'package:dailywallpaper/core/preferences/pref_helper_adapter.dart';
 import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
-import 'package:dailywallpaper/services/smart_crop/smart_crop.dart';
-import 'package:dailywallpaper/services/smart_crop/utils/device_capability_detector.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_crop.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/device_capability_detector.dart';
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final PreferencesReader _prefHelper;

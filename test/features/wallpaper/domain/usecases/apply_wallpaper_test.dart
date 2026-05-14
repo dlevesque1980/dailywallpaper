@@ -5,7 +5,7 @@ import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
 import 'package:dailywallpaper/services/wallpaper/wallpaper_service.dart';
 import 'package:dailywallpaper/services/image_cache_service.dart';
-import 'package:dailywallpaper/services/smart_crop/crop_render_cache.dart';
+import 'package:dailywallpaper/features/smart_crop/crop_render_cache.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 import 'package:mocktail/mocktail.dart';
 

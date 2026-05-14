@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:dailywallpaper/services/smart_crop/crop_render_cache.dart';
+import 'package:dailywallpaper/features/smart_crop/crop_render_cache.dart';
 
 class FakeCropRenderCache implements CropRenderCache {
   final Map<String, Uint8List> _renderedBytes = {};
