@@ -65,7 +65,8 @@ class CropCacheDatabase {
     await db.execute('CREATE INDEX idx_cache_key ON $tableName (cache_key)');
     await db.execute('CREATE INDEX idx_image_url ON $tableName (image_url)');
     await db.execute('CREATE INDEX idx_created_at ON $tableName (created_at)');
-    await db.execute('CREATE INDEX idx_last_accessed_at ON $tableName (last_accessed_at)');
+    await db.execute(
+        'CREATE INDEX idx_last_accessed_at ON $tableName (last_accessed_at)');
 
     await _createMlSubjectCacheTable(db);
   }
@@ -83,7 +84,8 @@ class CropCacheDatabase {
       )
     ''');
 
-    await db.execute('CREATE INDEX idx_ml_cache_image_url ON ml_subject_cache (image_url)');
+    await db.execute(
+        'CREATE INDEX idx_ml_cache_image_url ON ml_subject_cache (image_url)');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {

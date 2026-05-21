@@ -26,7 +26,8 @@ class HistoryScreen extends StatefulWidget {
   _HistoryScreenState createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserver {
+class _HistoryScreenState extends State<HistoryScreen>
+    with WidgetsBindingObserver {
   ValueNotifier<int> notifierIndex = ValueNotifier(0);
   final HistoryMemoryManager _memoryManager = HistoryMemoryManager();
   DateTime? _currentDate;
@@ -47,7 +48,8 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
       _memoryManager.forceCleanupInactive();
     }
   }
@@ -62,6 +64,7 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
     } else {
       if (notifierIndex.value != index) {
         notifierIndex.value = index;
+        context.read<HistoryBloc>().add(HistoryEvent.indexChanged(index));
       }
     }
   }
@@ -85,13 +88,16 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorLoadingImagesForDate),
+            content:
+                Text(AppLocalizations.of(context)!.errorLoadingImagesForDate),
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: AppLocalizations.of(context)!.retry,
               textColor: Colors.white,
               onPressed: () {
-                context.read<HistoryBloc>().add(HistoryEvent.dateSelected(date));
+                context
+                    .read<HistoryBloc>()
+                    .add(HistoryEvent.dateSelected(date));
               },
             ),
           ),
@@ -134,21 +140,22 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
     if (message == 'wallpaperSetSuccess') return l10n.wallpaperSetSuccess;
     if (message == 'invalidImageIndex') return l10n.invalidImageIndex;
     if (message.startsWith('failedToSetWallpaper')) {
-      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      final detail =
+          message.contains(':') ? message.substring(message.indexOf(':')) : '';
       return '${l10n.failedToSetWallpaper}$detail';
     }
     if (message.startsWith('failedToInitializeHistory')) {
-      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      final detail =
+          message.contains(':') ? message.substring(message.indexOf(':')) : '';
       return 'Failed to initialize history$detail'; // Add l10n key if needed
     }
     if (message.startsWith('failedToLoadImagesForDate')) {
-      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      final detail =
+          message.contains(':') ? message.substring(message.indexOf(':')) : '';
       return '${l10n.errorLoadingImagesForDate}$detail';
     }
     return message;
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +190,8 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
                     const CircularProgressIndicator(),
                     const SizedBox(height: 16),
                     Text(
-                      AppLocalizations.of(context)!.loadingImagesForDate(_formatSelectedDate(loadingState.selectedDate)),
+                      AppLocalizations.of(context)!.loadingImagesForDate(
+                          _formatSelectedDate(loadingState.selectedDate)),
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey[600],
@@ -218,7 +226,8 @@ class _HistoryScreenState extends State<HistoryScreen> with WidgetsBindingObserv
               error: (errorState) => HistoryErrorState(
                 state: state,
                 error: errorState.message,
-                translatedMessage: _translateMessage(context, errorState.message),
+                translatedMessage:
+                    _translateMessage(context, errorState.message),
                 onRetry: _onDateSelected,
               ),
             );

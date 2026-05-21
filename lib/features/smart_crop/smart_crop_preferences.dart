@@ -41,8 +41,8 @@ class SmartCropPreferences {
           sp_SmartCropBatteryOptimization, false);
       final maxCropCandidates =
           await _getIntWithDefault(sp_SmartCropMaxCandidates, 10);
-      final enableSubjectScaling = await PrefHelper.getBoolWithDefault(
-          sp_SmartCropSubjectScaling, true);
+      final enableSubjectScaling =
+          await PrefHelper.getBoolWithDefault(sp_SmartCropSubjectScaling, true);
 
       // Clamp aggressiveness index to valid range
       final clampedAggressivenessIndex =
@@ -100,8 +100,8 @@ class SmartCropPreferences {
         PrefHelper.setBool(sp_SmartCropBatteryOptimization,
             settings.enableBatteryOptimization),
         _setInt(sp_SmartCropMaxCandidates, settings.maxCropCandidates),
-        PrefHelper.setBool(sp_SmartCropSubjectScaling,
-            settings.enableSubjectScaling),
+        PrefHelper.setBool(
+            sp_SmartCropSubjectScaling, settings.enableSubjectScaling),
       ]);
 
       // Update version after successful save

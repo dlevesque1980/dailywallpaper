@@ -23,5 +23,6 @@ class FakeCropRenderCache implements CropRenderCache {
   Uint8List? getRenderedBytes(String imageIdent) => _renderedBytes[imageIdent];
 
   @override
-  ui.Image? getProcessedImage(String imageIdent) => _processedImages[imageIdent];
+  ui.Image? getProcessedImage(String imageIdent) =>
+      _processedImages[imageIdent];
 }

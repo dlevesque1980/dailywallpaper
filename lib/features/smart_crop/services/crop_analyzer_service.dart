@@ -11,7 +11,7 @@ import 'package:dailywallpaper/features/smart_crop/utils/device_capability_detec
 
 class CropAnalyzerService {
   final SmartCropEngine _engine = SmartCropEngine();
-  
+
   Future<CropResult> analyzeCrop({
     required String imageUrl,
     required ui.Image image,
@@ -52,16 +52,13 @@ class CropAnalyzerService {
     } catch (e) {
       stopwatch.stop();
       // Fallback center crop on error
-      return _createFallbackResult(image, targetSize, stopwatch.elapsed, e.toString());
+      return _createFallbackResult(
+          image, targetSize, stopwatch.elapsed, e.toString());
     }
   }
 
   CropResult _createFallbackResult(
-    ui.Image image, 
-    ui.Size targetSize, 
-    Duration elapsed, 
-    String error
-  ) {
+      ui.Image image, ui.Size targetSize, Duration elapsed, String error) {
     final targetAspectRatio = targetSize.width / targetSize.height;
     final imageAspectRatio = image.width / image.height;
 

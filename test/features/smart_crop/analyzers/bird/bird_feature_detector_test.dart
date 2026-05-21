@@ -11,7 +11,7 @@ void main() {
       for (int i = 0; i < data.length; i += 4) {
         data[i + 3] = 255;
       }
-      
+
       final birds = BirdFeatureDetector.detectBirds(size, data);
       expect(birds.isEmpty, true);
     });

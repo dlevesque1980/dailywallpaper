@@ -296,4 +296,3 @@ class PerformanceMonitor {
     return recentAverage.inMicroseconds > (overallAverage.inMicroseconds * 1.5);
   }
 }
-

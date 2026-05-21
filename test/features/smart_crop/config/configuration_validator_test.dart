@@ -18,7 +18,8 @@ void main() {
       expect(validator.validateImportedConfig(config), isFalse);
     });
 
-    test('validateImportedConfig returns false when profile index is invalid', () {
+    test('validateImportedConfig returns false when profile index is invalid',
+        () {
       final config = <String, dynamic>{
         'profile': 999, // Invalid index
       };

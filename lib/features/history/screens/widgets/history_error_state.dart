@@ -18,8 +18,10 @@ class HistoryErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDatabaseError = error.toLowerCase().contains('database') || error.toLowerCase().contains('sql');
-    final isNetworkError = error.toLowerCase().contains('network') || error.toLowerCase().contains('connection');
+    final isDatabaseError = error.toLowerCase().contains('database') ||
+        error.toLowerCase().contains('sql');
+    final isNetworkError = error.toLowerCase().contains('network') ||
+        error.toLowerCase().contains('connection');
 
     return Center(
       child: Padding(
@@ -69,7 +71,8 @@ class HistoryErrorState extends StatelessWidget {
                   icon: const Icon(Icons.refresh),
                   label: Text(AppLocalizations.of(context)!.retry),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -80,7 +83,8 @@ class HistoryErrorState extends StatelessWidget {
                   icon: const Icon(Icons.home),
                   label: Text(AppLocalizations.of(context)!.home),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                   ),
                 ),
               ],

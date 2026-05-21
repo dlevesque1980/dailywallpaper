@@ -43,7 +43,7 @@ void main() {
       for (int i = 0; i < data.length; i += 4) {
         data[i + 3] = 255; // A
       }
-      
+
       final analysis = ColorFeatureDetector.analyze(size, data);
       expect(analysis.dominantColors.length, 1);
       expect(analysis.vibrantRegions.isEmpty, true);
@@ -55,7 +55,7 @@ void main() {
       final data = Uint8List(16 * 16 * 4);
       // Half red (vibrant), half black
       for (int i = 0; i < data.length; i += 4) {
-        if (i < data.length ~/ 2) { 
+        if (i < data.length ~/ 2) {
           data[i] = 255;
           data[i + 1] = 0;
           data[i + 2] = 0;
@@ -66,7 +66,7 @@ void main() {
         }
         data[i + 3] = 255;
       }
-      
+
       final analysis = ColorFeatureDetector.analyze(size, data);
       expect(analysis.vibrantRegions.isNotEmpty, true);
       expect(analysis.averageSaturation, 0.5);

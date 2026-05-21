@@ -10,7 +10,9 @@ import 'package:dailywallpaper/features/wallpaper/domain/usecases/apply_wallpape
 import '../../../fakes/fake_image_preloader_service.dart';
 
 class MockFetchHistoryUseCase extends Mock implements FetchHistoryUseCase {}
+
 class MockApplyWallpaperUseCase extends Mock implements ApplyWallpaperUseCase {}
+
 class ImageItemFake extends Fake implements ImageItem {}
 
 void main() {
@@ -64,11 +66,18 @@ void main() {
       },
       act: (bloc) => bloc.add(const HistoryEvent.started()),
       expect: () => [
-        isA<HistoryState>().having((s) => s.maybeMap(loading: (_) => true, orElse: () => false), 'loading', true),
-        isA<HistoryState>().having((s) => s.maybeMap(
-          loaded: (s) => s.images.length == 1 && s.availableDates.length == 1,
-          orElse: () => false,
-        ), 'loaded', true),
+        isA<HistoryState>().having(
+            (s) => s.maybeMap(loading: (_) => true, orElse: () => false),
+            'loading',
+            true),
+        isA<HistoryState>().having(
+            (s) => s.maybeMap(
+                  loaded: (s) =>
+                      s.images.length == 1 && s.availableDates.length == 1,
+                  orElse: () => false,
+                ),
+            'loaded',
+            true),
       ],
     );
 
@@ -88,12 +97,60 @@ void main() {
       ),
       act: (bloc) => bloc.add(HistoryEvent.dateSelected(DateTime(2026, 5, 3))),
       expect: () => [
-        isA<HistoryState>().having((s) => s.maybeMap(loading: (_) => true, orElse: () => false), 'loading', true),
-        isA<HistoryState>().having((s) => s.maybeMap(
-          loaded: (s) => s.selectedDate.day == 3,
-          orElse: () => false,
-        ), 'loaded', true),
+        isA<HistoryState>().having(
+            (s) => s.maybeMap(loading: (_) => true, orElse: () => false),
+            'loading',
+            true),
+        isA<HistoryState>().having(
+            (s) => s.maybeMap(
+                  loaded: (s) => s.selectedDate.day == 3,
+                  orElse: () => false,
+                ),
+            'loaded',
+            true),
       ],
+      verify: (_) {
+        expect(fakePreloader.preloadCurrentImageWithCropCallCount, 1);
+      },
     );
+
+    blocTest<HistoryBloc, HistoryState>(
+      'should emit loaded even if preloadCurrentImageWithCrop times out (8s)',
+      build: () {
+        fakePreloader.shouldTimeout = true;
+        when(() => mockFetchUseCase.getImagesForDate(any()))
+            .thenAnswer((_) async => [mockImage]);
+        when(() => mockFetchUseCase.getAvailableDates())
+            .thenAnswer((_) async => [DateTime(2026, 5, 3)]);
+        return historyBloc;
+      },
+      seed: () => HistoryState.loaded(
+        images: [],
+        selectedDate: DateTime(2026, 5, 2),
+        availableDates: [DateTime(2026, 5, 2)],
+      ),
+      act: (bloc) => bloc.add(HistoryEvent.dateSelected(DateTime(2026, 5, 3))),
+      expect: () => [
+        isA<HistoryState>().having(
+            (s) => s.maybeMap(loading: (_) => true, orElse: () => false),
+            'loading',
+            true),
+        isA<HistoryState>().having(
+            (s) => s.maybeMap(
+                  loaded: (s) => s.selectedDate.day == 3,
+                  orElse: () => false,
+                ),
+            'loaded',
+            true),
+      ],
+      verify: (_) {
+        expect(fakePreloader.preloadCurrentImageWithCropCallCount, 1);
+      },
+    );
+
+    test('close() should NOT call clearCache on preloader', () async {
+      await historyBloc.close();
+      expect(fakePreloader.clearCacheCallCount, 0);
+    });
   });
 }

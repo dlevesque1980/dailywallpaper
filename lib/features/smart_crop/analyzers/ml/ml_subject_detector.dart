@@ -13,11 +13,15 @@ class MlSubjectDetector {
     final int width = params['width'];
     final int height = params['height'];
 
-    if (mask == null || mask.isEmpty || mask.length != width * height) return null;
+    if (mask == null || mask.isEmpty || mask.length != width * height)
+      return null;
 
     int minX = width, minY = height, maxX = 0, maxY = 0;
     bool found = false;
-    double weightedSumX = 0.0, weightedSumY = 0.0, totalWeight = 0.0, sumConfidence = 0.0;
+    double weightedSumX = 0.0,
+        weightedSumY = 0.0,
+        totalWeight = 0.0,
+        sumConfidence = 0.0;
     int foregroundPixels = 0;
 
     for (int y = 0; y < height; y++) {
@@ -49,8 +53,12 @@ class MlSubjectDetector {
     final normBoundsW = normMaxX - normMinX;
     final normBoundsH = normMaxY - normMinY;
 
-    final centroidX = totalWeight > 0 ? (weightedSumX / totalWeight) / width : normMinX + normBoundsW / 2;
-    final centroidY = totalWeight > 0 ? (weightedSumY / totalWeight) / height : normMinY + normBoundsH / 2;
+    final centroidX = totalWeight > 0
+        ? (weightedSumX / totalWeight) / width
+        : normMinX + normBoundsW / 2;
+    final centroidY = totalWeight > 0
+        ? (weightedSumY / totalWeight) / height
+        : normMinY + normBoundsH / 2;
 
     final halfW = math.min(normBoundsW / 2, normBoundsW * 0.60);
     final halfH = math.min(normBoundsH / 2, normBoundsH * 0.60);
@@ -70,16 +78,22 @@ class MlSubjectDetector {
     final avgConfidence = sumConfidence / foregroundPixels;
     double sizeMultiplier = 1.0;
     final area = normBoundsW * normBoundsH;
-    if (area < 0.01) sizeMultiplier = 0.3;
-    else if (area < 0.04) sizeMultiplier = 0.7;
+    if (area < 0.01)
+      sizeMultiplier = 0.3;
+    else if (area < 0.04)
+      sizeMultiplier = 0.7;
     else if (area > 0.85) sizeMultiplier = 0.6;
 
     double edgePenalty = 1.0;
-    if (normMinX < 0.01 || normMaxX > 0.99 || normMinY < 0.01 || normMaxY > 0.99) {
+    if (normMinX < 0.01 ||
+        normMaxX > 0.99 ||
+        normMinY < 0.01 ||
+        normMaxY > 0.99) {
       edgePenalty = area < 0.1 ? 0.7 : 0.9;
     }
 
-    final finalConfidence = (avgConfidence * sizeMultiplier * edgePenalty).clamp(0.0, 1.0);
+    final finalConfidence =
+        (avgConfidence * sizeMultiplier * edgePenalty).clamp(0.0, 1.0);
     return MlSubjectDetectorResult(bounds, finalConfidence);
   }
 }

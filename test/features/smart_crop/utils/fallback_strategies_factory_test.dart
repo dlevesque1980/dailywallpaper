@@ -23,7 +23,7 @@ void main() {
         targetSize: const ui.Size(1000, 2000),
         reason: 'memory_pressure',
       );
-      
+
       expect(crop.strategy, 'intelligent_center_fallback');
     });
 
@@ -33,7 +33,7 @@ void main() {
         targetSize: const ui.Size(1000, 2000),
         reason: 'analyzer_failure',
       );
-      
+
       expect(crop.strategy, 'aspect_ratio_aware_fallback');
     });
 
@@ -43,7 +43,7 @@ void main() {
         targetSize: const ui.Size(1000, 2000),
         reason: 'corrupted_image',
       );
-      
+
       expect(crop.strategy, 'safe_zone_fallback');
     });
 
@@ -52,7 +52,7 @@ void main() {
         image: mockImage,
         targetSize: const ui.Size(1000, 2000),
       );
-      
+
       expect(options.length, 3);
       // Options should be sorted by score descending
       expect(options[0].score >= options[1].score, isTrue);

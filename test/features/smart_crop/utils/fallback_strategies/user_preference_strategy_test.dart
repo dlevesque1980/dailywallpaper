@@ -20,8 +20,9 @@ void main() {
 
     test('uses aggressive bias', () {
       final targetSize = const ui.Size(2000, 1000); // Wider
-      final settings = const CropSettings(aggressiveness: CropAggressiveness.aggressive);
-      
+      final settings =
+          const CropSettings(aggressiveness: CropAggressiveness.aggressive);
+
       final crop = strategy.createCrop(
         image: mockImage,
         targetSize: targetSize,
@@ -34,8 +35,9 @@ void main() {
 
     test('uses balanced bias', () {
       final targetSize = const ui.Size(2000, 1000); // Wider
-      final settings = const CropSettings(aggressiveness: CropAggressiveness.balanced);
-      
+      final settings =
+          const CropSettings(aggressiveness: CropAggressiveness.balanced);
+
       final crop = strategy.createCrop(
         image: mockImage,
         targetSize: targetSize,
@@ -48,8 +50,9 @@ void main() {
 
     test('uses conservative bias', () {
       final targetSize = const ui.Size(2000, 1000); // Wider
-      final settings = const CropSettings(aggressiveness: CropAggressiveness.conservative);
-      
+      final settings =
+          const CropSettings(aggressiveness: CropAggressiveness.conservative);
+
       final crop = strategy.createCrop(
         image: mockImage,
         targetSize: targetSize,

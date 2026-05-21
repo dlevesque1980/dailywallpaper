@@ -4,31 +4,31 @@ import '../models/crop_coordinates.dart';
 class CropCacheEntry {
   /// Unique identifier for the cache entry
   final int? id;
-  
+
   /// Cache key (hash of image_url + target_size + settings)
   final String cacheKey;
-  
+
   /// Original image URL or identifier
   final String imageUrl;
-  
+
   /// Target size width
   final double targetWidth;
-  
+
   /// Target size height
   final double targetHeight;
-  
+
   /// Settings hash for cache invalidation
   final String settingsHash;
-  
+
   /// Cached crop coordinates
   final CropCoordinates coordinates;
-  
+
   /// Timestamp when the entry was created
   final DateTime createdAt;
-  
+
   /// Timestamp when the entry was last accessed
   final DateTime lastAccessedAt;
-  
+
   /// Number of times this cache entry has been accessed
   final int accessCount;
 
@@ -150,7 +150,8 @@ class CropCacheEntry {
         strategy: map['crop_strategy'] as String,
       ),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-      lastAccessedAt: DateTime.fromMillisecondsSinceEpoch(map['last_accessed_at'] as int),
+      lastAccessedAt:
+          DateTime.fromMillisecondsSinceEpoch(map['last_accessed_at'] as int),
       accessCount: map['access_count'] as int,
     );
   }
@@ -169,15 +170,15 @@ class CropCacheEntry {
   @override
   String toString() {
     return 'CropCacheEntry(id: $id, cacheKey: $cacheKey, imageUrl: $imageUrl, '
-           'coordinates: $coordinates, age: ${age.inHours}h, accessCount: $accessCount)';
+        'coordinates: $coordinates, age: ${age.inHours}h, accessCount: $accessCount)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is CropCacheEntry &&
-           other.cacheKey == cacheKey &&
-           other.coordinates == coordinates;
+        other.cacheKey == cacheKey &&
+        other.coordinates == coordinates;
   }
 
   @override

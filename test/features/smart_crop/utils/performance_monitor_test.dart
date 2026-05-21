@@ -22,7 +22,8 @@ void main() {
     });
 
     test('recordFailure adds a failed metric', () {
-      monitor.recordFailure('test_op', const Duration(milliseconds: 100), 'error');
+      monitor.recordFailure(
+          'test_op', const Duration(milliseconds: 100), 'error');
 
       final stats = monitor.getOverallStats();
       expect(stats.totalOperations, 1);
@@ -48,7 +49,7 @@ void main() {
       final statsA = monitor.getOperationStats('op_A');
       expect(statsA?.totalCount, 2);
       expect(statsA?.successCount, 2);
-      
+
       final statsB = monitor.getOperationStats('op_B');
       expect(statsB?.totalCount, 1);
       expect(statsB?.failureCount, 1);

@@ -24,7 +24,7 @@ class FallbackCropStrategies {
   static final FallbackCropStrategies _instance =
       FallbackCropStrategies._internal();
   factory FallbackCropStrategies() => _instance;
-  
+
   late final Map<FallbackType, FallbackStrategy> _strategies;
 
   FallbackCropStrategies._internal() {
@@ -46,7 +46,8 @@ class FallbackCropStrategies {
     Map<String, dynamic>? context,
   }) {
     final type = _selectFallbackStrategy(reason, settings, context);
-    final strategy = _strategies[type] ?? _strategies[FallbackType.intelligentCenter]!;
+    final strategy =
+        _strategies[type] ?? _strategies[FallbackType.intelligentCenter]!;
 
     return strategy.createCrop(
       image: image,
@@ -64,13 +65,16 @@ class FallbackCropStrategies {
   }) {
     final options = <CropScore>[];
 
-    void addOption(FallbackType type, String strategyName, String fallbackType, double confidence) {
+    void addOption(FallbackType type, String strategyName, String fallbackType,
+        double confidence) {
       final strategy = _strategies[type]!;
-      final coordinates = strategy.createCrop(image: image, targetSize: targetSize, settings: settings);
-      
+      final coordinates = strategy.createCrop(
+          image: image, targetSize: targetSize, settings: settings);
+
       options.add(CropScore(
         coordinates: coordinates,
-        score: strategy.scoreCrop(crop: coordinates, image: image, targetSize: targetSize),
+        score: strategy.scoreCrop(
+            crop: coordinates, image: image, targetSize: targetSize),
         strategy: strategyName,
         metrics: {
           'fallback_type': fallbackType,
@@ -79,8 +83,10 @@ class FallbackCropStrategies {
       ));
     }
 
-    addOption(FallbackType.intelligentCenter, 'intelligent_center_fallback', 'intelligent_center', 0.7);
-    addOption(FallbackType.aspectRatioAware, 'aspect_ratio_aware_fallback', 'aspect_ratio_aware', 0.6);
+    addOption(FallbackType.intelligentCenter, 'intelligent_center_fallback',
+        'intelligent_center', 0.7);
+    addOption(FallbackType.aspectRatioAware, 'aspect_ratio_aware_fallback',
+        'aspect_ratio_aware', 0.6);
     addOption(FallbackType.safeZone, 'safe_zone_fallback', 'safe_zone', 0.5);
 
     // Sort by score (highest first)

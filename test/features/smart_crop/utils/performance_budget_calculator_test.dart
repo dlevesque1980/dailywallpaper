@@ -10,7 +10,8 @@ void main() {
       calculator = PerformanceBudgetCalculator();
     });
 
-    test('calculateProcessingBudget applies multiplier and memory reduction', () {
+    test('calculateProcessingBudget applies multiplier and memory reduction',
+        () {
       final capabilities = const DeviceCapability(
         platform: DevicePlatform.android,
         isEmulator: false,
@@ -24,16 +25,19 @@ void main() {
         timeoutMultiplier: 1.5,
       );
 
-      final budgetLowMemory = calculator.calculateProcessingBudget(capabilities, false);
+      final budgetLowMemory =
+          calculator.calculateProcessingBudget(capabilities, false);
       // High perf -> 3s * 1.5 = 4500ms
       expect(budgetLowMemory.inMilliseconds, 4500);
 
-      final budgetHighMemory = calculator.calculateProcessingBudget(capabilities, true);
+      final budgetHighMemory =
+          calculator.calculateProcessingBudget(capabilities, true);
       // High perf -> 4500ms * 0.8 = 3600ms
       expect(budgetHighMemory.inMilliseconds, 3600);
     });
 
-    test('calculateProcessingBudget reduces base budget for low performance', () {
+    test('calculateProcessingBudget reduces base budget for low performance',
+        () {
       final capabilities = const DeviceCapability(
         platform: DevicePlatform.android,
         isEmulator: false,

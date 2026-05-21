@@ -17,12 +17,25 @@ void main() {
     test('postProcess applies letterbox for landscape image', () {
       final image = FakeImage(width: 2000, height: 1000); // 2:1
       final targetSize = const ui.Size(1080, 2400); // Portrait target
-      final bestCrop = const CropCoordinates(x: 0.45, y: 0.45, width: 0.1, height: 0.1, confidence: 1.0, strategy: 'test');
-      final settings = CropSettings.defaultSettings.copyWith(allowLetterbox: true);
+      final bestCrop = const CropCoordinates(
+          x: 0.45,
+          y: 0.45,
+          width: 0.1,
+          height: 0.1,
+          confidence: 1.0,
+          strategy: 'test');
+      final settings =
+          CropSettings.defaultSettings.copyWith(allowLetterbox: true);
 
       final result = processor.postProcess(
         bestCrop: bestCrop,
-        allScores: [CropScore(strategy: 'test', score: 1.0, coordinates: bestCrop, metrics: const {})],
+        allScores: [
+          CropScore(
+              strategy: 'test',
+              score: 1.0,
+              coordinates: bestCrop,
+              metrics: const {})
+        ],
         image: image,
         targetSize: targetSize,
         settings: settings,
@@ -35,12 +48,25 @@ void main() {
     test('postProcess does not apply letterbox if disabled', () {
       final image = FakeImage(width: 2000, height: 1000);
       final targetSize = const ui.Size(1080, 2400);
-      final bestCrop = const CropCoordinates(x: 0.45, y: 0.45, width: 0.1, height: 0.1, confidence: 1.0, strategy: 'test');
-      final settings = CropSettings.defaultSettings.copyWith(allowLetterbox: false);
+      final bestCrop = const CropCoordinates(
+          x: 0.45,
+          y: 0.45,
+          width: 0.1,
+          height: 0.1,
+          confidence: 1.0,
+          strategy: 'test');
+      final settings =
+          CropSettings.defaultSettings.copyWith(allowLetterbox: false);
 
       final result = processor.postProcess(
         bestCrop: bestCrop,
-        allScores: [CropScore(strategy: 'test', score: 1.0, coordinates: bestCrop, metrics: const {})],
+        allScores: [
+          CropScore(
+              strategy: 'test',
+              score: 1.0,
+              coordinates: bestCrop,
+              metrics: const {})
+        ],
         image: image,
         targetSize: targetSize,
         settings: settings,

@@ -41,7 +41,7 @@ class SmartCropProfileManager {
     try {
       final currentSettings = await SmartCropPreferences.getCropSettings();
       final currentScaling = currentSettings.enableSubjectScaling;
-      
+
       switch (level) {
         case 0:
           // Disable Smart Crop completely

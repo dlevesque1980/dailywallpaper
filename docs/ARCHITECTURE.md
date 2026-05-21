@@ -24,7 +24,9 @@ Each module contains its own `Bloc`, `State`, `Provider` (for dependency injecti
 - **Local Database**: Uses `sqflite` (e.g. `wallpaper.db` and `crop_cache.db`) to store history and expensive image calculations. User preferences are stored with `shared_preferences`.
 
 ### 1.3 Smart Crop Engine
-The project’s technical core lives in `lib/services/smart_crop/`. This engine uses multiple analyzers to identify the best crop area so images fit vertical mobile screens without losing the main subject.
+The project’s technical core lives in `lib/features/smart_crop/`. This engine uses multiple analyzers to identify the best crop area so images fit vertical mobile screens without losing the main subject.
+
+For a **high-level explanation** (two-phase analyse vs apply, diagrams, caching, app integration), see **[SMART_CROP.md](SMART_CROP.md)**.
 
 ---
 

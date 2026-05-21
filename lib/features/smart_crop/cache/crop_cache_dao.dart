@@ -147,8 +147,8 @@ class CropCacheDao {
     const batchSize = 50;
     int totalDeleted = 0;
     for (int iteration = 0; iteration < 100; iteration++) {
-      final countResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM ${CropCacheDatabase.tableName}');
+      final countResult = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM ${CropCacheDatabase.tableName}');
       final currentCount = countResult.first['count'] as int;
       if (currentCount <= maxEntries) break;
       final batchToDelete = ((currentCount - maxEntries).clamp(1, batchSize));
@@ -172,8 +172,8 @@ class CropCacheDao {
   Future<CropCacheStats> getStats() async {
     final db = await _database.database;
     try {
-      final countResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM ${CropCacheDatabase.tableName}');
+      final countResult = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM ${CropCacheDatabase.tableName}');
       final totalEntries = countResult.first['count'] as int;
 
       final sizeResult = await db.rawQuery(
@@ -201,8 +201,8 @@ class CropCacheDao {
             newestResult.first['created_at'] as int);
       }
 
-      final avgAccessResult = await db
-          .rawQuery('SELECT AVG(access_count) as avg_access FROM ${CropCacheDatabase.tableName}');
+      final avgAccessResult = await db.rawQuery(
+          'SELECT AVG(access_count) as avg_access FROM ${CropCacheDatabase.tableName}');
       final avgAccessCount =
           (avgAccessResult.first['avg_access'] as double?) ?? 0.0;
 
@@ -230,8 +230,8 @@ class CropCacheDao {
   Future<int> _clearBatched(Database db) async {
     const batchSize = 1000;
     int totalDeleted = 0;
-    final countResult =
-        await db.rawQuery('SELECT COUNT(*) as count FROM ${CropCacheDatabase.tableName}');
+    final countResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM ${CropCacheDatabase.tableName}');
     final totalCount = countResult.first['count'] as int;
 
     if (totalCount <= batchSize) {

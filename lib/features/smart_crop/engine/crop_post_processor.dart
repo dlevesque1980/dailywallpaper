@@ -16,7 +16,8 @@ class CropPostProcessor {
 
     // 1. Subject Fit Scaling
     if (settings.enableSubjectScaling) {
-      result = _applySubjectScaling(result, allScores, image, targetSize, settings);
+      result =
+          _applySubjectScaling(result, allScores, image, targetSize, settings);
     }
 
     // 2. Letterbox Expansion
@@ -70,14 +71,16 @@ class CropPostProcessor {
     return bestCrop;
   }
 
-  CropCoordinates _applyLetterboxExpansion(CropCoordinates bestCrop, ui.Image image) {
+  CropCoordinates _applyLetterboxExpansion(
+      CropCoordinates bestCrop, ui.Image image) {
     try {
       final imageAspect = image.width / image.height;
       if (imageAspect > 1.3) {
         const targetLetterboxWidth = 0.50;
         if (bestCrop.width < targetLetterboxWidth) {
           final cropCenterX = bestCrop.x + bestCrop.width / 2;
-          final newX = (cropCenterX - targetLetterboxWidth / 2).clamp(0.0, 1.0 - targetLetterboxWidth);
+          final newX = (cropCenterX - targetLetterboxWidth / 2)
+              .clamp(0.0, 1.0 - targetLetterboxWidth);
           return bestCrop.copyWith(
             x: newX,
             width: targetLetterboxWidth,

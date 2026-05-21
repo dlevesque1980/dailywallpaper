@@ -2,191 +2,155 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'dart:io';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/features/smart_crop/smart_cropper.dart';
-import 'package:dailywallpaper/features/smart_crop/utils/screen_utils.dart';
 import 'package:dailywallpaper/services/image_cache_service.dart';
 
-class CarouselItem extends StatelessWidget {
+class CarouselItem extends StatefulWidget {
   final ImageItem image;
 
   const CarouselItem({Key? key, required this.image}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // 1. Zero Flicker Path: Check if HomeBloc already pre-rendered this image
-    final cachedImage = SmartCropper.getProcessedImage(image.imageIdent);
-    if (cachedImage != null) {
-      // Trigger capture if bytes are not yet cached (non-blocking)
-      if (SmartCropper.getRenderedBytes(image.imageIdent) == null) {
-        unawaited(Future.microtask(
-            () => _captureRenderedImage(cachedImage, image.imageIdent)));
-      }
-      return _buildSmartCroppedImageWidget(cachedImage);
+  State<CarouselItem> createState() => _CarouselItemState();
+}
+
+class _CarouselItemState extends State<CarouselItem> {
+  ui.Image? _processedImage;
+  bool _isLoading = false;
+  String? _loadedImageIdent;
+  StreamSubscription<String>? _processedImageSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCacheAndLoad();
+    // Subscribe to know when background crop processing finishes for THIS image
+    _processedImageSub =
+        SmartCropper.processedImageStream.listen(_onProcessedImageReady);
+  }
+
+  @override
+  void didUpdateWidget(CarouselItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.image.imageIdent != widget.image.imageIdent) {
+      _checkCacheAndLoad();
+    }
+  }
+
+  @override
+  void dispose() {
+    _processedImageSub?.cancel();
+    super.dispose();
+  }
+
+  void _onProcessedImageReady(String imageIdent) {
+    if (imageIdent != widget.image.imageIdent) return;
+    if (_processedImage != null) return; // Already showing processed image
+
+    // First try the in-memory cache (populated by CropImageResolver)
+    final memCached = SmartCropper.getProcessedImage(imageIdent);
+    if (memCached != null && mounted) {
+      setState(() {
+        _processedImage = memCached;
+        _loadedImageIdent = imageIdent;
+      });
+      return;
     }
 
-    // 2. Transition Path: Show standard and fade in smart crop later
+    // Fallback: reload from disk (in case it was saved without caching in memory)
+    _isLoading = false; // Reset guard so _loadFromDisk can run again
+    _loadFromDisk(imageIdent);
+  }
+
+  void _checkCacheAndLoad() {
+    final cachedImage = SmartCropper.getProcessedImage(widget.image.imageIdent);
+    if (cachedImage != null) {
+      setState(() {
+        _processedImage = cachedImage;
+        _loadedImageIdent = widget.image.imageIdent;
+      });
+      return;
+    }
+
+    _processedImage = null;
+    _loadedImageIdent = widget.image.imageIdent;
+    _loadFromDisk(widget.image.imageIdent);
+  }
+
+  Future<void> _loadFromDisk(String imageIdent) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    try {
+      final imageCache = ImageCacheServiceImpl();
+      final image = await imageCache.loadProcessedImage(imageIdent);
+      if (image != null && mounted && _loadedImageIdent == imageIdent) {
+        SmartCropper.cacheProcessedImage(imageIdent, image);
+        setState(() {
+          _processedImage = image;
+        });
+      }
+    } catch (_) {
+      // Ignore
+    } finally {
+      _isLoading = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasProcessed = _processedImage != null;
+
     return Stack(
       fit: StackFit.expand,
       children: [
         // Level 1: Standard BoxFit.cover image (always present)
-        _buildStandardImageWidget(image),
+        _buildStandardImageWidget(widget.image),
 
-        // Level 2: Smart cropped image (fades in when ready)
-        if (image.smartCropResult != null)
-          FutureBuilder<ui.Image>(
-            key: ValueKey(
-                '${image.url}_${image.smartCropResult!.bestCrop.strategy}'),
-            future: _loadAndCropImage(image),
-            builder: (context, snapshot) {
-              final bool isReady = snapshot.hasData;
-
-              // Double check if it got cached while we were waiting
-              if (isReady) {
-                SmartCropper.cacheProcessedImage(
-                    image.imageIdent, snapshot.data!);
-                // Trigger capture of the rendered image non-blockingly
-                if (SmartCropper.getRenderedBytes(image.imageIdent) == null) {
-                  unawaited(Future.microtask(() =>
-                      _captureRenderedImage(snapshot.data!, image.imageIdent)));
-                }
-              }
-
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  AnimatedOpacity(
-                    opacity: isReady ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeIn,
-                    child: isReady
-                        ? _buildSmartCroppedImageWidget(snapshot.data!)
-                        : const SizedBox.expand(),
-                  ),
-                  if (!isReady)
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.black26,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white70),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+        // Level 2: Smart cropped image (fades in when loaded from disk)
+        AnimatedOpacity(
+          opacity: hasProcessed ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeIn,
+          child: hasProcessed
+              ? _buildSmartCroppedImageWidget(_processedImage!)
+              : const SizedBox.expand(),
+        ),
       ],
     );
   }
 
-  Future<ui.Image> _loadAndCropImage(ImageItem image) async {
-    final result = image.smartCropResult!;
-    final imageCache = ImageCacheServiceImpl();
-    
-    var sourceImage = await imageCache.loadSourceImage(image.imageIdent);
-    if (sourceImage == null) {
-      sourceImage = await imageCache.loadImageFromUrl(image.url);
-    }
-    
-    if (sourceImage == null) throw Exception('Failed to load source image');
 
-    final screenSize = ScreenUtils.getPhysicalScreenSize();
-    final targetSize = ScreenUtils.calculateTargetSize(
-      ui.Size(sourceImage.width.toDouble(), sourceImage.height.toDouble()),
-      screenSize.width / screenSize.height,
-      maxDimension: math.max(screenSize.width, screenSize.height).round(),
-    );
-
-    return await SmartCropper.applyCropAndResize(
-      sourceImage,
-      result.bestCrop,
-      targetSize,
-    );
-  }
-
-  Future<void> _captureRenderedImage(
-      ui.Image croppedImage, String imageIdent) async {
-    try {
-      final screenSize = ScreenUtils.getPhysicalScreenSize();
-      final width = screenSize.width;
-      final height = screenSize.height;
-
-      if (width <= 0 || height <= 0) return;
-
-      final imageAspectRatio = croppedImage.width / croppedImage.height;
-      final containerAspectRatio = width / height;
-
-      double drawWidth, drawHeight;
-      double offsetX = 0, offsetY = 0;
-
-      if (imageAspectRatio > containerAspectRatio) {
-        drawWidth = width;
-        drawHeight = drawWidth / imageAspectRatio;
-        offsetY = (height - drawHeight) / 2;
-      } else {
-        drawHeight = height;
-        drawWidth = drawHeight * imageAspectRatio;
-        offsetX = (width - drawWidth) / 2;
-      }
-
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, width, height),
-        Paint()..color = const Color(0xFF000000),
-      );
-
-      final destRect = Rect.fromLTWH(offsetX, offsetY, drawWidth, drawHeight);
-      final srcRect = Rect.fromLTWH(
-          0, 0, croppedImage.width.toDouble(), croppedImage.height.toDouble());
-
-      canvas.drawImageRect(croppedImage, srcRect, destRect, Paint());
-
-      final picture = recorder.endRecording();
-      final renderedImage =
-          await picture.toImage(width.round(), height.round());
-
-      final byteData =
-          await renderedImage.toByteData(format: ui.ImageByteFormat.png);
-      renderedImage.dispose();
-
-      if (byteData != null) {
-        SmartCropper.cacheRenderedBytes(
-            imageIdent, byteData.buffer.asUint8List());
-      }
-    } catch (e) {
-      debugPrint('_captureRenderedImage error for $imageIdent: $e');
-    }
-  }
 
   Widget _buildStandardImageWidget(ImageItem image) {
+    final mediaQuery = MediaQuery.of(context);
+    final size = mediaQuery.size;
+    final pixelRatio = mediaQuery.devicePixelRatio;
+    
+    // Scale image decode target to exact physical screen dimensions to avoid decoding 4K pixels in RAM.
+    final cacheWidth = (size.width * pixelRatio).round();
+    final cacheHeight = (size.height * pixelRatio).round();
+
+    if (image.localSourcePath != null) {
+      return Image.file(
+        File(image.localSourcePath!),
+        fit: BoxFit.cover,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildNetworkImage(image, cacheWidth, cacheHeight),
+      );
+    }
+    return _buildNetworkImage(image, cacheWidth, cacheHeight);
+  }
+
+  Widget _buildNetworkImage(ImageItem image, int cacheWidth, int cacheHeight) {
     return Image.network(
       image.url,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: Colors.black87,
-          child: Center(
-            child: CircularProgressIndicator(
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white54),
-              strokeWidth: 2,
-            ),
-          ),
-        );
-      },
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
       errorBuilder: (context, error, stackTrace) => Container(
         color: Colors.black87,
         child: const Center(
@@ -195,6 +159,7 @@ class CarouselItem extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _buildSmartCroppedImageWidget(ui.Image croppedImage) {
     return Container(

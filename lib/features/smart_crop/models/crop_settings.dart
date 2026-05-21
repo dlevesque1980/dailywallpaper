@@ -100,7 +100,8 @@ class CropSettings {
     minSubjectCoverage: 0.65, // Softer — allows wider crops with letterbox
     maxScaleFactor: 2.5,
     enableMlSubjectDetection: true,
-    allowLetterbox: true, // Bing/NASA editorial shots look great with blurred fill
+    allowLetterbox:
+        true, // Bing/NASA editorial shots look great with blurred fill
   );
 
   /// Conservative settings for portrait or complex images

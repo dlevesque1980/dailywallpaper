@@ -18,9 +18,15 @@ void main() {
       when(() => mockImage.height).thenReturn(100);
     });
 
-    test('applyCropAndResize returns resized image for invalid coordinates', () async {
+    test('applyCropAndResize returns resized image for invalid coordinates',
+        () async {
       final invalidCoordinates = const CropCoordinates(
-        x: -1, y: 0, width: 0, height: 0, confidence: 0, strategy: '',
+        x: -1,
+        y: 0,
+        width: 0,
+        height: 0,
+        confidence: 0,
+        strategy: '',
       );
 
       // The mockImage is passed in, but since coordinates are invalid, it will try to call resizeImage.
@@ -31,7 +37,12 @@ void main() {
 
     test('applyCrop returns sourceImage for invalid coordinates', () async {
       final invalidCoordinates = const CropCoordinates(
-        x: -1, y: 0, width: 0, height: 0, confidence: 0, strategy: '',
+        x: -1,
+        y: 0,
+        width: 0,
+        height: 0,
+        confidence: 0,
+        strategy: '',
       );
 
       final result = await processor.applyCrop(mockImage, invalidCoordinates);

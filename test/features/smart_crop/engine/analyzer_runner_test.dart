@@ -39,7 +39,13 @@ void main() {
       final score1 = CropScore(
         strategy: 'a1',
         score: 0.8,
-        coordinates: const CropCoordinates(x: 0, y: 0, width: 0.5, height: 0.5, confidence: 0.8, strategy: 'a1'),
+        coordinates: const CropCoordinates(
+            x: 0,
+            y: 0,
+            width: 0.5,
+            height: 0.5,
+            confidence: 0.8,
+            strategy: 'a1'),
         metrics: const {},
       );
       final analyzers = [
@@ -61,8 +67,10 @@ void main() {
       final settings = CropSettings.defaultSettings.copyWith(
         maxProcessingTime: const Duration(milliseconds: 1),
       );
-      context = context.copyWith(settings: settings, startTime: DateTime.now().subtract(const Duration(seconds: 1)));
-      
+      context = context.copyWith(
+          settings: settings,
+          startTime: DateTime.now().subtract(const Duration(seconds: 1)));
+
       final analyzers = [
         MockAnalyzerWithScore('a1', CropScore.empty('a1')),
       ];

@@ -42,7 +42,8 @@ class HistoryEmptyState extends StatelessWidget {
             Text(
               isToday
                   ? AppLocalizations.of(context)!.noWallpapersDownloadedToday
-                  : AppLocalizations.of(context)!.noWallpapersSavedForDate(formattedDate),
+                  : AppLocalizations.of(context)!
+                      .noWallpapersSavedForDate(formattedDate),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -59,7 +60,8 @@ class HistoryEmptyState extends StatelessWidget {
                   icon: const Icon(Icons.home),
                   label: Text(AppLocalizations.of(context)!.goToHome),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -74,7 +76,8 @@ class HistoryEmptyState extends StatelessWidget {
                 icon: const Icon(Icons.calendar_today),
                 label: Text(AppLocalizations.of(context)!.viewRecentImages),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
             ] else ...[
@@ -97,7 +100,8 @@ class HistoryEmptyState extends StatelessWidget {
                   icon: const Icon(Icons.home),
                   label: Text(AppLocalizations.of(context)!.goToHome),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
                 ),
               ],

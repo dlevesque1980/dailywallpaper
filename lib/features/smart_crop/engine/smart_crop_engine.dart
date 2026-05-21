@@ -34,7 +34,7 @@ class CropAnalysisException implements Exception {
 class SmartCropEngine {
   static final SmartCropEngine _instance = SmartCropEngine._internal();
   factory SmartCropEngine() => _instance;
-  SmartCropEngine._internal() 
+  SmartCropEngine._internal()
       : _registry = AnalyzerRegistry(),
         _runner = AnalyzerRunner(),
         _postProcessor = CropPostProcessor() {
@@ -75,7 +75,8 @@ class SmartCropEngine {
       _engineStats['successful_analyses'] = 0;
       _engineStats['failed_analyses'] = 0;
     } catch (e) {
-      throw CropAnalysisException('Failed to initialize SmartCropEngine', null, e);
+      throw CropAnalysisException(
+          'Failed to initialize SmartCropEngine', null, e);
     }
   }
 
@@ -90,10 +91,12 @@ class SmartCropEngine {
     final analysisSettings = settings ?? CropSettings.defaultSettings;
     final stopwatch = Stopwatch()..start();
 
-    _engineStats['total_analyses'] = (_engineStats['total_analyses'] as int? ?? 0) + 1;
+    _engineStats['total_analyses'] =
+        (_engineStats['total_analyses'] as int? ?? 0) + 1;
 
     try {
-      final recentErrors = _errorHandler.getRecentErrors(within: const Duration(minutes: 5));
+      final recentErrors =
+          _errorHandler.getRecentErrors(within: const Duration(minutes: 5));
       final degradationLevel = _degradationManager.assessDegradationNeeds(
         image: image,
         settings: analysisSettings,
@@ -101,24 +104,34 @@ class SmartCropEngine {
       );
 
       final effectiveSettings = degradationLevel != DegradationLevel.none
-          ? _degradationManager.createDegradedSettings(analysisSettings, degradationLevel)
+          ? _degradationManager.createDegradedSettings(
+              analysisSettings, degradationLevel)
           : analysisSettings;
 
-      final context = AnalysisContext(imageId: imageId, settings: effectiveSettings, metadata: metadata ?? {});
+      final context = AnalysisContext(
+          imageId: imageId,
+          settings: effectiveSettings,
+          metadata: metadata ?? {});
 
       if (_shouldSkipSmartCrop(image, targetSize, effectiveSettings)) {
         stopwatch.stop();
-        final fallback = _createFallback(image, targetSize, 'skipped', effectiveSettings);
-        return _createResult(fallback, [], stopwatch.elapsed, false, {'skipped': true});
+        final fallback =
+            _createFallback(image, targetSize, 'skipped', effectiveSettings);
+        return _createResult(
+            fallback, [], stopwatch.elapsed, false, {'skipped': true});
       }
 
-      var analyzers = _registry.getCompatibleAnalyzers(image, effectiveSettings);
-      analyzers = _degradationManager.filterAnalyzers(analyzers, degradationLevel, image, effectiveSettings);
+      var analyzers =
+          _registry.getCompatibleAnalyzers(image, effectiveSettings);
+      analyzers = _degradationManager.filterAnalyzers(
+          analyzers, degradationLevel, image, effectiveSettings);
 
       if (analyzers.isEmpty) {
         stopwatch.stop();
-        final fallback = _createFallback(image, targetSize, 'no_analyzers', effectiveSettings);
-        return _createResult(fallback, [], stopwatch.elapsed, false, {'no_analyzers': true});
+        final fallback = _createFallback(
+            image, targetSize, 'no_analyzers', effectiveSettings);
+        return _createResult(
+            fallback, [], stopwatch.elapsed, false, {'no_analyzers': true});
       }
 
       final scores = await _runner.runAnalyzers(
@@ -131,8 +144,10 @@ class SmartCropEngine {
 
       if (scores.isEmpty) {
         stopwatch.stop();
-        final fallback = _createFallback(image, targetSize, 'failed', effectiveSettings);
-        return _createResult(fallback, [], stopwatch.elapsed, false, {'analysis_failed': true});
+        final fallback =
+            _createFallback(image, targetSize, 'failed', effectiveSettings);
+        return _createResult(
+            fallback, [], stopwatch.elapsed, false, {'analysis_failed': true});
       }
 
       var bestCrop = _scoringEngine.selectBestCrop(scores, effectiveSettings);
@@ -145,35 +160,56 @@ class SmartCropEngine {
       );
 
       stopwatch.stop();
-      _engineStats['successful_analyses'] = (_engineStats['successful_analyses'] as int? ?? 0) + 1;
+      _engineStats['successful_analyses'] =
+          (_engineStats['successful_analyses'] as int? ?? 0) + 1;
 
-      return _createResult(bestCrop, scores, stopwatch.elapsed, false, {'success': true});
+      return _createResult(
+          bestCrop, scores, stopwatch.elapsed, false, {'success': true});
     } catch (e, stackTrace) {
       stopwatch.stop();
-      _errorHandler.recordError(CropError.fromException(e, stackTrace, imageId: imageId));
-      _engineStats['failed_analyses'] = (_engineStats['failed_analyses'] as int? ?? 0) + 1;
+      _errorHandler.recordError(
+          CropError.fromException(e, stackTrace, imageId: imageId));
+      _engineStats['failed_analyses'] =
+          (_engineStats['failed_analyses'] as int? ?? 0) + 1;
 
       final fallback = _createFallback(image, targetSize, 'error', settings);
-      return _createResult(fallback, [], stopwatch.elapsed, false, {'error': e.toString()});
+      return _createResult(
+          fallback, [], stopwatch.elapsed, false, {'error': e.toString()});
     }
   }
 
-  bool _shouldSkipSmartCrop(ui.Image image, ui.Size targetSize, CropSettings settings) {
-    return image.width < 100 || image.height < 100 || targetSize.width < 50 || targetSize.height < 50;
+  bool _shouldSkipSmartCrop(
+      ui.Image image, ui.Size targetSize, CropSettings settings) {
+    return image.width < 100 ||
+        image.height < 100 ||
+        targetSize.width < 50 ||
+        targetSize.height < 50;
   }
 
-  CropCoordinates _createFallback(ui.Image image, ui.Size targetSize, String reason, CropSettings? settings) {
-    return _fallbackStrategies.createFallbackCrop(image: image, targetSize: targetSize, reason: reason, settings: settings);
+  CropCoordinates _createFallback(ui.Image image, ui.Size targetSize,
+      String reason, CropSettings? settings) {
+    return _fallbackStrategies.createFallbackCrop(
+        image: image,
+        targetSize: targetSize,
+        reason: reason,
+        settings: settings);
   }
 
-  CropResult _createResult(CropCoordinates best, List<CropScore> all, Duration time, bool fromCache, Map<String, dynamic> meta) {
+  CropResult _createResult(CropCoordinates best, List<CropScore> all,
+      Duration time, bool fromCache, Map<String, dynamic> meta) {
     return CropResult(
       bestCrop: best,
       allScores: all,
       processingTime: time,
       fromCache: fromCache,
       analyzerMetadata: meta,
-      performanceMetrics: PerformanceMetrics(totalTime: time, analyzerTimes: {}, memoryUsage: 0, analyzersExecuted: all.length, analyzersSkipped: 0, cacheHitRate: fromCache ? 1.0 : 0.0),
+      performanceMetrics: PerformanceMetrics(
+          totalTime: time,
+          analyzerTimes: {},
+          memoryUsage: 0,
+          analyzersExecuted: all.length,
+          analyzersSkipped: 0,
+          cacheHitRate: fromCache ? 1.0 : 0.0),
       scoringBreakdown: {for (var s in all) s.strategy: s.score},
     );
   }

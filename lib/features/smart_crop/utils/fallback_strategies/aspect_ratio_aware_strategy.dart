@@ -23,13 +23,15 @@ class AspectRatioAwareStrategy implements FallbackStrategy {
 
     if (targetAspectRatio > imageAspectRatio) {
       cropWidth = math.max(0.1, 1.0 - padding);
-      cropHeight = math.max(0.1, (imageAspectRatio / targetAspectRatio) * cropWidth);
+      cropHeight =
+          math.max(0.1, (imageAspectRatio / targetAspectRatio) * cropWidth);
 
       offsetX = (1.0 - cropWidth) / 2;
       offsetY = _getOptimalVerticalPosition(cropHeight);
     } else {
       cropHeight = math.max(0.1, 1.0 - padding);
-      cropWidth = math.max(0.1, (targetAspectRatio / imageAspectRatio) * cropHeight);
+      cropWidth =
+          math.max(0.1, (targetAspectRatio / imageAspectRatio) * cropHeight);
 
       offsetY = (1.0 - cropHeight) / 2;
       offsetX = _getOptimalHorizontalPosition(cropWidth);

@@ -1,5 +1,5 @@
 /// Smart crop cache system
-/// 
+///
 /// Provides persistent caching for crop coordinates with database storage,
 /// LRU eviction, TTL support, and performance optimization.
 

@@ -31,7 +31,9 @@ class ObjectDetector {
     list.addAll(_detectByEdges(w, h, data));
     list.addAll(_detectByColor(w, h, data));
     final merged = _merge(list);
-    final filtered = merged.where((o) => o.confidence > 0.25 && o.size > 0.01 && o.size < 0.9).toList();
+    final filtered = merged
+        .where((o) => o.confidence > 0.25 && o.size > 0.01 && o.size < 0.9)
+        .toList();
     filtered.sort((a, b) => b.importance.compareTo(a.importance));
     return filtered.take(3).toList();
   }
@@ -49,14 +51,23 @@ class ObjectDetector {
         if (contrast > 0.4) {
           final cX = (sX + eX) / 2 / w, cY = (sY + eY) / 2 / h;
           final s = math.sqrt((cW * cH) / (w * h));
-          list.add(DetectedObject(center: ui.Offset(cX, cY), bounds: ui.Rect.fromLTWH(sX / w, sY / h, (eX - sX) / w, (eY - sY) / h), confidence: contrast, size: s, type: ObjectType.highContrast, importance: contrast * AnalyzerUtils.getPositionWeight(cX, cY) * s));
+          list.add(DetectedObject(
+              center: ui.Offset(cX, cY),
+              bounds: ui.Rect.fromLTWH(
+                  sX / w, sY / h, (eX - sX) / w, (eY - sY) / h),
+              confidence: contrast,
+              size: s,
+              type: ObjectType.highContrast,
+              importance:
+                  contrast * AnalyzerUtils.getPositionWeight(cX, cY) * s));
         }
       }
     }
     return list;
   }
 
-  static double _calcContrast(Uint8List data, int w, int h, int sX, int eX, int sY, int eY) {
+  static double _calcContrast(
+      Uint8List data, int w, int h, int sX, int eX, int sY, int eY) {
     final bs = <int>[];
     for (int y = sY; y < eY; y += 3) {
       for (int x = sX; x < eX; x += 3) {
@@ -93,7 +104,15 @@ class ObjectDetector {
         if (density > 0.3) {
           final cX = (sX + eX) / 2 / w, cY = (sY + eY) / 2 / h;
           final s = math.sqrt((cW * cH) / (w * h));
-          list.add(DetectedObject(center: ui.Offset(cX, cY), bounds: ui.Rect.fromLTWH(sX / w, sY / h, (eX - sX) / w, (eY - sY) / h), confidence: density, size: s, type: ObjectType.edgeDense, importance: density * AnalyzerUtils.getPositionWeight(cX, cY) * s * 0.8));
+          list.add(DetectedObject(
+              center: ui.Offset(cX, cY),
+              bounds: ui.Rect.fromLTWH(
+                  sX / w, sY / h, (eX - sX) / w, (eY - sY) / h),
+              confidence: density,
+              size: s,
+              type: ObjectType.edgeDense,
+              importance:
+                  density * AnalyzerUtils.getPositionWeight(cX, cY) * s * 0.8));
         }
       }
     }
@@ -112,14 +131,27 @@ class ObjectDetector {
         for (int y = sY; y < eY; y += 4) {
           for (int x = sX; x < eX; x += 4) {
             final idx = (y * w + x) * 4;
-            if (idx + 2 < data.length) cs.add(((data[idx] ~/ 32) << 10) | ((data[idx + 1] ~/ 32) << 5) | (data[idx + 2] ~/ 32));
+            if (idx + 2 < data.length)
+              cs.add(((data[idx] ~/ 32) << 10) |
+                  ((data[idx + 1] ~/ 32) << 5) |
+                  (data[idx + 2] ~/ 32));
           }
         }
         final variance = cs.isEmpty ? 0.0 : cs.toSet().length / cs.length;
         if (variance > 0.35) {
           final cX = (sX + eX) / 2 / w, cY = (sY + eY) / 2 / h;
           final s = math.sqrt((cW * cH) / (w * h));
-          list.add(DetectedObject(center: ui.Offset(cX, cY), bounds: ui.Rect.fromLTWH(sX / w, sY / h, (eX - sX) / w, (eY - sY) / h), confidence: variance, size: s, type: ObjectType.colorDistinct, importance: variance * AnalyzerUtils.getPositionWeight(cX, cY) * s * 0.9));
+          list.add(DetectedObject(
+              center: ui.Offset(cX, cY),
+              bounds: ui.Rect.fromLTWH(
+                  sX / w, sY / h, (eX - sX) / w, (eY - sY) / h),
+              confidence: variance,
+              size: s,
+              type: ObjectType.colorDistinct,
+              importance: variance *
+                  AnalyzerUtils.getPositionWeight(cX, cY) *
+                  s *
+                  0.9));
         }
       }
     }
@@ -134,7 +166,8 @@ class ObjectDetector {
       final group = <DetectedObject>[objs[i]];
       processed[i] = true;
       for (int j = i + 1; j < objs.length; j++) {
-        if (!processed[j] && (objs[i].center - objs[j].center).distance < 0.15) {
+        if (!processed[j] &&
+            (objs[i].center - objs[j].center).distance < 0.15) {
           group.add(objs[j]);
           processed[j] = true;
         }
@@ -146,16 +179,37 @@ class ObjectDetector {
 
   static DetectedObject _mergeGroup(List<DetectedObject> group) {
     if (group.length == 1) return group.first;
-    double totalI = 0, wX = 0, wY = 0, minX = 1, minY = 1, maxX = 0, maxY = 0, maxC = 0, totalW = 0;
+    double totalI = 0,
+        wX = 0,
+        wY = 0,
+        minX = 1,
+        minY = 1,
+        maxX = 0,
+        maxY = 0,
+        maxC = 0,
+        totalW = 0;
     ObjectType type = group.first.type;
     for (final o in group) {
       totalI += o.importance;
       final w = math.pow(o.importance, 2.0).toDouble();
-      wX += o.center.dx * w; wY += o.center.dy * w; totalW += w;
-      minX = math.min(minX, o.bounds.left); minY = math.min(minY, o.bounds.top);
-      maxX = math.max(maxX, o.bounds.right); maxY = math.max(maxY, o.bounds.bottom);
-      if (o.confidence > maxC) { maxC = o.confidence; type = o.type; }
+      wX += o.center.dx * w;
+      wY += o.center.dy * w;
+      totalW += w;
+      minX = math.min(minX, o.bounds.left);
+      minY = math.min(minY, o.bounds.top);
+      maxX = math.max(maxX, o.bounds.right);
+      maxY = math.max(maxY, o.bounds.bottom);
+      if (o.confidence > maxC) {
+        maxC = o.confidence;
+        type = o.type;
+      }
     }
-    return DetectedObject(center: ui.Offset(wX / totalW, wY / totalW), bounds: ui.Rect.fromLTRB(minX, minY, maxX, maxY), confidence: maxC, size: (maxX - minX) * (maxY - minY), type: type, importance: totalI);
+    return DetectedObject(
+        center: ui.Offset(wX / totalW, wY / totalW),
+        bounds: ui.Rect.fromLTRB(minX, minY, maxX, maxY),
+        confidence: maxC,
+        size: (maxX - minX) * (maxY - minY),
+        type: type,
+        importance: totalI);
   }
 }

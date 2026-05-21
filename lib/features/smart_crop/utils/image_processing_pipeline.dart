@@ -100,7 +100,8 @@ class ImageProcessingPipeline {
       return _resolutionCache[cacheKey]!;
     }
 
-    final resizedImage = await ImagePreprocessor.resizeImage(image, targetResolution);
+    final resizedImage =
+        await ImagePreprocessor.resizeImage(image, targetResolution);
     _resolutionCache[cacheKey] = resizedImage;
 
     if (_resolutionCache.length > 10) {

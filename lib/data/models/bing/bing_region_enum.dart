@@ -5,7 +5,8 @@ import 'package:built_value/serializer.dart';
 part 'bing_region_enum.g.dart';
 
 class BingRegionEnum extends EnumClass {
-  static Serializer<BingRegionEnum> get serializer => _$bingRegionEnumSerializer;
+  static Serializer<BingRegionEnum> get serializer =>
+      _$bingRegionEnumSerializer;
 
   @BuiltValueEnumConst(wireName: 'en-US')
   static const BingRegionEnum US = _$us;

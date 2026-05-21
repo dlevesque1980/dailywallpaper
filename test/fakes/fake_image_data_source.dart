@@ -3,7 +3,8 @@ import 'package:dailywallpaper/data/datasources/bing_data_source.dart';
 import 'package:dailywallpaper/data/datasources/pexels_data_source.dart';
 import 'package:dailywallpaper/data/datasources/nasa_data_source.dart';
 
-class FakeImageDataSource implements BingDataSource, PexelsDataSource, NasaDataSource {
+class FakeImageDataSource
+    implements BingDataSource, PexelsDataSource, NasaDataSource {
   ImageItem? bingResult;
   ImageItem? bingThumbnailResult;
   ImageItem? pexelsResult;
@@ -56,7 +57,8 @@ class FakeImageDataSource implements BingDataSource, PexelsDataSource, NasaDataS
   }
 
   @override
-  Future<List<ImageItem>> searchPexelsImages({required String query, int page = 1}) async {
+  Future<List<ImageItem>> searchPexelsImages(
+      {required String query, int page = 1}) async {
     if (pexelsShouldThrow) throw Exception(throwMessage);
     return pexelsSearchResults ?? [_defaultItem('pexels.search.$query.$page')];
   }

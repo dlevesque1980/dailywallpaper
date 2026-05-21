@@ -50,7 +50,8 @@ class LandscapeFeatureDetector {
     return subjects;
   }
 
-  static double _calculateColorVariance(Uint8List data, int w, int sX, int eX, int sY, int eY) {
+  static double _calculateColorVariance(
+      Uint8List data, int w, int sX, int eX, int sY, int eY) {
     final grays = <int>[];
     for (int y = sY; y < eY; y += 2) {
       for (int x = sX; x < eX; x += 2) {
@@ -60,10 +61,12 @@ class LandscapeFeatureDetector {
     }
     if (grays.isEmpty) return 0.0;
     final mean = grays.reduce((a, b) => a + b) / grays.length;
-    return grays.map((c) => math.pow(c - mean, 2)).reduce((a, b) => a + b) / grays.length;
+    return grays.map((c) => math.pow(c - mean, 2)).reduce((a, b) => a + b) /
+        grays.length;
   }
 
-  static double calculateLocalComplexity(Uint8List data, int w, int h, int cx, int cy, int r) {
+  static double calculateLocalComplexity(
+      Uint8List data, int w, int h, int cx, int cy, int r) {
     final samples = <int>[];
     for (int dy = -r; dy <= r; dy += 4) {
       for (int dx = -r; dx <= r; dx += 4) {
@@ -73,7 +76,9 @@ class LandscapeFeatureDetector {
     }
     if (samples.isEmpty) return 0.0;
     final mean = samples.reduce((a, b) => a + b) / samples.length;
-    final variance = samples.map((s) => math.pow(s - mean, 2)).reduce((a, b) => a + b) / samples.length;
+    final variance =
+        samples.map((s) => math.pow(s - mean, 2)).reduce((a, b) => a + b) /
+            samples.length;
     return math.min(1.0, math.sqrt(variance) / 128.0);
   }
 }

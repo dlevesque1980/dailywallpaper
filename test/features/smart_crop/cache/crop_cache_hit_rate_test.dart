@@ -24,7 +24,8 @@ void main() {
         estimatedHitRate: 0.75,
       );
 
-      expect(hitRate.toString(), 'CropCacheHitRate(entries: 100, hitRate: 75.0%, avgAccess: 2.5)');
+      expect(hitRate.toString(),
+          'CropCacheHitRate(entries: 100, hitRate: 75.0%, avgAccess: 2.5)');
     });
   });
 }

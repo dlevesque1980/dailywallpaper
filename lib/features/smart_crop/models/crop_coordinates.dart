@@ -39,13 +39,13 @@ class CropCoordinates {
 
   /// Factory for an empty/default crop
   factory CropCoordinates.empty(String strategy) => CropCoordinates(
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-    confidence: 0,
-    strategy: strategy,
-  );
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        confidence: 0,
+        strategy: strategy,
+      );
 
   /// Creates a copy with modified values
   CropCoordinates copyWith({
@@ -97,7 +97,7 @@ class CropCoordinates {
       'strategy': strategy,
       'scalingApplied': scalingApplied,
     };
-    
+
     if (subjectBounds != null) {
       map['subjectBounds'] = {
         'left': subjectBounds!.left,
@@ -106,7 +106,7 @@ class CropCoordinates {
         'bottom': subjectBounds!.bottom,
       };
     }
-    
+
     return map;
   }
 
@@ -156,6 +156,7 @@ class CropCoordinates {
 
   @override
   int get hashCode {
-    return Object.hash(x, y, width, height, confidence, strategy, subjectBounds, scalingApplied);
+    return Object.hash(x, y, width, height, confidence, strategy, subjectBounds,
+        scalingApplied);
   }
 }

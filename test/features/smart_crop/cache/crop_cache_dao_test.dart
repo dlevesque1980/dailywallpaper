@@ -7,6 +7,7 @@ import 'package:dailywallpaper/features/smart_crop/cache/crop_cache_entry.dart';
 import 'package:dailywallpaper/features/smart_crop/models/crop_coordinates.dart';
 
 class MockCropCacheDatabase extends Mock implements CropCacheDatabase {}
+
 class MockDatabase extends Mock implements Database {}
 
 void main() {

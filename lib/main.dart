@@ -77,20 +77,23 @@ class MyApp extends StatelessWidget {
         routes: {
           '/': (context) => const HomeScreen(),
           '/settings': (context) => MultiBlocProvider(
-            providers: [
-              BlocProvider<SettingsBloc>(
-                create: (context) => SettingsBloc()..add(const SettingsEvent.started()),
+                providers: [
+                  BlocProvider<SettingsBloc>(
+                    create: (context) =>
+                        SettingsBloc()..add(const SettingsEvent.started()),
+                  ),
+                  BlocProvider<PexelsCategoriesBloc>(
+                    create: (context) => PexelsCategoriesBloc()
+                      ..add(const PexelsCategoriesEvent.started()),
+                  ),
+                ],
+                child: SimplifiedSettingsScreen(),
               ),
-              BlocProvider<PexelsCategoriesBloc>(
-                create: (context) => PexelsCategoriesBloc()..add(const PexelsCategoriesEvent.started()),
-              ),
-            ],
-            child: SimplifiedSettingsScreen(),
-          ),
           '/older': (context) => BlocProvider<HistoryBloc>(
-            create: (context) => HistoryBloc()..add(const HistoryEvent.started()),
-            child: HistoryScreen(),
-          ),
+                create: (context) =>
+                    HistoryBloc()..add(const HistoryEvent.started()),
+                child: HistoryScreen(),
+              ),
         },
         title: 'Daily Wallpaper',
         theme: ThemeData(),

@@ -11,7 +11,7 @@ void main() {
       for (int i = 0; i < data.length; i += 4) {
         data[i + 3] = 255;
       }
-      
+
       final subjects = SubjectDetector.detectSubjects(size, data);
       expect(subjects.isEmpty, true);
     });
@@ -27,17 +27,17 @@ void main() {
           // Create high contrast within cells at center
           if (y >= 30 && y < 34 && x >= 30 && x < 34) {
             if ((x + y) % 2 == 0) {
-              data[idx] = data[idx+1] = data[idx+2] = 255; // White
+              data[idx] = data[idx + 1] = data[idx + 2] = 255; // White
             } else {
-              data[idx] = data[idx+1] = data[idx+2] = 0;   // Black
+              data[idx] = data[idx + 1] = data[idx + 2] = 0; // Black
             }
           } else {
-            data[idx] = data[idx+1] = data[idx+2] = 128;   // Gray
+            data[idx] = data[idx + 1] = data[idx + 2] = 128; // Gray
           }
           data[idx + 3] = 255;
         }
       }
-      
+
       final subjects = SubjectDetector.detectSubjects(size, data);
       expect(subjects.isNotEmpty, true);
       expect(subjects.any((s) => s.type == SubjectType.highContrast), true);
@@ -49,20 +49,20 @@ void main() {
       // Mostly white, with a red block that covers enough area to be "distinct"
       // Dominant color will be white.
       for (int i = 0; i < data.length; i += 4) {
-        data[i] = data[i+1] = data[i+2] = 255; // White
+        data[i] = data[i + 1] = data[i + 2] = 255; // White
         data[i + 3] = 255;
       }
-      
+
       // Add red block
       for (int y = 16; y < 48; y++) {
         for (int x = 16; x < 48; x++) {
           final idx = (y * 64 + x) * 4;
           data[idx] = 255; // Red
-          data[idx+1] = 0;
-          data[idx+2] = 0;
+          data[idx + 1] = 0;
+          data[idx + 2] = 0;
         }
       }
-      
+
       final subjects = SubjectDetector.detectSubjects(size, data);
       expect(subjects.isNotEmpty, true);
       expect(subjects.any((s) => s.type == SubjectType.colorDistinct), true);

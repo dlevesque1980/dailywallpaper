@@ -23,14 +23,13 @@ class HistoryWallpaperFab extends StatelessWidget {
       builder: (context, value, child) {
         return BlocConsumer<HistoryBloc, HistoryState>(
           listenWhen: (previous, current) {
-            return current.mapOrNull(
-              loaded: (curr) {
-                final prev = previous.mapOrNull(loaded: (p) => p);
-                return prev != null && 
-                       curr.wallpaperMessage != null && 
-                       curr.wallpaperMessage != prev.wallpaperMessage;
-              }
-            ) ?? false;
+            return current.mapOrNull(loaded: (curr) {
+                  final prev = previous.mapOrNull(loaded: (p) => p);
+                  return prev != null &&
+                      curr.wallpaperMessage != null &&
+                      curr.wallpaperMessage != prev.wallpaperMessage;
+                }) ??
+                false;
           },
           listener: (context, state) {
             state.mapOrNull(loaded: (loadedState) {
@@ -51,8 +50,8 @@ class HistoryWallpaperFab extends StatelessWidget {
             state.mapOrNull(loaded: (loadedState) {
               hasImages = loadedState.images.isNotEmpty;
               isSetting = loadedState.isSettingWallpaper;
-              isSuccess = loadedState.wallpaperMessage != null && 
-                         (loadedState.wallpaperMessage == 'wallpaperSetSuccess');
+              isSuccess = loadedState.wallpaperMessage != null &&
+                  (loadedState.wallpaperMessage == 'wallpaperSetSuccess');
             });
 
             if (!hasImages) {
@@ -61,7 +60,8 @@ class HistoryWallpaperFab extends StatelessWidget {
 
             return WallpaperButton(
               onPressed: () {
-                context.read<HistoryBloc>().add(HistoryEvent.wallpaperUpdateRequested(notifierIndex.value));
+                context.read<HistoryBloc>().add(
+                    HistoryEvent.wallpaperUpdateRequested(notifierIndex.value));
               },
               isSettingWallpaper: isSetting,
               isSuccess: isSuccess,

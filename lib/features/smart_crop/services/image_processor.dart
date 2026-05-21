@@ -90,7 +90,8 @@ class ImageProcessor {
       final cropHeight = coordinates.height * sourceHeight;
 
       if (cropWidth <= 0 || cropHeight <= 0) {
-        throw ArgumentError('Invalid crop dimensions: $cropWidth x $cropHeight');
+        throw ArgumentError(
+            'Invalid crop dimensions: $cropWidth x $cropHeight');
       }
 
       final srcLeftRaw = math.max(0.0, cropX);
@@ -235,8 +236,7 @@ class ImageProcessor {
     return resultImage;
   }
 
-  Future<ui.Image> resizeImage(
-      ui.Image sourceImage, ui.Size targetSize) async {
+  Future<ui.Image> resizeImage(ui.Image sourceImage, ui.Size targetSize) async {
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
 

@@ -106,10 +106,12 @@ class ImageTypeDetector {
       maxProcessingTime:
           Duration(seconds: 4), // Plus de temps pour une meilleure analyse
       enableSubjectScaling: true,
-      minSubjectCoverage: 0.60, // Softer: allows wider crop window with letterbox fill
+      minSubjectCoverage:
+          0.60, // Softer: allows wider crop window with letterbox fill
       maxScaleFactor: 3.0,
       enableMlSubjectDetection: true,
-      allowLetterbox: true, // Blurred fill for wide landscape→portrait conversions
+      allowLetterbox:
+          true, // Blurred fill for wide landscape→portrait conversions
     );
   }
 

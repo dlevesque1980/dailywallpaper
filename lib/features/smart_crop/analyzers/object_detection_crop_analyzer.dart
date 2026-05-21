@@ -1,10 +1,13 @@
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:isolate';
 import '../interfaces/crop_analyzer.dart';
 import '../interfaces/analyzer_metadata.dart';
+import '../interfaces/analysis_context.dart';
 import '../models/crop_score.dart';
 import '../models/crop_coordinates.dart';
+import '../models/crop_settings.dart';
 import 'utils/analyzer_utils.dart';
 import 'object/object_detector.dart';
 
@@ -20,7 +23,8 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
           weight: _analyzerWeight,
           maxProcessingTime: const Duration(milliseconds: 600),
           metadata: const AnalyzerMetadata(
-            description: 'Detects and preserves important objects and subjects in crop areas',
+            description:
+                'Detects and preserves important objects and subjects in crop areas',
             version: '2.0.0',
             supportedImageTypes: ['jpeg', 'png', 'webp'],
             isCpuIntensive: true,
@@ -30,16 +34,39 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
         );
 
   @override
-  Future<CropScore> analyze(ui.Image image, ui.Size targetSize) async {
+  Future<CropScore> analyze(ui.Image image, ui.Size targetSize) {
+    return analyzeWithContext(
+      image,
+      targetSize,
+      AnalysisContext(
+        imageId: '',
+        settings: CropSettings.defaultSettings,
+        metadata: {},
+      ),
+    );
+  }
+
+  @override
+  Future<CropScore> analyzeWithContext(
+      ui.Image image, ui.Size targetSize, AnalysisContext context) async {
     final imageSize = ui.Size(image.width.toDouble(), image.height.toDouble());
     final targetAspectRatio = targetSize.width / targetSize.height;
 
     try {
-      final imageData = await _getImageData(image);
-      final objects = ObjectDetector.detectObjects(imageSize, imageData);
+      final imageData = await _getImageData(image, context);
+      
+      final result = await Isolate.run(() => _performObjectAnalysisIsolate({
+        'imageWidth': imageSize.width,
+        'imageHeight': imageSize.height,
+        'targetAspectRatio': targetAspectRatio,
+        'imageData': imageData,
+        'strategyName': strategyName,
+      }));
 
+      final objects = result['objects'] as List;
       if (objects.isEmpty) {
-        final centerCrop = AnalyzerUtils.getCenterCrop(imageSize, targetAspectRatio, strategyName);
+        final centerCrop = AnalyzerUtils.getCenterCrop(
+            imageSize, targetAspectRatio, strategyName);
         return CropScore(
           coordinates: centerCrop,
           score: 0.2,
@@ -48,14 +75,15 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
             'objects_detected': 0.0,
             'object_count': 0.0,
             'detection_confidence': 0.0,
-            'crop_area_ratio': (centerCrop.width * centerCrop.height) / (imageSize.width * imageSize.height),
+            'crop_area_ratio': (centerCrop.width * centerCrop.height) /
+                (imageSize.width * imageSize.height),
           },
         );
       }
 
-      final primary = objects.first;
-      final crop = _createCrop(primary, imageSize, targetAspectRatio);
-      final score = _scoreCrop(crop, objects);
+      final crop = result['best'] as CropCoordinates;
+      final score = result['bestScore'] as double;
+      final primary = result['primary'] as DetectedObject;
 
       return CropScore(
         coordinates: crop,
@@ -70,12 +98,14 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
           'subject_y': primary.bounds.top,
           'subject_width': primary.bounds.width,
           'subject_height': primary.bounds.height,
-          'crop_area_ratio': (crop.width * crop.height) / (imageSize.width * imageSize.height),
+          'crop_area_ratio':
+              (crop.width * crop.height) / (imageSize.width * imageSize.height),
         },
       );
     } catch (e) {
       return CropScore(
-        coordinates: AnalyzerUtils.getCenterCrop(imageSize, targetAspectRatio, strategyName),
+        coordinates: AnalyzerUtils.getCenterCrop(
+            imageSize, targetAspectRatio, strategyName),
         score: 0.2,
         strategy: strategyName,
         metrics: {'error': e.toString()},
@@ -83,12 +113,37 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
     }
   }
 
-  Future<Uint8List> _getImageData(ui.Image image) async {
+  Future<Uint8List> _getImageData(ui.Image image, AnalysisContext context) async {
+    if (context.metadata.containsKey('rawRgba')) {
+      return context.metadata['rawRgba'] as Uint8List;
+    }
     final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-    return byteData!.buffer.asUint8List();
+    final bytes = byteData!.buffer.asUint8List();
+    context.metadata['rawRgba'] = bytes;
+    return bytes;
   }
 
-  CropCoordinates _createCrop(DetectedObject object, ui.Size size, double aspect) {
+}
+
+/// Top-level function executed in background isolate
+Map<String, dynamic> _performObjectAnalysisIsolate(Map<String, dynamic> params) {
+  final ui.Size imageSize = ui.Size(params['imageWidth'] as double, params['imageHeight'] as double);
+  final double targetAspectRatio = params['targetAspectRatio'];
+  final Uint8List imageData = params['imageData'];
+  final String strategyName = params['strategyName'];
+
+  final objects = ObjectDetector.detectObjects(imageSize, imageData);
+
+  if (objects.isEmpty) {
+    return {
+      'objects': <DetectedObject>[],
+      'best': null,
+      'bestScore': 0.2,
+      'primary': null,
+    };
+  }
+
+  CropCoordinates createCrop(DetectedObject object, ui.Size size, double aspect) {
     final cW = AnalyzerUtils.calculateCropWidth(size, aspect);
     final cH = AnalyzerUtils.calculateCropHeight(size, aspect);
     return CropCoordinates(
@@ -101,15 +156,17 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
     );
   }
 
-  double _scoreCrop(CropCoordinates crop, List<DetectedObject> objects) {
+  double scoreCrop(CropCoordinates crop, List<DetectedObject> objects) {
     final cropRect = ui.Rect.fromLTWH(crop.x, crop.y, crop.width, crop.height);
     double totalI = 0, totalInc = 0;
     for (final o in objects) {
-      totalInc += (cropRect.intersect(o.bounds).isEmpty ? 0.0 : 1.0) * o.importance;
+      totalInc +=
+          (cropRect.intersect(o.bounds).isEmpty ? 0.0 : 1.0) * o.importance;
       totalI += o.importance;
     }
     final incScore = totalI > 0 ? totalInc / totalI : 0.0;
-    final avgConf = objects.map((o) => o.confidence).reduce((a, b) => a + b) / objects.length;
+    final avgConf = objects.map((o) => o.confidence).reduce((a, b) => a + b) /
+        objects.length;
     double quality = 1.0;
     if (crop.x <= 0.01) quality -= 0.1;
     if (crop.y <= 0.01) quality -= 0.1;
@@ -118,4 +175,15 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
 
     return (incScore * 0.5 + avgConf * 0.3 + math.max(0.0, quality) * 0.2);
   }
+
+  final primary = objects.first;
+  final crop = createCrop(primary, imageSize, targetAspectRatio);
+  final score = scoreCrop(crop, objects);
+
+  return {
+    'objects': objects,
+    'best': crop,
+    'bestScore': score,
+    'primary': primary,
+  };
 }

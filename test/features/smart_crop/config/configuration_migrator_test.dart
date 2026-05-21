@@ -16,25 +16,28 @@ void main() {
       );
     });
 
-    test('performMigrationIfNeeded runs migration and sets new version', () async {
+    test('performMigrationIfNeeded runs migration and sets new version',
+        () async {
       await PrefHelper.setString('smart_crop_aggressiveness', 'test');
-      
+
       await migrator.performMigrationIfNeeded();
-      
+
       final newVersion = await PrefHelper.getInt(migrationKey);
       expect(newVersion, 1);
-      
-      final legacyValue = await PrefHelper.getString('smart_crop_aggressiveness');
+
+      final legacyValue =
+          await PrefHelper.getString('smart_crop_aggressiveness');
       expect(legacyValue, isNull);
     });
-    
+
     test('performMigrationIfNeeded does not run if already migrated', () async {
       await PrefHelper.setInt(migrationKey, 1);
       await PrefHelper.setString('smart_crop_aggressiveness', 'test');
-      
+
       await migrator.performMigrationIfNeeded();
-      
-      final legacyValue = await PrefHelper.getString('smart_crop_aggressiveness');
+
+      final legacyValue =
+          await PrefHelper.getString('smart_crop_aggressiveness');
       expect(legacyValue, 'test'); // Should not be cleared
     });
   });

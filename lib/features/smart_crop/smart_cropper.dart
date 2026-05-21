@@ -11,7 +11,7 @@ import 'services/crop_cache_service.dart';
 import 'services/device_service.dart';
 
 /// Coordinator class for intelligent image cropping.
-/// 
+///
 /// Refactored to delegate logic to specialized services.
 class SmartCropper {
   static final ImageProcessor _processor = ImageProcessor();
@@ -20,12 +20,28 @@ class SmartCropper {
   static final DeviceService _device = DeviceService();
 
   // Memory cache for processed images to avoid flickering (delegated to CacheService)
-  static void cacheProcessedImage(String key, ui.Image image) => _cache.cacheProcessedImage(key, image);
-  static ui.Image? getProcessedImage(String key) => _cache.getProcessedImage(key);
+  static final StreamController<String> _processedImageController =
+      StreamController<String>.broadcast();
+
+  /// Stream that emits imageIdent whenever a processed (smart-cropped) image
+  /// becomes available in the cache. CarouselItem widgets subscribe to this
+  /// to trigger the Level-2 fade-in at the right moment.
+  static Stream<String> get processedImageStream =>
+      _processedImageController.stream;
+
+  static void cacheProcessedImage(String key, ui.Image image) {
+    _cache.cacheProcessedImage(key, image);
+    _processedImageController.add(key);
+  }
+
+  static ui.Image? getProcessedImage(String key) =>
+      _cache.getProcessedImage(key);
 
   // Rendered bytes cache (delegated to CacheService)
-  static void cacheRenderedBytes(String key, Uint8List bytes) => _cache.cacheRenderedBytes(key, bytes);
-  static Uint8List? getRenderedBytes(String key) => _cache.getRenderedBytes(key);
+  static void cacheRenderedBytes(String key, Uint8List bytes) =>
+      _cache.cacheRenderedBytes(key, bytes);
+  static Uint8List? getRenderedBytes(String key) =>
+      _cache.getRenderedBytes(key);
   static void clearRenderedBytesCache() => _cache.clearRenderedBytesCache();
 
   /// Gets a cached crop if available
@@ -33,7 +49,8 @@ class SmartCropper {
     String imageUrl,
     ui.Size targetSize,
     CropSettings settings,
-  ) => _cache.getCachedCrop(imageUrl, targetSize, settings);
+  ) =>
+      _cache.getCachedCrop(imageUrl, targetSize, settings);
 
   /// Analyzes an image and returns the best crop coordinates
   static Future<CropResult> analyzeCrop(
@@ -68,7 +85,8 @@ class SmartCropper {
 
     // 3. Save to cache if successful
     if (result.success && !result.fromCache) {
-      unawaited(_cache.cacheCrop(imageUrl, targetSize, settings, result.bestCrop));
+      unawaited(
+          _cache.cacheCrop(imageUrl, targetSize, settings, result.bestCrop));
     }
 
     return result;
@@ -78,14 +96,16 @@ class SmartCropper {
   static Future<ui.Image> applyCrop(
     ui.Image sourceImage,
     CropCoordinates coordinates,
-  ) => _processor.applyCrop(sourceImage, coordinates);
+  ) =>
+      _processor.applyCrop(sourceImage, coordinates);
 
   /// Applies crop and resizes in one operation
   static Future<ui.Image> applyCropAndResize(
     ui.Image sourceImage,
     CropCoordinates coordinates,
     ui.Size targetSize,
-  ) => _processor.applyCropAndResize(sourceImage, coordinates, targetSize);
+  ) =>
+      _processor.applyCropAndResize(sourceImage, coordinates, targetSize);
 
   /// Full pipeline: analyze + apply
   static Future<ProcessedImageResult> processImage(
@@ -94,8 +114,10 @@ class SmartCropper {
     ui.Size targetSize,
     CropSettings settings,
   ) async {
-    final cropResult = await analyzeCrop(imageUrl, sourceImage, targetSize, settings);
-    final processedImage = await applyCropAndResize(sourceImage, cropResult.bestCrop, targetSize);
+    final cropResult =
+        await analyzeCrop(imageUrl, sourceImage, targetSize, settings);
+    final processedImage =
+        await applyCropAndResize(sourceImage, cropResult.bestCrop, targetSize);
 
     return ProcessedImageResult(
       image: processedImage,
@@ -107,14 +129,16 @@ class SmartCropper {
 
   /// Cache management
   static Future<int> clearCache() => _cache.clearCache();
-  static Future<int> invalidateImageCache(String imageUrl) => _cache.invalidateImageCache(imageUrl);
+  static Future<int> invalidateImageCache(String imageUrl) =>
+      _cache.invalidateImageCache(imageUrl);
   static Future<Map<String, dynamic>> getCacheStats() => _cache.getStats();
 
   /// Memory and capability
-  static int estimateMemoryUsage(ui.Image image, ui.Size targetSize) => 
+  static int estimateMemoryUsage(ui.Image image, ui.Size targetSize) =>
       _device.estimateMemoryUsage(image, targetSize);
-  
-  static bool shouldProcessImage(ui.Image image, ui.Size targetSize, {int maxMemoryMB = 100}) {
+
+  static bool shouldProcessImage(ui.Image image, ui.Size targetSize,
+      {int maxMemoryMB = 100}) {
     final usage = estimateMemoryUsage(image, targetSize);
     return usage <= (maxMemoryMB * 1024 * 1024);
   }

@@ -8,4 +8,11 @@ abstract class ImageStorage {
   Future<List<ImageItem>> getImagesForDate(DateTime date);
   Future<void> deleteImageByIdent(String imageIdent);
   Future<List<DateTime>> getAvailableDates();
+  Future<bool> updateImagePaths(
+    String imageIdent, {
+    String? localSourcePath,
+    String? localProcessedPath,
+    String? cropResultJson,
+  });
+  Future<void> cleanupOldFilesAndReferences({int daysToKeepFiles = 2});
 }

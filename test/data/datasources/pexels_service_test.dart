@@ -10,7 +10,7 @@ void main() {
     late PexelsService service;
 
     setUp(() async {
-      dotenv.testLoad(fileInput: 'PEXELS_API_KEY=test_key');
+      dotenv.loadFromString(envString: 'PEXELS_API_KEY=test_key');
       client = FakeHttpClient();
       service = PexelsService(client: client);
     });

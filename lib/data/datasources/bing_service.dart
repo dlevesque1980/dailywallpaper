@@ -14,8 +14,9 @@ class BingService implements BingDataSource {
 
   @override
   Future<ImageItem> fetchFromBing(String region) async {
-    final response = await _client.get(Uri.parse('$_baseUrl$_archivePath&mkt=$region'));
-    
+    final response =
+        await _client.get(Uri.parse('$_baseUrl$_archivePath&mkt=$region'));
+
     if (response.statusCode == 200) {
       final bingImages = BingImages.fromJson(json.decode(response.body));
       return _convertBingImageToItem(bingImages, region, isThumbnail: false);
@@ -26,8 +27,9 @@ class BingService implements BingDataSource {
 
   @override
   Future<ImageItem> fetchThumbnailFromBing(String region) async {
-    final response = await _client.get(Uri.parse('$_baseUrl$_archivePath&mkt=$region'));
-    
+    final response =
+        await _client.get(Uri.parse('$_baseUrl$_archivePath&mkt=$region'));
+
     if (response.statusCode == 200) {
       final bingImages = BingImages.fromJson(json.decode(response.body));
       return _convertBingImageToItem(bingImages, region, isThumbnail: true);
@@ -36,19 +38,21 @@ class BingService implements BingDataSource {
     }
   }
 
-  ImageItem _convertBingImageToItem(BingImages bingImages, String region, {required bool isThumbnail}) {
+  ImageItem _convertBingImageToItem(BingImages bingImages, String region,
+      {required bool isThumbnail}) {
     if (bingImages.images.isEmpty) {
       throw Exception('No images found in Bing response');
     }
 
     final bingImage = bingImages.images[0];
     final copyrightParts = bingImage.copyright.split("(");
-    final photographer = copyrightParts.length > 1 
+    final photographer = copyrightParts.length > 1
         ? copyrightParts[1].substring(0, copyrightParts[1].length - 1).trim()
         : "";
-    
+
     final resolution = isThumbnail ? "220x176" : "UHD";
-    final imageUrl = '$_baseUrl${bingImage.url.replaceAll("1920x1080", resolution)}';
+    final imageUrl =
+        '$_baseUrl${bingImage.url.replaceAll("1920x1080", resolution)}';
 
     return ImageItem(
       "Bing image of the day",

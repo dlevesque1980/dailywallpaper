@@ -36,7 +36,8 @@ void main() {
     );
   }
 
-  testWidgets('HistoryWallpaperFab is empty when no images', (WidgetTester tester) async {
+  testWidgets('HistoryWallpaperFab is empty when no images',
+      (WidgetTester tester) async {
     final now = DateTime.now();
     await tester.pumpWidget(createWidgetUnderTest(HistoryState.loaded(
       images: [],
@@ -48,7 +49,8 @@ void main() {
     expect(find.byType(WallpaperButton), findsNothing);
   });
 
-  testWidgets('HistoryWallpaperFab shows WallpaperButton when images exist', (WidgetTester tester) async {
+  testWidgets('HistoryWallpaperFab shows WallpaperButton when images exist',
+      (WidgetTester tester) async {
     final now = DateTime.now();
     await tester.pumpWidget(createWidgetUnderTest(HistoryState.loaded(
       images: [
@@ -56,9 +58,9 @@ void main() {
           'test', // source
           'test', // url
           'test', // description
-          now,    // startTime
-          now,    // endTime
-          '1',    // imageIdent
+          now, // startTime
+          now, // endTime
+          '1', // imageIdent
           'test', // triggerUrl
           'test', // copyright
         )
@@ -71,7 +73,9 @@ void main() {
     expect(find.byType(WallpaperButton), findsOneWidget);
   });
 
-  testWidgets('HistoryWallpaperFab triggers wallpaper update event when pressed', (WidgetTester tester) async {
+  testWidgets(
+      'HistoryWallpaperFab triggers wallpaper update event when pressed',
+      (WidgetTester tester) async {
     final now = DateTime.now();
     when(() => mockHistoryBloc.state).thenReturn(HistoryState.loaded(
       images: [
@@ -79,9 +83,9 @@ void main() {
           'test', // source
           'test', // url
           'test', // description
-          now,    // startTime
-          now,    // endTime
-          '1',    // imageIdent
+          now, // startTime
+          now, // endTime
+          '1', // imageIdent
           'test', // triggerUrl
           'test', // copyright
         )
@@ -107,6 +111,8 @@ void main() {
     await tester.tap(find.byType(WallpaperButton));
     await tester.pumpAndSettle();
 
-    verify(() => mockHistoryBloc.add(const HistoryEvent.wallpaperUpdateRequested(0))).called(1);
+    verify(() =>
+            mockHistoryBloc.add(const HistoryEvent.wallpaperUpdateRequested(0)))
+        .called(1);
   });
 }

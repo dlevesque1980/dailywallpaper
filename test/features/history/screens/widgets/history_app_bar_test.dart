@@ -42,9 +42,11 @@ void main() {
     );
   }
 
-  testWidgets('HistoryAppBar shows DateSelector with loading state', (WidgetTester tester) async {
+  testWidgets('HistoryAppBar shows DateSelector with loading state',
+      (WidgetTester tester) async {
     final now = DateTime.now();
-    await tester.pumpWidget(createWidgetUnderTest(HistoryState.loading(selectedDate: now, availableDates: [now])));
+    await tester.pumpWidget(createWidgetUnderTest(
+        HistoryState.loading(selectedDate: now, availableDates: [now])));
     await tester.pump();
 
     expect(find.byType(AppBar), findsOneWidget);
@@ -53,7 +55,8 @@ void main() {
     expect(find.byIcon(Icons.more_vert), findsOneWidget);
   });
 
-  testWidgets('HistoryAppBar popup menu has specific items', (WidgetTester tester) async {
+  testWidgets('HistoryAppBar popup menu has specific items',
+      (WidgetTester tester) async {
     final now = DateTime.now();
     await tester.pumpWidget(createWidgetUnderTest(HistoryState.loaded(
       images: [],

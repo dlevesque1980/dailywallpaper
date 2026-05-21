@@ -19,13 +19,15 @@ class SimplifiedSettingsScreen extends StatefulWidget {
   const SimplifiedSettingsScreen({Key? key}) : super(key: key);
 
   @override
-  _SimplifiedSettingsScreenState createState() => _SimplifiedSettingsScreenState();
+  _SimplifiedSettingsScreenState createState() =>
+      _SimplifiedSettingsScreenState();
 }
 
 class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
   final formKey = GlobalKey<FormState>();
 
-  void showBingRegion(BuildContext context, BingRegionEnum currentChoice, List<RegionItem> thumbnails) {
+  void showBingRegion(BuildContext context, BingRegionEnum currentChoice,
+      List<RegionItem> thumbnails) {
     showModalBottomSheet<void>(
       context: context,
       builder: (BuildContext bottomSheetContext) {
@@ -37,7 +39,9 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
               children: thumbnails.map<Widget>((item) {
                 return InkWell(
                   onTap: () {
-                    context.read<SettingsBloc>().add(SettingsEvent.regionChanged(item.value));
+                    context
+                        .read<SettingsBloc>()
+                        .add(SettingsEvent.regionChanged(item.value));
                     Navigator.of(bottomSheetContext).pop();
                   },
                   child: GridTile(
@@ -65,7 +69,8 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
             children: [
               Text(
                 AppLocalizations.of(context)!.selectRegion,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -79,7 +84,9 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
                           : null,
                       selected: isSelected,
                       onTap: () {
-                        context.read<SettingsBloc>().add(SettingsEvent.regionChanged(region));
+                        context
+                            .read<SettingsBloc>()
+                            .add(SettingsEvent.regionChanged(region));
                         Navigator.of(bottomSheetContext).pop();
                       },
                     );
@@ -105,7 +112,8 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(l10n.settings, style: const TextStyle(color: Colors.white)),
+          title:
+              Text(l10n.settings, style: const TextStyle(color: Colors.white)),
           backgroundColor: const Color.fromRGBO(0, 0, 0, 0.3),
           elevation: 0.0,
           iconTheme: const IconThemeData(color: Colors.white),
@@ -133,8 +141,9 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
                     ),
                     subtitle: Text(l10n.applyWallpaperToLockScreen),
                     value: state.includeLockWallpaper,
-                    onChanged: (value) =>
-                        context.read<SettingsBloc>().add(SettingsEvent.lockWallpaperToggled(value)),
+                    onChanged: (value) => context
+                        .read<SettingsBloc>()
+                        .add(SettingsEvent.lockWallpaperToggled(value)),
                   ),
 
                   const Divider(),
@@ -159,7 +168,8 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
                         const Icon(Icons.arrow_drop_down),
                       ],
                     ),
-                    onTap: () => showBingRegion(context, state.selectedRegion, state.thumbnails),
+                    onTap: () => showBingRegion(
+                        context, state.selectedRegion, state.thumbnails),
                   ),
 
                   const Divider(),
@@ -178,7 +188,8 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
                           ),
                           initialValue: pexelsState.selectedCategories,
                           items: pexelsState.allCategories
-                              .map((category) => MultiSelectItem(category, category))
+                              .map((category) =>
+                                  MultiSelectItem(category, category))
                               .toList(),
                           listType: MultiSelectListType.CHIP,
                           validator: (values) {
@@ -193,7 +204,8 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
                           onSaved: (values) {
                             if (values != null) {
                               context.read<PexelsCategoriesBloc>().add(
-                                  PexelsCategoriesEvent.categoriesChanged(values.cast<String>()));
+                                  PexelsCategoriesEvent.categoriesChanged(
+                                      values.cast<String>()));
                             }
                           },
                           onConfirm: (values) {
@@ -210,18 +222,20 @@ class _SimplifiedSettingsScreenState extends State<SimplifiedSettingsScreen> {
 
                   SmartCropQualitySlider(
                     currentLevel: state.smartCropLevel,
-                    onLevelChanged: (level) =>
-                        context.read<SettingsBloc>().add(SettingsEvent.smartCropLevelChanged(level)),
+                    onLevelChanged: (level) => context
+                        .read<SettingsBloc>()
+                        .add(SettingsEvent.smartCropLevelChanged(level)),
                     subjectScalingEnabled: state.enableSubjectScaling,
-                    onScalingToggled: (value) =>
-                        context.read<SettingsBloc>().add(SettingsEvent.subjectScalingToggled(value)),
+                    onScalingToggled: (value) => context
+                        .read<SettingsBloc>()
+                        .add(SettingsEvent.subjectScalingToggled(value)),
                   ),
 
                   const SizedBox(height: 20),
 
                   if (state.deviceCapability != null)
                     _buildMlStatus(context, state.deviceCapability!),
-                  
+
                   const SizedBox(height: 30),
                 ],
               );

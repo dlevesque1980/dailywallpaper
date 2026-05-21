@@ -34,7 +34,8 @@ class ImagePreprocessor {
     return await picture.toImage(image.width, image.height);
   }
 
-  static Future<ui.Image> resizeImage(ui.Image image, ui.Size targetSize) async {
+  static Future<ui.Image> resizeImage(
+      ui.Image image, ui.Size targetSize) async {
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
 

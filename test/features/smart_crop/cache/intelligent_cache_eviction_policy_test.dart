@@ -5,6 +5,7 @@ import 'package:dailywallpaper/features/smart_crop/cache/intelligent_cache_evict
 import 'package:dailywallpaper/features/smart_crop/cache/crop_cache_database.dart';
 
 class MockCropCacheDatabase extends Mock implements CropCacheDatabase {}
+
 class MockDatabase extends Mock implements Database {}
 
 void main() {

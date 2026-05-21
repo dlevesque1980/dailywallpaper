@@ -8,13 +8,13 @@ void main() {
       const settings = CropSettings(
         aggressiveness: CropAggressiveness.balanced,
       );
-      
+
       const strategy = FallbackStrategy(
         name: 'test_strategy',
         settings: settings,
         timeout: Duration(milliseconds: 500),
       );
-      
+
       expect(strategy.name, 'test_strategy');
       expect(strategy.settings, settings);
       expect(strategy.timeout.inMilliseconds, 500);
@@ -24,14 +24,15 @@ void main() {
       const settings = CropSettings(
         aggressiveness: CropAggressiveness.balanced,
       );
-      
+
       const strategy = FallbackStrategy(
         name: 'test_strategy',
         settings: settings,
         timeout: Duration(milliseconds: 500),
       );
-      
-      expect(strategy.toString(), 'FallbackStrategy(test_strategy, timeout: 500ms)');
+
+      expect(strategy.toString(),
+          'FallbackStrategy(test_strategy, timeout: 500ms)');
     });
   });
 }

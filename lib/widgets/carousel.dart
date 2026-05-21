@@ -3,7 +3,6 @@ import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:flutter/material.dart';
 import 'package:dailywallpaper/widgets/carousel_item.dart';
 
-
 @immutable
 class Carousel extends StatefulWidget {
   ///All the [Widget] on this Carousel.
@@ -32,8 +31,6 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
 
   // Track which images are currently being processed to avoid duplicate work
   final Set<String> _processingImages = {};
-
-
 
   ///Actual index of the displaying Widget
   int get actualIndex => _controller!.index;
@@ -94,8 +91,6 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     if (widget.childrenCount != _numOfTab || _pageController == null) {
@@ -116,8 +111,7 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
         _pageController!.dispose();
       }
 
-      _controller =
-          TabController(length: widget.childrenCount, vsync: this);
+      _controller = TabController(length: widget.childrenCount, vsync: this);
       _controller!.addListener(_onChange);
 
       // Adjust index if it's out of bounds
@@ -159,5 +153,3 @@ class _CarouselState extends State<Carousel> with TickerProviderStateMixin {
     );
   }
 }
-
-

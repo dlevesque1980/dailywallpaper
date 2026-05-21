@@ -9,7 +9,8 @@ class ScoringEngine {
 
   ScoringEngine(this._registry);
 
-  CropCoordinates selectBestCrop(List<CropScore> scores, CropSettings settings) {
+  CropCoordinates selectBestCrop(
+      List<CropScore> scores, CropSettings settings) {
     if (scores.isEmpty) {
       throw StateError('No valid crop scores available');
     }
@@ -18,7 +19,7 @@ class ScoringEngine {
 
     for (final score in scores) {
       CropAnalyzer? analyzer = _registry.getAnalyzer(score.strategy);
-      
+
       if (analyzer == null) {
         for (final a in _registry.getAllAnalyzers()) {
           if (score.strategy.startsWith(a.strategyName)) {
@@ -32,7 +33,8 @@ class ScoringEngine {
         double aggressivenessMultiplier = 1.0;
         final baseStrategy = analyzer.strategyName;
 
-        if (baseStrategy == 'ml_subject_detection' || baseStrategy == 'subject_detection') {
+        if (baseStrategy == 'ml_subject_detection' ||
+            baseStrategy == 'subject_detection') {
           switch (settings.aggressiveness) {
             case CropAggressiveness.conservative:
               aggressivenessMultiplier = 1.0;

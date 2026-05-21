@@ -19,7 +19,7 @@ void main() {
 
     test('creates crop within safe zone for portrait target', () {
       final targetSize = const ui.Size(1000, 2000);
-      
+
       final crop = strategy.createCrop(
         image: mockImage,
         targetSize: targetSize,
@@ -30,7 +30,7 @@ void main() {
       // cropWidth = min(0.8, 0.5 * 0.8) = 0.4
       expect(crop.height, closeTo(0.8, 0.001));
       expect(crop.width, closeTo(0.4, 0.001));
-      
+
       // Center offsets
       expect(crop.y, closeTo(0.1, 0.001)); // (1.0 - 0.8) / 2
       expect(crop.x, closeTo(0.3, 0.001)); // (1.0 - 0.4) / 2
@@ -38,7 +38,7 @@ void main() {
 
     test('creates crop within safe zone for landscape target', () {
       final targetSize = const ui.Size(2000, 1000);
-      
+
       final crop = strategy.createCrop(
         image: mockImage,
         targetSize: targetSize,
@@ -48,7 +48,7 @@ void main() {
       // cropHeight = min(0.8, 0.5 * 0.8) = 0.4
       expect(crop.width, closeTo(0.8, 0.001));
       expect(crop.height, closeTo(0.4, 0.001));
-      
+
       expect(crop.x, closeTo(0.1, 0.001)); // (1.0 - 0.8) / 2
       expect(crop.y, closeTo(0.3, 0.001)); // (1.0 - 0.4) / 2
     });

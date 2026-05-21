@@ -17,7 +17,11 @@ class PostCropScaler {
   /// Falls back to 1080 × 1920 if the resolution is unavailable or zero.
   static ui.Size getDeviceResolution() {
     try {
-      final view = ui.PlatformDispatcher.instance.views.first;
+      final views = ui.PlatformDispatcher.instance.views;
+      if (views.isEmpty) {
+        return _fallbackResolution;
+      }
+      final view = views.first;
       final physicalSize = view.physicalSize;
       final dpr = view.devicePixelRatio;
 

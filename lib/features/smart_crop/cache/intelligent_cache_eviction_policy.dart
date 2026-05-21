@@ -54,7 +54,8 @@ class IntelligentCacheEvictionPolicy {
           ids.remove(keepId);
 
           for (final id in ids) {
-            await db.delete(CropCacheDatabase.tableName, where: 'id = ?', whereArgs: [id]);
+            await db.delete(CropCacheDatabase.tableName,
+                where: 'id = ?', whereArgs: [id]);
             removedEntries++;
           }
         }

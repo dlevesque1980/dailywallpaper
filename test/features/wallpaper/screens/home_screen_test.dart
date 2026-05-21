@@ -47,16 +47,22 @@ void main() {
     );
   }
 
-  testWidgets('HomeScreen ignores PageView changes when isSettingWallpaper is true', (WidgetTester tester) async {
+  testWidgets(
+      'HomeScreen ignores PageView changes when isSettingWallpaper is true',
+      (WidgetTester tester) async {
     // État où le fond d'écran est en train de s'appliquer
     when(() => mockHomeBloc.state).thenReturn(HomeState.loaded(
-      list: [mockImage, mockImage], // 2 images pour permettre le changement de page
+      list: [
+        mockImage,
+        mockImage
+      ], // 2 images pour permettre le changement de page
       imageIndex: 0,
       isSettingWallpaper: true, // IMPORTANT: c'est ce qu'on teste
     ));
 
     await tester.pumpWidget(createWidgetUnderTest());
-    await tester.pump(); // Use pump instead of pumpAndSettle because Carousel might have infinite animations (loading indicators)
+    await tester
+        .pump(); // Use pump instead of pumpAndSettle because Carousel might have infinite animations (loading indicators)
 
     // Trouver le Carousel
     final carouselFinder = find.byType(Carousel);
@@ -64,7 +70,7 @@ void main() {
 
     // Extraire le widget Carousel pour accéder à son callback onChange
     final Carousel carousel = tester.widget(carouselFinder);
-    
+
     // Simuler le fait que le PageView change de page (e.g., causé par Material You)
     carousel.onChange?.call(1, false);
 
@@ -72,7 +78,9 @@ void main() {
     verifyNever(() => mockHomeBloc.add(const HomeEvent.indexChanged(1)));
   });
 
-  testWidgets('HomeScreen accepts PageView changes when isSettingWallpaper is false', (WidgetTester tester) async {
+  testWidgets(
+      'HomeScreen accepts PageView changes when isSettingWallpaper is false',
+      (WidgetTester tester) async {
     // État normal
     when(() => mockHomeBloc.state).thenReturn(HomeState.loaded(
       list: [mockImage, mockImage],
@@ -87,7 +95,7 @@ void main() {
     expect(carouselFinder, findsOneWidget);
 
     final Carousel carousel = tester.widget(carouselFinder);
-    
+
     // Simuler un changement de page
     carousel.onChange?.call(1, false);
 

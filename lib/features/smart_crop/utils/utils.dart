@@ -1,5 +1,5 @@
 /// Utility functions for smart crop operations
-/// 
+///
 /// This file exports all utility classes for easy importing
 library smart_crop_utils;
 

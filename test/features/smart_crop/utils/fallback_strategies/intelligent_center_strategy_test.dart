@@ -20,7 +20,7 @@ void main() {
 
     test('creates center crop for portrait target on square image', () {
       final targetSize = const ui.Size(1000, 2000);
-      
+
       final crop = strategy.createCrop(
         image: mockImage,
         targetSize: targetSize,
@@ -34,7 +34,7 @@ void main() {
 
     test('creates top-biased crop for landscape target on square image', () {
       final targetSize = const ui.Size(2000, 1000);
-      
+
       final crop = strategy.createCrop(
         image: mockImage,
         targetSize: targetSize,

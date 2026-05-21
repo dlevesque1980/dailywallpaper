@@ -13,14 +13,14 @@ void main() {
         for (int x = 0; x < 16; x++) {
           final idx = (y * 16 + x) * 4;
           if (y < 16) {
-            data[idx] = data[idx+1] = data[idx+2] = 255;
+            data[idx] = data[idx + 1] = data[idx + 2] = 255;
           } else {
-            data[idx] = data[idx+1] = data[idx+2] = 0;
+            data[idx] = data[idx + 1] = data[idx + 2] = 0;
           }
           data[idx + 3] = 255;
         }
       }
-      
+
       final horizon = LandscapeFeatureDetector.detectHorizon(size, data);
       // Transition is at y=16 (index 16 / 32 = 0.5)
       expect(horizon, closeTo(0.5, 0.1));
@@ -35,17 +35,17 @@ void main() {
           final idx = (y * 32 + x) * 4;
           if (y >= 8 && y < 16 && x >= 8 && x < 16) {
             data[idx] = (x + y) % 2 == 0 ? 255 : 0;
-            data[idx+1] = (x + y) % 2 == 0 ? 255 : 0;
-            data[idx+2] = (x + y) % 2 == 0 ? 255 : 0;
+            data[idx + 1] = (x + y) % 2 == 0 ? 255 : 0;
+            data[idx + 2] = (x + y) % 2 == 0 ? 255 : 0;
           } else {
             data[idx] = 255;
-            data[idx+1] = 255;
-            data[idx+2] = 255;
+            data[idx + 1] = 255;
+            data[idx + 2] = 255;
           }
           data[idx + 3] = 255;
         }
       }
-      
+
       final areas = LandscapeFeatureDetector.detectSubjectAreas(size, data);
       expect(areas.isNotEmpty, true);
     });

@@ -26,7 +26,9 @@ class FakeImage implements ui.Image {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-  
+
   @override
-  Future<ByteData?> toByteData({ui.ImageByteFormat format = ui.ImageByteFormat.rawRgba}) async => null;
+  Future<ByteData?> toByteData(
+          {ui.ImageByteFormat format = ui.ImageByteFormat.rawRgba}) async =>
+      null;
 }

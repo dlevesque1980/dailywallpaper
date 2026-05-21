@@ -71,6 +71,9 @@ class DeviceCapabilityDetector {
   /// Detects if the device is an emulator
   static Future<bool> _detectEmulator() async {
     try {
+      if (io.Platform.environment.containsKey('FLUTTER_TEST')) {
+        return true;
+      }
       final deviceInfo = DeviceInfoPlugin();
       if (io.Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
@@ -88,9 +91,12 @@ class DeviceCapabilityDetector {
   /// Assesses memory tier based on available indicators
   static Future<PerformanceTier> _assessMemoryTier() async {
     try {
+      final views = ui.PlatformDispatcher.instance.views;
+      if (views.isEmpty) {
+        return PerformanceTier.low;
+      }
       // Get screen size as a proxy for device capability
-      final screenSize =
-          ui.PlatformDispatcher.instance.views.first.physicalSize;
+      final screenSize = views.first.physicalSize;
       final screenPixels = screenSize.width * screenSize.height;
 
       // Higher resolution screens typically indicate more capable devices

@@ -27,19 +27,7 @@ class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
-        val engine = FlutterEngine(this)
-
-        // Register all Flutter plugins (channel handlers) before Dart code runs.
-        GeneratedPluginRegistrant.registerWith(engine)
-
-        // Start the Dart entrypoint — this keeps the Dart isolate alive independently
-        // of the Activity lifecycle, so BLoC state (including wallpaperMessage) survives
-        // the Material You Activity restart.
-        engine.dartExecutor.executeDartEntrypoint(
-            DartExecutor.DartEntrypoint.createDefault()
-        )
-
-        FlutterEngineCache.getInstance().put(ENGINE_ID, engine)
+        // Standard initialization without pre-warming to avoid Impeller/Vulkan 
+        // surface conflicts on Android 16.
     }
 }

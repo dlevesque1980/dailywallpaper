@@ -31,8 +31,21 @@ class BingImage extends Object {
   @JsonKey(name: "bot")
   int bot;
 
-  BingImage(this.startDate, this.fullStartDate, this.endDate, this.url, this.urlBase, this.copyright, this.copyrightLink, this.quiz, this.wp, this.hash, this.drk,
-      this.top, this.bot);
+  BingImage(
+      this.startDate,
+      this.fullStartDate,
+      this.endDate,
+      this.url,
+      this.urlBase,
+      this.copyright,
+      this.copyrightLink,
+      this.quiz,
+      this.wp,
+      this.hash,
+      this.drk,
+      this.top,
+      this.bot);
 
-  factory BingImage.fromJson(Map<String, dynamic> json) => _$BingImageFromJson(json);
+  factory BingImage.fromJson(Map<String, dynamic> json) =>
+      _$BingImageFromJson(json);
 }

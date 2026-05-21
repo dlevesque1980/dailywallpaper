@@ -11,7 +11,8 @@ class AnalyzerRunner {
     required AnalysisContext context,
     required List<CropAnalyzer> analyzers,
     void Function(String name)? onAnalyzerStarted,
-    void Function(String name, Duration duration, bool success)? onAnalyzerFinished,
+    void Function(String name, Duration duration, bool success)?
+        onAnalyzerFinished,
   }) async {
     final scores = <CropScore>[];
 
@@ -19,14 +20,15 @@ class AnalyzerRunner {
       if (context.hasExceededTimeout) break;
 
       // Yield to UI thread
-      await Future.delayed(Duration.zero);
+      await Future.delayed(const Duration(milliseconds: 16));
 
       try {
-        final analyzerName = analyzer is CropAnalyzerV2 ? analyzer.name : analyzer.strategyName;
+        final analyzerName =
+            analyzer is CropAnalyzerV2 ? analyzer.name : analyzer.strategyName;
         onAnalyzerStarted?.call(analyzerName);
 
         final stopwatch = Stopwatch()..start();
-        
+
         final score = analyzer is CropAnalyzerV2
             ? await analyzer.analyzeWithContext(image, targetSize, context)
             : await analyzer.analyze(image, targetSize);
@@ -38,7 +40,10 @@ class AnalyzerRunner {
           scores.add(score);
         }
       } catch (e) {
-        onAnalyzerFinished?.call(analyzer is CropAnalyzerV2 ? analyzer.name : analyzer.strategyName, Duration.zero, false);
+        onAnalyzerFinished?.call(
+            analyzer is CropAnalyzerV2 ? analyzer.name : analyzer.strategyName,
+            Duration.zero,
+            false);
       }
     }
 

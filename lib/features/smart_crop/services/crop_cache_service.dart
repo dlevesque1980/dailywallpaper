@@ -43,7 +43,8 @@ class CropCacheService {
     CropSettings settings,
     CropCoordinates coordinates,
   ) async {
-    return await _persistentCache.cacheCrop(imageUrl, targetSize, settings, coordinates);
+    return await _persistentCache.cacheCrop(
+        imageUrl, targetSize, settings, coordinates);
   }
 
   Future<int> invalidateImageCache(String imageUrl) async {

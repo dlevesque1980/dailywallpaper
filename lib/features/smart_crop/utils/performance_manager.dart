@@ -35,7 +35,8 @@ class PerformanceManager {
   // Processing budgets
   Duration _processingBudget = const Duration(seconds: 2);
   int _memoryBudgetMB = 100;
-  final PerformanceBudgetCalculator _budgetCalculator = PerformanceBudgetCalculator();
+  final PerformanceBudgetCalculator _budgetCalculator =
+      PerformanceBudgetCalculator();
 
   /// Initializes the performance manager
   Future<void> initialize() async {
@@ -53,8 +54,7 @@ class PerformanceManager {
 
   /// Gets adaptive crop settings based on current performance conditions
   Future<CropSettings> getAdaptiveSettings(CropSettings baseSettings) async {
-    final capabilities =
-        await DeviceCapabilityDetector.getDeviceCapability();
+    final capabilities = await DeviceCapabilityDetector.getDeviceCapability();
     final memoryStatus = await _getMemoryStatus();
 
     // Apply battery optimizations first
@@ -64,7 +64,8 @@ class PerformanceManager {
     // Calculate adaptive budget
     final adaptiveBudget = _budgetCalculator.calculateProcessingBudget(
       capabilities,
-      memoryStatus == MemoryStatus.high || memoryStatus == MemoryStatus.critical,
+      memoryStatus == MemoryStatus.high ||
+          memoryStatus == MemoryStatus.critical,
     );
 
     // Create final adaptive settings
@@ -158,7 +159,8 @@ class PerformanceManager {
         milliseconds: (_processingBudget.inMilliseconds * 0.7).round(),
       );
     }
-}
+  }
+
   /// Checks for adaptive adjustments based on recent performance
   void _checkForAdaptiveAdjustments() {
     if (_metrics.length < 10) return;
