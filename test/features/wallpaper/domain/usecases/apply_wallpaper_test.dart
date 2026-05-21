@@ -5,16 +5,26 @@ import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
 import 'package:dailywallpaper/services/wallpaper/wallpaper_service.dart';
 import 'package:dailywallpaper/services/image_cache_service.dart';
-import 'package:dailywallpaper/services/smart_crop/crop_render_cache.dart';
+import 'package:dailywallpaper/features/smart_crop/crop_render_cache.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
+import 'dart:ui' as ui;
+import 'package:dailywallpaper/features/smart_crop/models/crop_coordinates.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_cropper.dart';
 import 'package:mocktail/mocktail.dart';
-
 import 'package:flutter/services.dart';
 
 class MockWallpaperService extends Mock implements WallpaperService {}
+
 class MockPreferencesReader extends Mock implements PreferencesReader {}
+
 class MockCropRenderCache extends Mock implements CropRenderCache {}
+
 class MockImageCacheService extends Mock implements ImageCacheService {}
+
+class FakeImage extends Fake implements ui.Image {}
+
+class FakeCropResult extends Fake implements CropResult {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +40,8 @@ void main() {
         .setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/path_provider'),
       (MethodCall methodCall) async {
-        if (methodCall.method == 'getTemporaryDirectory') {
+        if (methodCall.method == 'getTemporaryDirectory' ||
+            methodCall.method == 'getApplicationDocumentsDirectory') {
           return '.';
         }
         return null;
@@ -39,7 +50,17 @@ void main() {
 
     registerFallbackValue('fallback');
     registerFallbackValue(Uint8List(0));
+    registerFallbackValue(FakeImage());
+    registerFallbackValue(FakeCropResult());
   });
+
+  Future<ui.Image> createRealImage() async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    canvas.drawRect(const ui.Rect.fromLTWH(0, 0, 100, 100), ui.Paint()..color = const ui.Color(0xFF000000));
+    final picture = recorder.endRecording();
+    return await picture.toImage(100, 100);
+  }
 
   setUp(() {
     mockWallpaperService = MockWallpaperService();
@@ -53,14 +74,23 @@ void main() {
       cropCache: mockCropRenderCache,
       imageCache: mockImageCache,
     );
-    
+
     // Default behaviors
     when(() => mockPreferencesReader.getBoolWithDefault(any(), any()))
         .thenAnswer((_) async => true);
     when(() => mockPreferencesReader.getIntWithDefault(any(), any()))
         .thenAnswer((_) async => 1);
-    when(() => mockCropRenderCache.getRenderedBytes(any()))
-        .thenReturn(null);
+    when(() => mockCropRenderCache.getRenderedBytes(any())).thenReturn(null);
+    when(() => mockImageCache.saveProcessedImage(any(), any()))
+        .thenAnswer((_) async => 'fake_path.png');
+    when(() => mockImageCache.downloadAndSaveSourceImage(any(), any()))
+        .thenAnswer((_) async => 'fake_source.jpg');
+    when(() => mockImageCache.loadCropResultJson(any()))
+        .thenAnswer((_) async => null);
+    when(() => mockImageCache.loadProcessedImage(any()))
+        .thenAnswer((_) async => null);
+    when(() => mockImageCache.saveCropResult(any(), any()))
+        .thenAnswer((_) async => {});
     when(() => mockWallpaperService.setBothWallpaper(any()))
         .thenAnswer((_) async => 'Success');
     when(() => mockWallpaperService.setSystemWallpaper(any()))
@@ -82,7 +112,7 @@ void main() {
 
     test('should use local processed bytes if available', () async {
       final cachedBytes = Uint8List.fromList([10, 20, 30]);
-      
+
       when(() => mockImageCache.getProcessedImageBytes(any()))
           .thenAnswer((_) => Future.value(cachedBytes));
       when(() => mockWallpaperService.setBothWallpaper(any()))
@@ -91,25 +121,116 @@ void main() {
       final result = await useCase(testImage);
 
       expect(result, 'wallpaperSetSuccess');
-      verify(() => mockImageCache.getProcessedImageBytes(testImage.imageIdent)).called(1);
+      verify(() => mockImageCache.getProcessedImageBytes(testImage.imageIdent))
+          .called(1);
       verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
       // Should NOT attempt to load source image if processed bytes are found
       verifyNever(() => mockImageCache.loadSourceImage(any()));
     });
 
-    test('should try loading source from disk if processed bytes are missing', () async {
+    test('should try loading source from disk if processed bytes are missing',
+        () async {
       when(() => mockImageCache.getProcessedImageBytes(any()))
           .thenAnswer((_) => Future.value(null));
       when(() => mockImageCache.loadSourceImage(any()))
           .thenAnswer((_) => Future.value(null));
-      when(() => mockImageCache.loadImageFromUrl(any()))
+      when(() => mockImageCache.loadImageFromUrl(any(), client: any(named: 'client')))
           .thenAnswer((_) => Future.value(null));
 
       await useCase(testImage);
 
-      verify(() => mockImageCache.getProcessedImageBytes(testImage.imageIdent)).called(1);
-      verify(() => mockImageCache.loadSourceImage(testImage.imageIdent)).called(1);
-      verify(() => mockImageCache.loadImageFromUrl(testImage.url)).called(1);
+      verify(() => mockImageCache.getProcessedImageBytes(testImage.imageIdent))
+          .called(1);
+      verify(() => mockImageCache.loadSourceImage(testImage.imageIdent))
+          .called(1);
+      verify(() => mockImageCache.loadImageFromUrl(testImage.url, client: any(named: 'client'))).called(1);
+    });
+
+    test('should apply saved CropCoordinates when processed PNG missing (source on disk)', () async {
+      final sourceImg = await createRealImage();
+      
+      final fakeCrop = CropResult(
+        bestCrop: CropCoordinates(x: 0, y: 0, width: 1, height: 1, confidence: 1, strategy: 'test', subjectBounds: null),
+        allScores: [],
+        processingTime: Duration.zero,
+        fromCache: true,
+        performanceMetrics: PerformanceMetrics.empty(),
+        analyzerMetadata: {},
+        scoringBreakdown: {},
+      );
+      final imageWithCoords = testImage.copyWith(cropResultJson: fakeCrop.serialize());
+
+      when(() => mockImageCache.getProcessedImageBytes(any())).thenAnswer((_) => Future.value(null));
+      when(() => mockImageCache.loadSourceImage(any())).thenAnswer((_) => Future.value(sourceImg));
+      when(() => mockWallpaperService.setBothWallpaper(any())).thenAnswer((_) => Future.value('Success'));
+
+      final result = await useCase(imageWithCoords);
+
+      expect(result, 'wallpaperSetSuccess');
+      verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
+      verifyNever(() => mockImageCache.loadImageFromUrl(any(), client: any(named: 'client')));
+    });
+
+    test('should apply coords after download when source missing but cropResultJson in DB (History > 2j)', () async {
+      final downloadedImg = await createRealImage();
+      
+      final fakeCrop = CropResult(
+        bestCrop: CropCoordinates(x: 0, y: 0, width: 1, height: 1, confidence: 1, strategy: 'test', subjectBounds: null),
+        allScores: [],
+        processingTime: Duration.zero,
+        fromCache: true,
+        performanceMetrics: PerformanceMetrics.empty(),
+        analyzerMetadata: {},
+        scoringBreakdown: {},
+      );
+      final imageWithCoords = testImage.copyWith(cropResultJson: fakeCrop.serialize());
+
+      when(() => mockImageCache.getProcessedImageBytes(any())).thenAnswer((_) => Future.value(null));
+      when(() => mockImageCache.loadSourceImage(any())).thenAnswer((_) => Future.value(null));
+      when(() => mockImageCache.loadImageFromUrl(any(), client: any(named: 'client'))).thenAnswer((_) => Future.value(downloadedImg));
+      when(() => mockWallpaperService.setBothWallpaper(any())).thenAnswer((_) => Future.value('Success'));
+
+      final result = await useCase(imageWithCoords);
+
+      expect(result, 'wallpaperSetSuccess');
+      verify(() => mockImageCache.loadImageFromUrl(imageWithCoords.url, client: any(named: 'client'))).called(1);
+      verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
+    });
+
+    test('should use raw source bytes when coords and PNG both missing', () async {
+      final sourceImg = await createRealImage();
+      // testImage has no cropResultJson
+      when(() => mockImageCache.getProcessedImageBytes(any())).thenAnswer((_) => Future.value(null));
+      when(() => mockImageCache.loadSourceImage(any())).thenAnswer((_) => Future.value(sourceImg));
+      when(() => mockWallpaperService.setBothWallpaper(any())).thenAnswer((_) => Future.value('Success'));
+
+      final result = await useCase(testImage);
+
+      expect(result, 'wallpaperSetSuccess');
+      verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
+    });
+
+    test('should apply EXACT carousel bytes when available', () async {
+      final carouselBytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+      when(() => mockCropRenderCache.getRenderedBytes(any())).thenReturn(carouselBytes);
+      when(() => mockWallpaperService.setBothWallpaper(any())).thenAnswer((_) => Future.value('Success'));
+
+      final result = await useCase(testImage);
+
+      expect(result, 'wallpaperSetSuccess');
+      verify(() => mockCropRenderCache.getRenderedBytes(testImage.imageIdent)).called(1);
+      verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
+      verifyNever(() => mockImageCache.getProcessedImageBytes(any()));
+    });
+
+    test('should return failedToSetWallpaper when wallpaper service throws', () async {
+      final carouselBytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+      when(() => mockCropRenderCache.getRenderedBytes(any())).thenReturn(carouselBytes);
+      when(() => mockWallpaperService.setBothWallpaper(any())).thenThrow(Exception('Failed to set'));
+
+      final result = await useCase(testImage);
+
+      expect(result, 'failedToSetWallpaper');
     });
   });
 }

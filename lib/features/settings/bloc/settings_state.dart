@@ -1,7 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:dailywallpaper/data/models/bing/bing_region_enum.dart';
 import 'package:dailywallpaper/features/settings/bloc/bing_region_state.dart';
-import 'package:dailywallpaper/services/smart_crop/utils/device_capability_detector.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/device_capability_detector.dart';
 
 part 'settings_state.freezed.dart';
 

@@ -10,7 +10,7 @@ void main() {
     late NasaService service;
 
     setUp(() {
-      dotenv.testLoad(fileInput: 'NASA_API_KEY=test_key');
+      dotenv.loadFromString(envString: 'NASA_API_KEY=test_key');
       client = FakeHttpClient();
       service = NasaService(client: client);
     });

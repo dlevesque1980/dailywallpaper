@@ -1,12 +1,14 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-
 class TextWithHyperLink extends StatelessWidget {
   final String text;
-  final Color color; 
+  final Color color;
   final Color hyperlinkColor;
-  TextWithHyperLink({required this.text, this.color = Colors.blue, this.hyperlinkColor = Colors.purple});
+  TextWithHyperLink(
+      {required this.text,
+      this.color = Colors.blue,
+      this.hyperlinkColor = Colors.purple});
 
   List<TextSpan> extractUrl(String text) {
     List<TextSpan> textParts = <TextSpan>[];

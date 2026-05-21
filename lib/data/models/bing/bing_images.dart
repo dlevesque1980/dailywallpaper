@@ -10,5 +10,6 @@ class BingImages extends Object {
 
   BingImages(this.images);
 
-  factory BingImages.fromJson(Map<String, dynamic> json) => _$BingImagesFromJson(json);
+  factory BingImages.fromJson(Map<String, dynamic> json) =>
+      _$BingImagesFromJson(json);
 }

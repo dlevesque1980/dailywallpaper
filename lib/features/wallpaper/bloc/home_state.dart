@@ -12,6 +12,8 @@ sealed class HomeState with _$HomeState {
     @Default(0) int imageIndex,
     String? wallpaperMessage,
     @Default(false) bool isSettingWallpaper,
+    @Default(false) bool isCropProcessing,
+    @Default(false) bool isSourceLoading,
   }) = _Loaded;
   const factory HomeState.error(String message) = _Error;
 }

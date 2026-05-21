@@ -55,6 +55,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult Function(HomeEventIndexChanged value)? indexChanged,
     TResult Function(HomeEventWallpaperUpdateRequested value)?
         wallpaperUpdateRequested,
+    TResult Function(HomeEventCropStatusChanged value)? cropStatusChanged,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -68,6 +69,8 @@ extension HomeEventPatterns on HomeEvent {
       case HomeEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested(_that);
+      case HomeEventCropStatusChanged() when cropStatusChanged != null:
+        return cropStatusChanged(_that);
       case _:
         return orElse();
     }
@@ -93,6 +96,8 @@ extension HomeEventPatterns on HomeEvent {
     required TResult Function(HomeEventIndexChanged value) indexChanged,
     required TResult Function(HomeEventWallpaperUpdateRequested value)
         wallpaperUpdateRequested,
+    required TResult Function(HomeEventCropStatusChanged value)
+        cropStatusChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -104,6 +109,8 @@ extension HomeEventPatterns on HomeEvent {
         return indexChanged(_that);
       case HomeEventWallpaperUpdateRequested():
         return wallpaperUpdateRequested(_that);
+      case HomeEventCropStatusChanged():
+        return cropStatusChanged(_that);
     }
   }
 
@@ -126,6 +133,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult? Function(HomeEventIndexChanged value)? indexChanged,
     TResult? Function(HomeEventWallpaperUpdateRequested value)?
         wallpaperUpdateRequested,
+    TResult? Function(HomeEventCropStatusChanged value)? cropStatusChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -138,6 +146,8 @@ extension HomeEventPatterns on HomeEvent {
       case HomeEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested(_that);
+      case HomeEventCropStatusChanged() when cropStatusChanged != null:
+        return cropStatusChanged(_that);
       case _:
         return null;
     }
@@ -161,6 +171,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult Function()? refreshRequested,
     TResult Function(int newIndex)? indexChanged,
     TResult Function()? wallpaperUpdateRequested,
+    TResult Function(String imageIdent, bool isProcessing)? cropStatusChanged,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -174,6 +185,8 @@ extension HomeEventPatterns on HomeEvent {
       case HomeEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested();
+      case HomeEventCropStatusChanged() when cropStatusChanged != null:
+        return cropStatusChanged(_that.imageIdent, _that.isProcessing);
       case _:
         return orElse();
     }
@@ -198,6 +211,8 @@ extension HomeEventPatterns on HomeEvent {
     required TResult Function() refreshRequested,
     required TResult Function(int newIndex) indexChanged,
     required TResult Function() wallpaperUpdateRequested,
+    required TResult Function(String imageIdent, bool isProcessing)
+        cropStatusChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -209,6 +224,8 @@ extension HomeEventPatterns on HomeEvent {
         return indexChanged(_that.newIndex);
       case HomeEventWallpaperUpdateRequested():
         return wallpaperUpdateRequested();
+      case HomeEventCropStatusChanged():
+        return cropStatusChanged(_that.imageIdent, _that.isProcessing);
     }
   }
 
@@ -230,6 +247,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult? Function()? refreshRequested,
     TResult? Function(int newIndex)? indexChanged,
     TResult? Function()? wallpaperUpdateRequested,
+    TResult? Function(String imageIdent, bool isProcessing)? cropStatusChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -242,6 +260,8 @@ extension HomeEventPatterns on HomeEvent {
       case HomeEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested();
+      case HomeEventCropStatusChanged() when cropStatusChanged != null:
+        return cropStatusChanged(_that.imageIdent, _that.isProcessing);
       case _:
         return null;
     }
@@ -373,6 +393,82 @@ class HomeEventWallpaperUpdateRequested implements HomeEvent {
   @override
   String toString() {
     return 'HomeEvent.wallpaperUpdateRequested()';
+  }
+}
+
+/// @nodoc
+
+class HomeEventCropStatusChanged implements HomeEvent {
+  const HomeEventCropStatusChanged(
+      {required this.imageIdent, required this.isProcessing});
+
+  final String imageIdent;
+  final bool isProcessing;
+
+  /// Create a copy of HomeEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $HomeEventCropStatusChangedCopyWith<HomeEventCropStatusChanged>
+      get copyWith =>
+          _$HomeEventCropStatusChangedCopyWithImpl<HomeEventCropStatusChanged>(
+              this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is HomeEventCropStatusChanged &&
+            (identical(other.imageIdent, imageIdent) ||
+                other.imageIdent == imageIdent) &&
+            (identical(other.isProcessing, isProcessing) ||
+                other.isProcessing == isProcessing));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, imageIdent, isProcessing);
+
+  @override
+  String toString() {
+    return 'HomeEvent.cropStatusChanged(imageIdent: $imageIdent, isProcessing: $isProcessing)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $HomeEventCropStatusChangedCopyWith<$Res>
+    implements $HomeEventCopyWith<$Res> {
+  factory $HomeEventCropStatusChangedCopyWith(HomeEventCropStatusChanged value,
+          $Res Function(HomeEventCropStatusChanged) _then) =
+      _$HomeEventCropStatusChangedCopyWithImpl;
+  @useResult
+  $Res call({String imageIdent, bool isProcessing});
+}
+
+/// @nodoc
+class _$HomeEventCropStatusChangedCopyWithImpl<$Res>
+    implements $HomeEventCropStatusChangedCopyWith<$Res> {
+  _$HomeEventCropStatusChangedCopyWithImpl(this._self, this._then);
+
+  final HomeEventCropStatusChanged _self;
+  final $Res Function(HomeEventCropStatusChanged) _then;
+
+  /// Create a copy of HomeEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? imageIdent = null,
+    Object? isProcessing = null,
+  }) {
+    return _then(HomeEventCropStatusChanged(
+      imageIdent: null == imageIdent
+          ? _self.imageIdent
+          : imageIdent // ignore: cast_nullable_to_non_nullable
+              as String,
+      isProcessing: null == isProcessing
+          ? _self.isProcessing
+          : isProcessing // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
   }
 }
 

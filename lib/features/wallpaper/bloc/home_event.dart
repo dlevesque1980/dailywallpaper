@@ -7,5 +7,10 @@ sealed class HomeEvent with _$HomeEvent {
   const factory HomeEvent.started() = HomeEventStarted;
   const factory HomeEvent.refreshRequested() = HomeEventRefreshRequested;
   const factory HomeEvent.indexChanged(int newIndex) = HomeEventIndexChanged;
-  const factory HomeEvent.wallpaperUpdateRequested() = HomeEventWallpaperUpdateRequested;
+  const factory HomeEvent.wallpaperUpdateRequested() =
+      HomeEventWallpaperUpdateRequested;
+  const factory HomeEvent.cropStatusChanged({
+    required String imageIdent,
+    required bool isProcessing,
+  }) = HomeEventCropStatusChanged;
 }

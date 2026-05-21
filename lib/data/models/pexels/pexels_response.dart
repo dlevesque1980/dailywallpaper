@@ -22,8 +22,9 @@ class PexelsResponse {
       page: json['page'] ?? 1,
       perPage: json['per_page'] ?? 15,
       photos: (json['photos'] as List<dynamic>?)
-          ?.map((photoJson) => PexelsPhoto.fromJson(photoJson))
-          .toList() ?? [],
+              ?.map((photoJson) => PexelsPhoto.fromJson(photoJson))
+              .toList() ??
+          [],
       nextPage: json['next_page'],
       prevPage: json['prev_page'],
       totalResults: json['total_results'] ?? 0,

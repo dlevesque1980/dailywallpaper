@@ -36,7 +36,8 @@ class CropInfoDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _infoRow(context, AppLocalizations.of(context)!.strategy, crop.strategy),
+          _infoRow(
+              context, AppLocalizations.of(context)!.strategy, crop.strategy),
           _infoRow(context, AppLocalizations.of(context)!.confidence,
               '${(crop.confidence * 100).toStringAsFixed(1)}%'),
           _infoRow(context, AppLocalizations.of(context)!.targetAspect,

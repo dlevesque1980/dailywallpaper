@@ -9,7 +9,8 @@ class DateTimeHelper {
     return DateTime(datetime.year, datetime.month, datetime.day, 23, 59, 59);
   }
 
-  static String formatDisplayDate(DateTime date, {String? todayLabel, String? yesterdayLabel}) {
+  static String formatDisplayDate(DateTime date,
+      {String? todayLabel, String? yesterdayLabel}) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));

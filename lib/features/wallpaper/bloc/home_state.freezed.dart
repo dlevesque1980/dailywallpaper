@@ -154,8 +154,13 @@ extension HomeStatePatterns on HomeState {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(List<ImageItem> list, int imageIndex,
-            String? wallpaperMessage, bool isSettingWallpaper)?
+    TResult Function(
+            List<ImageItem> list,
+            int imageIndex,
+            String? wallpaperMessage,
+            bool isSettingWallpaper,
+            bool isCropProcessing,
+            bool isSourceLoading)?
         loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
@@ -167,8 +172,13 @@ extension HomeStatePatterns on HomeState {
       case _Loading() when loading != null:
         return loading();
       case _Loaded() when loaded != null:
-        return loaded(_that.list, _that.imageIndex, _that.wallpaperMessage,
-            _that.isSettingWallpaper);
+        return loaded(
+            _that.list,
+            _that.imageIndex,
+            _that.wallpaperMessage,
+            _that.isSettingWallpaper,
+            _that.isCropProcessing,
+            _that.isSourceLoading);
       case _Error() when error != null:
         return error(_that.message);
       case _:
@@ -193,8 +203,13 @@ extension HomeStatePatterns on HomeState {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(List<ImageItem> list, int imageIndex,
-            String? wallpaperMessage, bool isSettingWallpaper)
+    required TResult Function(
+            List<ImageItem> list,
+            int imageIndex,
+            String? wallpaperMessage,
+            bool isSettingWallpaper,
+            bool isCropProcessing,
+            bool isSourceLoading)
         loaded,
     required TResult Function(String message) error,
   }) {
@@ -205,8 +220,13 @@ extension HomeStatePatterns on HomeState {
       case _Loading():
         return loading();
       case _Loaded():
-        return loaded(_that.list, _that.imageIndex, _that.wallpaperMessage,
-            _that.isSettingWallpaper);
+        return loaded(
+            _that.list,
+            _that.imageIndex,
+            _that.wallpaperMessage,
+            _that.isSettingWallpaper,
+            _that.isCropProcessing,
+            _that.isSourceLoading);
       case _Error():
         return error(_that.message);
     }
@@ -228,8 +248,13 @@ extension HomeStatePatterns on HomeState {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(List<ImageItem> list, int imageIndex,
-            String? wallpaperMessage, bool isSettingWallpaper)?
+    TResult? Function(
+            List<ImageItem> list,
+            int imageIndex,
+            String? wallpaperMessage,
+            bool isSettingWallpaper,
+            bool isCropProcessing,
+            bool isSourceLoading)?
         loaded,
     TResult? Function(String message)? error,
   }) {
@@ -240,8 +265,13 @@ extension HomeStatePatterns on HomeState {
       case _Loading() when loading != null:
         return loading();
       case _Loaded() when loaded != null:
-        return loaded(_that.list, _that.imageIndex, _that.wallpaperMessage,
-            _that.isSettingWallpaper);
+        return loaded(
+            _that.list,
+            _that.imageIndex,
+            _that.wallpaperMessage,
+            _that.isSettingWallpaper,
+            _that.isCropProcessing,
+            _that.isSourceLoading);
       case _Error() when error != null:
         return error(_that.message);
       case _:
@@ -297,7 +327,9 @@ class _Loaded implements HomeState {
       {required final List<ImageItem> list,
       this.imageIndex = 0,
       this.wallpaperMessage,
-      this.isSettingWallpaper = false})
+      this.isSettingWallpaper = false,
+      this.isCropProcessing = false,
+      this.isSourceLoading = false})
       : _list = list;
 
   final List<ImageItem> _list;
@@ -312,6 +344,10 @@ class _Loaded implements HomeState {
   final String? wallpaperMessage;
   @JsonKey()
   final bool isSettingWallpaper;
+  @JsonKey()
+  final bool isCropProcessing;
+  @JsonKey()
+  final bool isSourceLoading;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
@@ -331,7 +367,11 @@ class _Loaded implements HomeState {
             (identical(other.wallpaperMessage, wallpaperMessage) ||
                 other.wallpaperMessage == wallpaperMessage) &&
             (identical(other.isSettingWallpaper, isSettingWallpaper) ||
-                other.isSettingWallpaper == isSettingWallpaper));
+                other.isSettingWallpaper == isSettingWallpaper) &&
+            (identical(other.isCropProcessing, isCropProcessing) ||
+                other.isCropProcessing == isCropProcessing) &&
+            (identical(other.isSourceLoading, isSourceLoading) ||
+                other.isSourceLoading == isSourceLoading));
   }
 
   @override
@@ -340,11 +380,13 @@ class _Loaded implements HomeState {
       const DeepCollectionEquality().hash(_list),
       imageIndex,
       wallpaperMessage,
-      isSettingWallpaper);
+      isSettingWallpaper,
+      isCropProcessing,
+      isSourceLoading);
 
   @override
   String toString() {
-    return 'HomeState.loaded(list: $list, imageIndex: $imageIndex, wallpaperMessage: $wallpaperMessage, isSettingWallpaper: $isSettingWallpaper)';
+    return 'HomeState.loaded(list: $list, imageIndex: $imageIndex, wallpaperMessage: $wallpaperMessage, isSettingWallpaper: $isSettingWallpaper, isCropProcessing: $isCropProcessing, isSourceLoading: $isSourceLoading)';
   }
 }
 
@@ -358,7 +400,9 @@ abstract mixin class _$LoadedCopyWith<$Res>
       {List<ImageItem> list,
       int imageIndex,
       String? wallpaperMessage,
-      bool isSettingWallpaper});
+      bool isSettingWallpaper,
+      bool isCropProcessing,
+      bool isSourceLoading});
 }
 
 /// @nodoc
@@ -376,6 +420,8 @@ class __$LoadedCopyWithImpl<$Res> implements _$LoadedCopyWith<$Res> {
     Object? imageIndex = null,
     Object? wallpaperMessage = freezed,
     Object? isSettingWallpaper = null,
+    Object? isCropProcessing = null,
+    Object? isSourceLoading = null,
   }) {
     return _then(_Loaded(
       list: null == list
@@ -393,6 +439,14 @@ class __$LoadedCopyWithImpl<$Res> implements _$LoadedCopyWith<$Res> {
       isSettingWallpaper: null == isSettingWallpaper
           ? _self.isSettingWallpaper
           : isSettingWallpaper // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isCropProcessing: null == isCropProcessing
+          ? _self.isCropProcessing
+          : isCropProcessing // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isSourceLoading: null == isSourceLoading
+          ? _self.isSourceLoading
+          : isSourceLoading // ignore: cast_nullable_to_non_nullable
               as bool,
     ));
   }

@@ -3,10 +3,11 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
 
 abstract class ImageCacheService {
-  Future<String?> downloadAndSaveSourceImage(String url, String imageIdent, {http.Client? client});
+  Future<String?> downloadAndSaveSourceImage(String url, String imageIdent,
+      {http.Client? client});
   Future<ui.Image?> loadSourceImage(String imageIdent);
   Future<String?> saveProcessedImage(ui.Image image, String imageIdent);
   Future<ui.Image?> loadProcessedImage(String imageIdent);
@@ -19,7 +20,8 @@ abstract class ImageCacheService {
 
 class ImageCacheServiceImpl implements ImageCacheService {
   @override
-  Future<String?> downloadAndSaveSourceImage(String url, String imageIdent, {http.Client? client}) async {
+  Future<String?> downloadAndSaveSourceImage(String url, String imageIdent,
+      {http.Client? client}) async {
     try {
       final response = await (client ?? http.Client()).get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -141,12 +143,13 @@ class ImageCacheServiceImpl implements ImageCacheService {
   }
 
   @override
-  Future<int> cleanupOldWallpapers({Duration maxAge = const Duration(days: 2)}) async {
+  Future<int> cleanupOldWallpapers(
+      {Duration maxAge = const Duration(days: 2)}) async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final wallpaperDir = Directory('${appDir.path}/wallpapers');
       if (!await wallpaperDir.exists()) return 0;
-      
+
       final cutoffTime = DateTime.now().subtract(maxAge);
       int deletedCount = 0;
       await for (final entity in wallpaperDir.list()) {

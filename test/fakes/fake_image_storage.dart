@@ -40,8 +40,8 @@ class FakeImageStorage implements ImageStorage {
   Future<List<ImageItem>> getImagesForDate(DateTime date) async {
     return _store.values.where((item) {
       return item.startTime.year == date.year &&
-             item.startTime.month == date.month &&
-             item.startTime.day == date.day;
+          item.startTime.month == date.month &&
+          item.startTime.day == date.day;
     }).toList();
   }
 
@@ -53,10 +53,48 @@ class FakeImageStorage implements ImageStorage {
 
   @override
   Future<List<DateTime>> getAvailableDates() async {
-    final dates = _store.values.map((item) {
-      return DateTime(item.startTime.year, item.startTime.month, item.startTime.day);
-    }).toSet().toList();
+    final dates = _store.values
+        .map((item) {
+          return DateTime(
+              item.startTime.year, item.startTime.month, item.startTime.day);
+        })
+        .toSet()
+        .toList();
     dates.sort((a, b) => b.compareTo(a));
     return dates;
+  }
+
+  @override
+  Future<bool> updateImagePaths(
+    String imageIdent, {
+    String? localSourcePath,
+    String? localProcessedPath,
+    String? cropResultJson,
+  }) async {
+    final item = _store[imageIdent];
+    if (item == null) return false;
+
+    _store[imageIdent] = item.copyWith(
+      localSourcePath: localSourcePath ?? item.localSourcePath,
+      localProcessedPath: localProcessedPath ?? item.localProcessedPath,
+      cropResultJson: cropResultJson ?? item.cropResultJson,
+    );
+    return true;
+  }
+
+  @override
+  Future<void> cleanupOldFilesAndReferences({int daysToKeepFiles = 2}) async {
+    final now = DateTime.now();
+    final cutoff = now.subtract(Duration(days: daysToKeepFiles));
+
+    for (final entry in _store.entries) {
+      if (entry.value.endTime.isBefore(cutoff)) {
+        _store[entry.key] = entry.value.copyWith(
+          localSourcePath: null,
+          localProcessedPath: null,
+          cropResultJson: null,
+        );
+      }
+    }
   }
 }

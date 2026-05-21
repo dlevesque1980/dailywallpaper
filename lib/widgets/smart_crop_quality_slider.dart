@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dailywallpaper/services/smart_crop/smart_crop_profile_manager.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_crop_profile_manager.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
 
 /// Custom slider widget for Smart Crop quality selection
@@ -15,10 +15,10 @@ class SmartCropQualitySlider extends StatefulWidget {
 
   /// Whether the slider is enabled
   final bool enabled;
-  
+
   /// Subject scaling enabled
   final bool subjectScalingEnabled;
-  
+
   /// Callback when scaling toggled
   final Function(bool value) onScalingToggled;
 
@@ -76,9 +76,9 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
 
   /// Gets the current level description
   String _getCurrentDescription(BuildContext context) {
-     // Ideally, these should be in AppLocalizations too, but they are in ProfileManager for now.
-     // We will leave them there but we could localize them later.
-     return SmartCropProfileManager.getLevelDescription(_currentLevel);
+    // Ideally, these should be in AppLocalizations too, but they are in ProfileManager for now.
+    // We will leave them there but we could localize them later.
+    return SmartCropProfileManager.getLevelDescription(_currentLevel);
   }
 
   /// Handles slider value change
@@ -108,7 +108,7 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,7 +255,7 @@ class _SmartCropQualitySliderState extends State<SmartCropQualitySlider> {
                   ],
                 ),
               ),
-              
+
               // Subject scaling toggle
               if (_currentLevel > 0)
                 SwitchListTile(

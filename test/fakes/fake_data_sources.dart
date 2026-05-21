@@ -19,7 +19,9 @@ class FakePexelsDataSource implements PexelsDataSource {
   @override
   Future<List<ImageItem>> fetchPexelsCurated({int page = 1}) async => list!;
   @override
-  Future<List<ImageItem>> searchPexelsImages({required String query, int page = 1}) async => list!;
+  Future<List<ImageItem>> searchPexelsImages(
+          {required String query, int page = 1}) async =>
+      list!;
 }
 
 class FakeNasaDataSource implements NasaDataSource {

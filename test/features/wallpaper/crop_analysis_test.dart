@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_coordinates.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_coordinates.dart';
 
 void main() {
   group('Crop Analysis Functional Tests', () {
@@ -68,12 +68,10 @@ void main() {
         null,
         "copy",
       );
-      
+
       final mockCropResult = CropResult(
         bestCrop: CropCoordinates(
-          x: 0, y: 0, width: 1, height: 1, 
-          confidence: 1.0, strategy: 'full'
-        ),
+            x: 0, y: 0, width: 1, height: 1, confidence: 1.0, strategy: 'full'),
         allScores: [],
         processingTime: Duration.zero,
         fromCache: true,
@@ -81,7 +79,7 @@ void main() {
         performanceMetrics: createMockMetrics(),
         scoringBreakdown: {'full': 1.0},
       );
-      
+
       image.smartCropResult = mockCropResult;
 
       // Act

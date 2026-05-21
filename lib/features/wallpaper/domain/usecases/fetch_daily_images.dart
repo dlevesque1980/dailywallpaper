@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/core/database/database_helper.dart';
 import 'package:dailywallpaper/data/repositories/image_repository.dart';
@@ -26,6 +29,8 @@ class FetchDailyImagesUseCase {
 
     // Clean up old images periodically (keep last 30 days)
     _dbHelper.cleanupOldImages(daysToKeep: 30);
+    // Clean up physical files and db references older than 2 days
+    unawaited(_dbHelper.cleanupOldFilesAndReferences(daysToKeepFiles: 2));
 
     // Launch all API requests concurrently
     var bingFuture = _bingHandler(forceRefresh: forceRefresh);
@@ -54,6 +59,7 @@ class FetchDailyImagesUseCase {
       list.add(nasaResult);
     }
 
+    await _resolvePhysicalPaths(list);
     return list;
   }
 
@@ -76,7 +82,8 @@ class FetchDailyImagesUseCase {
     return image;
   }
 
-  Future<List<ImageItem>> _fetchPexelsParallel({bool forceRefresh = false}) async {
+  Future<List<ImageItem>> _fetchPexelsParallel(
+      {bool forceRefresh = false}) async {
     var categories = await _prefHelper.getStringListWithDefault(
         sp_PexelsCategories, defaultPexelsCategories.take(3).toList());
 
@@ -84,18 +91,21 @@ class FetchDailyImagesUseCase {
 
     var futures = <Future<ImageItem?>>[];
     for (int i = 0; i < categories.length; i++) {
-      futures.add(_fetchSinglePexels(categories[i], dateStr, i + 1, forceRefresh: forceRefresh));
+      futures.add(_fetchSinglePexels(categories[i], dateStr, i + 1,
+          forceRefresh: forceRefresh));
     }
 
     var results = await Future.wait(futures);
     return results.whereType<ImageItem>().toList();
   }
 
-  Future<ImageItem?> _fetchSinglePexels(String category, String dateStr, int order, {bool forceRefresh = false}) async {
+  Future<ImageItem?> _fetchSinglePexels(
+      String category, String dateStr, int order,
+      {bool forceRefresh = false}) async {
     try {
       var imageIdent = 'pexels.$category.$dateStr';
       ImageItem? pexelsImage;
-      
+
       if (forceRefresh) {
         await _dbHelper.deleteImageByIdent(imageIdent);
       } else {
@@ -140,6 +150,53 @@ class FetchDailyImagesUseCase {
     } catch (e) {
       debugPrint('Error loading NASA APOD: $e');
       return null;
+    }
+  }
+
+  /// Retourne les dernières images mises en cache (Zero-Latency Carousel)
+  Future<List<ImageItem>> getCachedImages() async {
+    try {
+      final list = await _dbHelper.getHistoricalImages(limit: 10);
+      if (list.isEmpty) return [];
+
+      // Filtrer pour garder le lot d'images le plus récent (par exemple de la dernière date de début)
+      final latestStartTime = list.first.startTime;
+      final dailyBatch = list
+          .where((img) =>
+              img.startTime.difference(latestStartTime).inHours.abs() < 24)
+          .toList();
+
+      // Trier le lot par DisplayOrder
+      dailyBatch.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+      await _resolvePhysicalPaths(dailyBatch);
+      return dailyBatch;
+    } catch (e) {
+      debugPrint('Error getting cached images: $e');
+      return [];
+    }
+  }
+
+  Future<void> _resolvePhysicalPaths(List<ImageItem> list) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      for (final img in list) {
+        if (img.localSourcePath == null) {
+          final filePath = '${appDir.path}/wallpapers/${img.imageIdent}_source.jpg';
+          if (await File(filePath).exists()) {
+            img.localSourcePath = filePath;
+            unawaited(_dbHelper.updateImagePaths(img.imageIdent, localSourcePath: filePath));
+          }
+        }
+        if (img.localProcessedPath == null) {
+          final filePath = '${appDir.path}/wallpapers/${img.imageIdent}_processed.png';
+          if (await File(filePath).exists()) {
+            img.localProcessedPath = filePath;
+            unawaited(_dbHelper.updateImagePaths(img.imageIdent, localProcessedPath: filePath));
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error resolving physical paths: $e');
     }
   }
 }

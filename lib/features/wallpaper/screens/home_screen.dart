@@ -11,6 +11,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
 import 'package:dailywallpaper/widgets/crop_info_dialog.dart';
 import 'package:dailywallpaper/widgets/image_info_sheet.dart';
+import 'package:dailywallpaper/features/wallpaper/screens/widgets/home_loading_state.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -50,7 +51,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
 
     if (isSetting) {
-      debugPrint('Ignoring fake PageView swipe to $index because wallpaper is currently being set.');
+      debugPrint(
+          'Ignoring fake PageView swipe to $index because wallpaper is currently being set.');
       return;
     }
 
@@ -64,7 +66,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context.read<HomeBloc>().add(HomeEvent.indexChanged(index));
     }
   }
-
 
   void _showImageInfo(BuildContext context, ImageItem image) {
     showModalBottomSheet<void>(
@@ -84,15 +85,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final l10n = AppLocalizations.of(context)!;
     if (message == 'wallpaperSetSuccess') return l10n.wallpaperSetSuccess;
     if (message.startsWith('failedToSetWallpaper')) {
-      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      final detail =
+          message.contains(':') ? message.substring(message.indexOf(':')) : '';
       return '${l10n.failedToSetWallpaper}$detail';
     }
     if (message.startsWith('failedToFetchWallpapers')) {
-      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      final detail =
+          message.contains(':') ? message.substring(message.indexOf(':')) : '';
       return '${l10n.failedToFetchWallpapers}$detail';
     }
     if (message.startsWith('failedToRefreshWallpapers')) {
-      final detail = message.contains(':') ? message.substring(message.indexOf(':')) : '';
+      final detail =
+          message.contains(':') ? message.substring(message.indexOf(':')) : '';
       return '${l10n.failedToRefreshWallpapers}$detail';
     }
     return message;
@@ -155,7 +159,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         onPressed: () {
                           state.mapOrNull(loaded: (loadedState) {
                             if (loadedState.list.isNotEmpty) {
-                              _showImageInfo(context, loadedState.list[_currentIndex.value]);
+                              _showImageInfo(context,
+                                  loadedState.list[_currentIndex.value]);
                             }
                           });
                         },
@@ -164,12 +169,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         onSelected: (choice) {
                           if (choice == '/settings') {
                             Navigator.pushNamed(context, choice).then((_) {
-                              context.read<HomeBloc>().add(const HomeEvent.refreshRequested());
+                              context
+                                  .read<HomeBloc>()
+                                  .add(const HomeEvent.refreshRequested());
                             });
                           } else if (choice == 'crop_info') {
                             state.mapOrNull(loaded: (loadedState) {
                               if (loadedState.list.isNotEmpty) {
-                                _showCropInfo(context, loadedState.list[_currentIndex.value]);
+                                _showCropInfo(context,
+                                    loadedState.list[_currentIndex.value]);
                               }
                             });
                           } else {
@@ -195,7 +203,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               children: [
                                 const Icon(Icons.center_focus_strong, size: 20),
                                 const SizedBox(width: 8),
-                                Text(AppLocalizations.of(context)!.cropAnalysis),
+                                Text(
+                                    AppLocalizations.of(context)!.cropAnalysis),
                               ],
                             ),
                           ),
@@ -228,20 +237,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             floatingActionButton: BlocConsumer<HomeBloc, HomeState>(
               listenWhen: (previous, current) {
-                return current.mapOrNull(
-                  loaded: (curr) {
-                    final prev = previous.mapOrNull(loaded: (p) => p);
-                    return prev != null && 
-                           curr.wallpaperMessage != null && 
-                           curr.wallpaperMessage != prev.wallpaperMessage;
-                  }
-                ) ?? false;
+                return current.mapOrNull(loaded: (curr) {
+                      final prev = previous.mapOrNull(loaded: (p) => p);
+                      return prev != null &&
+                          curr.wallpaperMessage != null &&
+                          curr.wallpaperMessage != prev.wallpaperMessage;
+                    }) ??
+                    false;
               },
               listener: (context, state) {
                 state.mapOrNull(loaded: (loadedState) {
                   if (loadedState.wallpaperMessage != null) {
                     Fluttertoast.showToast(
-                      msg: _translateMessage(context, loadedState.wallpaperMessage!),
+                      msg: _translateMessage(
+                          context, loadedState.wallpaperMessage!),
                       toastLength: Toast.LENGTH_SHORT,
                       gravity: ToastGravity.BOTTOM,
                     );
@@ -251,70 +260,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               builder: (context, state) {
                 bool isSetting = false;
                 bool isSuccess = false;
+                bool isCropProcessing = false;
+                bool isSourceLoading = false;
 
                 state.mapOrNull(loaded: (loadedState) {
                   isSetting = loadedState.isSettingWallpaper;
-                  isSuccess = loadedState.wallpaperMessage != null && 
-                             (loadedState.wallpaperMessage == 'wallpaperSetSuccess');
+                  isSuccess = loadedState.wallpaperMessage != null &&
+                      (loadedState.wallpaperMessage == 'wallpaperSetSuccess');
+                  isCropProcessing = loadedState.isCropProcessing;
+                  isSourceLoading = loadedState.isSourceLoading;
                 });
 
                 return WallpaperButton(
-                  onPressed: () {
-                    context.read<HomeBloc>().add(const HomeEvent.wallpaperUpdateRequested());
-                  },
+                  onPressed: isSourceLoading
+                      ? null
+                      : () {
+                          context
+                              .read<HomeBloc>()
+                              .add(const HomeEvent.wallpaperUpdateRequested());
+                        },
                   isSettingWallpaper: isSetting,
                   isSuccess: isSuccess,
+                  isCropProcessing: isCropProcessing,
+                  isSourceLoading: isSourceLoading,
                 );
               },
             ),
-            body: BlocBuilder<HomeBloc, HomeState>(
-                builder: (context, state) {
-                  return state.map(
-                    initial: (_) => _buildLoadingState(),
-                    loading: (_) => _buildLoadingState(),
-                    loaded: (loadedState) {
-                      if (loadedState.list.isNotEmpty) {
-                        return Carousel(
-                          list: loadedState.list,
-                          initialPage: loadedState.imageIndex,
-                          onChange: _onChange,
-                        );
-                      } else {
-                        return Center(child: Text(AppLocalizations.of(context)!.noWallpapersFound, style: const TextStyle(color: Colors.white)));
-                      }
-                    },
-                    error: (errorState) => Center(
-                      child: Text(_translateMessage(context, errorState.message), style: const TextStyle(color: Colors.red)),
-                    ),
-                  );
-                })));
-  }
-
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.optimizingWallpapers,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.analyzingForCrop,
-            style: const TextStyle(
-              color: Colors.white38,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
+            body: BlocBuilder<HomeBloc, HomeState>(builder: (context, state) {
+              return state.map(
+                initial: (_) => const HomeLoadingState(),
+                loading: (_) => const HomeLoadingState(),
+                loaded: (loadedState) {
+                  if (loadedState.list.isNotEmpty) {
+                    return Carousel(
+                      list: loadedState.list,
+                      initialPage: loadedState.imageIndex,
+                      onChange: _onChange,
+                    );
+                  } else {
+                    return Center(
+                        child: Text(
+                            AppLocalizations.of(context)!.noWallpapersFound,
+                            style: const TextStyle(color: Colors.white)));
+                  }
+                },
+                error: (errorState) => Center(
+                  child: Text(_translateMessage(context, errorState.message),
+                      style: const TextStyle(color: Colors.red)),
+                ),
+              );
+            })));
   }
 }

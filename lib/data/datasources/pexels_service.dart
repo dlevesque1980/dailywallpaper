@@ -11,11 +11,11 @@ class PexelsService implements PexelsDataSource {
   static const String _baseUrl = 'https://api.pexels.com/v1';
   static const String _curatedEndpoint = '/curated';
   static const String _searchEndpoint = '/search';
-  
+
   static const int _maxRequestsPerHour = 200;
   static const Duration _rateLimitWindow = Duration(hours: 1);
   static final List<DateTime> _requestTimes = [];
-  
+
   final http.Client _client;
 
   PexelsService({http.Client? client}) : _client = client ?? http.Client();
@@ -27,7 +27,7 @@ class PexelsService implements PexelsDataSource {
     }
     return key;
   }
-  
+
   @override
   Future<ImageItem> fetchFromPexels(String category) async {
     if (category.trim().isEmpty) {
@@ -58,7 +58,8 @@ class PexelsService implements PexelsDataSource {
   }
 
   @override
-  Future<List<ImageItem>> searchPexelsImages({required String query, int page = 1}) async {
+  Future<List<ImageItem>> searchPexelsImages(
+      {required String query, int page = 1}) async {
     try {
       final response = await _searchPhotos(
         query: query,
@@ -80,14 +81,18 @@ class PexelsService implements PexelsDataSource {
     final pexelsUrl = "https://www.pexels.com";
     final referralQuery = "?utm_source=DailyWallpaper&utm_medium=referral";
 
-    final copyright = 'Photo by <a href="$photographerUrl$referralQuery">$photographer</a> on <a href="$pexelsUrl$referralQuery">Pexels</a>';
+    final copyright =
+        'Photo by <a href="$photographerUrl$referralQuery">$photographer</a> on <a href="$pexelsUrl$referralQuery">Pexels</a>';
 
     final startTime = DateTimeHelper.startDayDate(DateTime.now());
     final endTime = startTime.add(const Duration(days: 1));
 
-    final imageUrl = photo.src.large2x.isNotEmpty ? photo.src.large2x : photo.src.original;
+    final imageUrl =
+        photo.src.large2x.isNotEmpty ? photo.src.large2x : photo.src.original;
 
-    final description = photo.alt?.isNotEmpty == true ? photo.alt! : 'Photo by ${photo.photographer}';
+    final description = photo.alt?.isNotEmpty == true
+        ? photo.alt!
+        : 'Photo by ${photo.photographer}';
 
     return ImageItem(
       "Pexels - $category",
@@ -109,25 +114,29 @@ class PexelsService implements PexelsDataSource {
         perPage: 80,
         orientation: 'portrait',
       );
-      
+
       if (response.photos.isNotEmpty) {
-        final randomIndex = DateTime.now().millisecondsSinceEpoch % response.photos.length;
+        final randomIndex =
+            DateTime.now().millisecondsSinceEpoch % response.photos.length;
         return response.photos[randomIndex];
       }
       return null;
     } catch (e) {
       final curatedResponse = await _fetchCuratedPhotos(perPage: 80);
       if (curatedResponse.photos.isNotEmpty) {
-        final randomIndex = DateTime.now().millisecondsSinceEpoch % curatedResponse.photos.length;
+        final randomIndex = DateTime.now().millisecondsSinceEpoch %
+            curatedResponse.photos.length;
         return curatedResponse.photos[randomIndex];
       }
       rethrow;
     }
   }
 
-  Future<PexelsResponse> _fetchCuratedPhotos({int page = 1, int perPage = 15}) async {
+  Future<PexelsResponse> _fetchCuratedPhotos(
+      {int page = 1, int perPage = 15}) async {
     _checkRateLimit();
-    final uri = Uri.parse('$_baseUrl$_curatedEndpoint').replace(queryParameters: {
+    final uri =
+        Uri.parse('$_baseUrl$_curatedEndpoint').replace(queryParameters: {
       'page': page.toString(),
       'per_page': perPage.toString(),
     });
@@ -147,8 +156,9 @@ class PexelsService implements PexelsDataSource {
       'per_page': perPage.toString(),
     };
     if (orientation != null) queryParameters['orientation'] = orientation;
-    
-    final uri = Uri.parse('$_baseUrl$_searchEndpoint').replace(queryParameters: queryParameters);
+
+    final uri = Uri.parse('$_baseUrl$_searchEndpoint')
+        .replace(queryParameters: queryParameters);
     return _doGet(uri);
   }
 
@@ -161,10 +171,12 @@ class PexelsService implements PexelsDataSource {
       }).timeout(const Duration(seconds: 30));
       return _handleResponse(response);
     } on TimeoutException {
-      throw PexelsApiException('Request timeout', 408, PexelsErrorType.networkError);
+      throw PexelsApiException(
+          'Request timeout', 408, PexelsErrorType.networkError);
     } catch (e) {
       if (e is PexelsApiException) rethrow;
-      throw PexelsApiException('Network error: $e', null, PexelsErrorType.networkError);
+      throw PexelsApiException(
+          'Network error: $e', null, PexelsErrorType.networkError);
     }
   }
 
@@ -176,15 +188,18 @@ class PexelsService implements PexelsDataSource {
       if (response.statusCode == 429) type = PexelsErrorType.rateLimitExceeded;
       if (response.statusCode == 401) type = PexelsErrorType.invalidApiKey;
       if (response.statusCode >= 500) type = PexelsErrorType.serverError;
-      throw PexelsApiException('Pexels API error: ${response.statusCode}', response.statusCode, type);
+      throw PexelsApiException('Pexels API error: ${response.statusCode}',
+          response.statusCode, type);
     }
   }
 
   void _checkRateLimit() {
     final now = DateTime.now();
-    _requestTimes.removeWhere((time) => now.difference(time) > _rateLimitWindow);
+    _requestTimes
+        .removeWhere((time) => now.difference(time) > _rateLimitWindow);
     if (_requestTimes.length >= _maxRequestsPerHour) {
-      throw PexelsApiException('Rate limit exceeded', 429, PexelsErrorType.rateLimitExceeded);
+      throw PexelsApiException(
+          'Rate limit exceeded', 429, PexelsErrorType.rateLimitExceeded);
     }
   }
 
@@ -197,7 +212,14 @@ class PexelsApiException implements Exception {
   final PexelsErrorType type;
   PexelsApiException(this.message, this.statusCode, this.type);
   @override
-  String toString() => 'PexelsApiException: $message (Status: $statusCode, Type: $type)';
+  String toString() =>
+      'PexelsApiException: $message (Status: $statusCode, Type: $type)';
 }
 
-enum PexelsErrorType { networkError, rateLimitExceeded, invalidApiKey, serverError, noContent }
+enum PexelsErrorType {
+  networkError,
+  rateLimitExceeded,
+  invalidApiKey,
+  serverError,
+  noContent
+}

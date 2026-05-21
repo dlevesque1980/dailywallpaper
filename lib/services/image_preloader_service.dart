@@ -2,14 +2,16 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
-import 'smart_crop/smart_cropper.dart';
-import 'smart_crop/smart_crop_preferences.dart';
-import 'smart_crop/utils/screen_utils.dart';
-import 'smart_crop/utils/image_utils.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_cropper.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_crop_preferences.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/screen_utils.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/image_utils.dart';
 
 import 'package:dailywallpaper/services/image_preloader.dart';
-import 'package:dailywallpaper/services/smart_crop/models/crop_result.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
 import 'package:dailywallpaper/services/image_cache_service.dart';
+import 'package:dailywallpaper/core/database/database_helper.dart';
+import 'package:dailywallpaper/features/smart_crop/services/crop_image_resolver.dart';
 
 /// Service de préchargement intelligent des images
 /// Gère le chargement parallèle et la mise en cache optimisée
@@ -17,10 +19,16 @@ class ImagePreloaderService implements ImagePreloader {
   static final ImagePreloaderService _instance =
       ImagePreloaderService._internal(ImageCacheServiceImpl());
   factory ImagePreloaderService() => _instance;
-  
+
   final ImageCacheService _imageCache;
-  
+
   ImagePreloaderService._internal(this._imageCache);
+
+  @override
+  int currentIndex = 0;
+
+  @override
+  List<ImageItem> currentImages = [];
 
   // Cache des images préchargées
   final Map<String, ui.Image> _preloadedImages = {};
@@ -30,44 +38,100 @@ class ImagePreloaderService implements ImagePreloader {
   final Map<String, Future<ui.Image?>> _loadingTasks = {};
   final Map<String, Future<ui.Image?>> _processingTasks = {};
 
+  // Verrou séquentiel pour le traitement Smart Crop (évite les pics de CPU/GPU sur Android 16)
+  Future<void> _processingLock = Future.value();
+
+  // ID de la session actuelle pour annuler les anciennes tâches
+  int _currentSessionId = 0;
+
+  Future<void> _enqueuePreprocessing(
+      ImageItem imageItem, ui.Image sourceImage) {
+    _processingLock = _processingLock.then((_) async {
+      try {
+        await _preprocessImage(imageItem, sourceImage);
+      } catch (e) {
+        debugPrint('Error preprocessing image in sequential lock: $e');
+      }
+    });
+    return _processingLock;
+  }
+
   // Configuration
   static const int maxCacheSize =
-      10; // Limite de cache pour éviter les fuites mémoire
+      20; // Augmenté pour éviter les dispose fréquents pendant la navigation
   static const int preloadDistance =
       2; // Nombre d'images à précharger en avance
+
+  @override
+  Future<void> preloadCurrentImageWithCrop(ImageItem imageItem) async {
+    final cacheKey = _getCacheKey(imageItem);
+    final processKey = _getProcessKey(imageItem);
+
+    // 1. Download source if needed
+    if (!_preloadedImages.containsKey(cacheKey) &&
+        !_loadingTasks.containsKey(cacheKey)) {
+      final loadingFuture = _loadImage(imageItem);
+      _loadingTasks[cacheKey] = loadingFuture;
+      final image = await loadingFuture;
+      _loadingTasks.remove(cacheKey);
+      if (image != null) _preloadedImages[cacheKey] = image;
+    } else if (_loadingTasks.containsKey(cacheKey)) {
+      final image = await _loadingTasks[cacheKey];
+      if (image != null) _preloadedImages[cacheKey] = image;
+    }
+
+    final sourceImage = _preloadedImages[cacheKey];
+    if (sourceImage == null) return;
+
+    // 2. Preprocess
+    if (!_processedImages.containsKey(processKey) &&
+        !_processingTasks.containsKey(processKey)) {
+      final processingFuture =
+          _processImageWithSmartCrop(imageItem, sourceImage);
+      _processingTasks[processKey] = processingFuture;
+      final processedImage = await processingFuture;
+      _processingTasks.remove(processKey);
+      if (processedImage != null) _processedImages[processKey] = processedImage;
+    } else if (_processingTasks.containsKey(processKey)) {
+      final processedImage = await _processingTasks[processKey];
+      if (processedImage != null) _processedImages[processKey] = processedImage;
+    }
+  }
 
   /// Précharge une liste d'images en parallèle
   /// Priorité: image courante > suivante > précédente > autres
   Future<void> preloadImages(List<ImageItem> images, int currentIndex) async {
+    this.currentImages = images;
+    this.currentIndex = currentIndex;
+    final sessionId = ++_currentSessionId;
+
     if (images.isEmpty) return;
 
     // Nettoyer le cache si nécessaire
-    _cleanupCache();
+    // On passe l'index actuel pour NE PAS supprimer les images proches
+    _cleanupCache(currentIndex, images);
 
     // Définir les priorités de chargement
     final priorities = _calculatePriorities(images, currentIndex);
 
-    // Lancer le préchargement en parallèle avec gestion des priorités
-    final futures = <Future<void>>[];
-
+    // Lancer le préchargement de manière SÉQUENTIELLE
     for (final entry in priorities.entries) {
+      // Vérifier si une nouvelle session a démarré entre-temps
+      if (sessionId != _currentSessionId) {
+        return;
+      }
+
       final imageItem = entry.key;
       final priority = entry.value;
 
-      futures.add(_preloadSingleImage(imageItem, priority));
-    }
+      try {
+        await _preloadSingleImage(imageItem, priority);
 
-    // Attendre que TOUTES les images soient chargées et traitées
-    // On traite les images de manière séquentielle pour ne pas saturer le thread UI
-    // et permettre au loader de continuer de tourner de façon fluide.
-    for (final entry in priorities.entries) {
-      // Yield BEFORE starting work on an image
-      await Future.delayed(Duration.zero);
-      
-      await _preloadSingleImage(entry.key, entry.value);
-      
-      // Yield AFTER working on an image
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Pause pour la mémoire
+        await Future.delayed(const Duration(milliseconds: 300));
+      } catch (e) {
+        // Ignorer les erreurs individuelles de préchargement
+      }
     }
   }
 
@@ -98,7 +162,7 @@ class ImagePreloaderService implements ImagePreloader {
       ..sort((a, b) => a.value.compareTo(b.value)));
   }
 
-  /// Précharge une image individuelle
+  /// Précharge une image individuelle et déclenche le Smart Crop en arrière-plan
   Future<void> _preloadSingleImage(ImageItem imageItem, int priority) async {
     final cacheKey = _getCacheKey(imageItem);
 
@@ -109,19 +173,15 @@ class ImagePreloaderService implements ImagePreloader {
     }
 
     try {
-      // Démarrer le chargement
+      // 1. Charger l'image source (téléchargement ou cache)
       final loadingFuture = _loadImage(imageItem);
       _loadingTasks[cacheKey] = loadingFuture;
 
       final image = await loadingFuture;
       if (image != null) {
         _preloadedImages[cacheKey] = image;
-
-        // Traiter le smart crop immédiatement pour garantir que l'image est prête
-        // Yield before preprocessing to allow UI updates
-        await Future.delayed(Duration.zero);
-        await _preprocessImage(imageItem, image);
-        await Future.delayed(Duration.zero);
+        // 2. Déclencher le prétraitement Smart Crop en arrière-plan (file d'attente séquentielle)
+        unawaited(_enqueuePreprocessing(imageItem, image));
       }
     } catch (e) {
       debugPrint('Erreur préchargement image ${imageItem.url}: $e');
@@ -134,17 +194,27 @@ class ImagePreloaderService implements ImagePreloader {
   Future<ui.Image?> _loadImage(ImageItem imageItem) async {
     try {
       // 1. Try to load from local cache
-      final localImage = await _imageCache.loadSourceImage(imageItem.imageIdent);
+      final localImage =
+          await _imageCache.loadSourceImage(imageItem.imageIdent);
       if (localImage != null) {
         return localImage;
       }
-      
+
       // 2. If not found locally, download, save, and load
-      final savedPath = await _imageCache.downloadAndSaveSourceImage(imageItem.url, imageItem.imageIdent);
+      final savedPath = await _imageCache.downloadAndSaveSourceImage(
+          imageItem.url, imageItem.imageIdent);
       if (savedPath != null) {
+        // Enregistrer le chemin de l'image source en DB SQLite
+        final dbHelper = DatabaseHelper();
+        await dbHelper.updateImagePaths(
+          imageItem.imageIdent,
+          localSourcePath: savedPath,
+        );
+        imageItem.localSourcePath = savedPath;
+
         return await _imageCache.loadSourceImage(imageItem.imageIdent);
       }
-      
+
       // 3. Fallback to direct URL load if saving failed
       return await _imageCache.loadImageFromUrl(imageItem.url);
     } catch (e) {
@@ -161,6 +231,17 @@ class ImagePreloaderService implements ImagePreloader {
     if (_processedImages.containsKey(processKey) ||
         _processingTasks.containsKey(processKey)) {
       return;
+    }
+
+    if (currentImages.isNotEmpty) {
+      final index = currentImages.indexWhere((img) => img.imageIdent == imageItem.imageIdent);
+      if (index != -1) {
+        final diff = (index - currentIndex).abs();
+        final circDist = diff > currentImages.length / 2 ? currentImages.length - diff : diff;
+        if (circDist > 1) {
+          return;
+        }
+      }
     }
 
     try {
@@ -187,24 +268,6 @@ class ImagePreloaderService implements ImagePreloader {
           await SmartCropPreferences.isSmartCropEnabled();
       if (!isSmartCropEnabled) return sourceImage;
 
-      // 1. Check local cache for processed image AND crop metadata
-      final cachedProcessedImage = await _imageCache.loadProcessedImage(imageItem.imageIdent);
-      final cachedCropResultJson = await _imageCache.loadCropResultJson(imageItem.imageIdent);
-      
-      if (cachedProcessedImage != null && cachedCropResultJson != null) {
-        try {
-          imageItem.smartCropResult = CropResult.deserialize(cachedCropResultJson);
-          
-          // Populate the global processed cache so Carousel can see it
-          SmartCropper.cacheProcessedImage(imageItem.imageIdent, cachedProcessedImage);
-          return cachedProcessedImage;
-        } catch (e) {
-          debugPrint('Failed to deserialize cached crop result: $e');
-          // If deserialization fails, proceed to re-crop
-        }
-      }
-
-      // 2. Perform Smart Crop if cache missed
       final cropSettings = await SmartCropPreferences.getCropSettings();
       final screenSize = ScreenUtils.getPhysicalScreenSize();
 
@@ -216,26 +279,15 @@ class ImagePreloaderService implements ImagePreloader {
             : screenSize.height.round(),
       );
 
-      final result = await SmartCropper.processImage(
-        imageItem.url,
-        sourceImage,
-        targetSize,
-        cropSettings,
+      final result = await CropImageResolver.resolve(
+        image: imageItem,
+        sourceImage: sourceImage,
+        targetSize: targetSize,
+        settings: cropSettings,
+        imageCache: _imageCache,
       );
 
-      if (result.success) {
-        // Essential: Populate the global processed cache so Carousel can see it
-        SmartCropper.cacheProcessedImage(imageItem.imageIdent, result.image);
-        // Save the crop result in the imageItem so the UI can display it
-        imageItem.smartCropResult = result.cropResult;
-        
-        // Save to local permanent cache for next time
-        await _imageCache.saveProcessedImage(result.image, imageItem.imageIdent);
-        await _imageCache.saveCropResult(result.cropResult, imageItem.imageIdent);
-        
-        return result.image;
-      }
-      return sourceImage;
+      return result.image;
     } catch (e) {
       debugPrint('Erreur smart crop ${imageItem.url}: $e');
       return sourceImage;
@@ -266,11 +318,41 @@ class ImagePreloaderService implements ImagePreloader {
     return _processingTasks.containsKey(processKey);
   }
 
-  /// Nettoie le cache pour éviter les fuites mémoire
-  void _cleanupCache() {
+  @override
+  Future<ui.Image?>? getLoadingTask(ImageItem imageItem) {
+    final cacheKey = _getCacheKey(imageItem);
+    return _loadingTasks[cacheKey];
+  }
+
+  @override
+  Future<ui.Image?>? getProcessingTask(ImageItem imageItem) {
+    final processKey = _getProcessKey(imageItem);
+    return _processingTasks[processKey];
+  }
+
+  /// Nettoye le cache intelligemment
+  void _cleanupCache(int currentIndex, List<ImageItem> images) {
+    if (_preloadedImages.length <= maxCacheSize &&
+        _processedImages.length <= maxCacheSize) {
+      return;
+    }
+
+    // Identifier les images à protéger (celles proches de l'index actuel)
+    final protectedKeys = <String>{};
+    for (int i = currentIndex - 2; i <= currentIndex + 2; i++) {
+      final idx = (i + images.length) % images.length;
+      if (idx >= 0 && idx < images.length) {
+        protectedKeys.add(_getCacheKey(images[idx]));
+        protectedKeys.add(_getProcessKey(images[idx]));
+      }
+    }
+
     if (_preloadedImages.length > maxCacheSize) {
-      final keysToRemove =
-          _preloadedImages.keys.take(_preloadedImages.length - maxCacheSize);
+      final keysToRemove = _preloadedImages.keys
+          .where((key) => !protectedKeys.contains(key))
+          .take(_preloadedImages.length - maxCacheSize)
+          .toList();
+
       for (final key in keysToRemove) {
         _preloadedImages[key]?.dispose();
         _preloadedImages.remove(key);
@@ -278,8 +360,11 @@ class ImagePreloaderService implements ImagePreloader {
     }
 
     if (_processedImages.length > maxCacheSize) {
-      final keysToRemove =
-          _processedImages.keys.take(_processedImages.length - maxCacheSize);
+      final keysToRemove = _processedImages.keys
+          .where((key) => !protectedKeys.contains(key))
+          .take(_processedImages.length - maxCacheSize)
+          .toList();
+
       for (final key in keysToRemove) {
         _processedImages[key]?.dispose();
         _processedImages.remove(key);

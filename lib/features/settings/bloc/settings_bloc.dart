@@ -7,8 +7,8 @@ import 'package:dailywallpaper/features/settings/bloc/settings_state.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
 import 'package:dailywallpaper/core/preferences/pref_helper_adapter.dart';
 import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
-import 'package:dailywallpaper/services/smart_crop/smart_crop.dart';
-import 'package:dailywallpaper/services/smart_crop/utils/device_capability_detector.dart';
+import 'package:dailywallpaper/features/smart_crop/smart_crop.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/device_capability_detector.dart';
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final PreferencesReader _prefHelper;
@@ -28,18 +28,22 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<SettingsEventSubjectScalingToggled>(_onSubjectScalingToggled);
   }
 
-  Future<void> _onStarted(SettingsEventStarted event, Emitter<SettingsState> emit) async {
+  Future<void> _onStarted(
+      SettingsEventStarted event, Emitter<SettingsState> emit) async {
     emit(state.copyWith(isLoading: true));
     try {
-      final regionStr = await _prefHelper.getStringWithDefault(sp_BingRegion, BingRegionEnum.definitionOf(BingRegionEnum.US));
+      final regionStr = await _prefHelper.getStringWithDefault(
+          sp_BingRegion, BingRegionEnum.definitionOf(BingRegionEnum.US));
       final selectedRegion = BingRegionEnum.valueFromDefinition(regionStr);
-      final includeLock = await _prefHelper.getBoolWithDefault(sp_IncludeLockWallpaper, true);
-      
+      final includeLock =
+          await _prefHelper.getBoolWithDefault(sp_IncludeLockWallpaper, true);
+
       final smartCropEnabled = await SmartCropPreferences.isSmartCropEnabled();
       final smartCropLevel = await SmartCropProfileManager.getCurrentLevel();
       final cropSettings = await SmartCropPreferences.getCropSettings();
-      
-      final deviceCapability = await DeviceCapabilityDetector.getDeviceCapability();
+
+      final deviceCapability =
+          await DeviceCapabilityDetector.getDeviceCapability();
       final thumbnails = await _fetchThumbnails();
 
       if (!isClosed) {
@@ -56,34 +60,40 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       }
     } catch (e) {
       if (!isClosed) {
-        emit(state.copyWith(isLoading: false, error: 'failedToLoadSettings: $e'));
+        emit(state.copyWith(
+            isLoading: false, error: 'failedToLoadSettings: $e'));
       }
     }
   }
 
-  Future<void> _onRegionChanged(SettingsEventRegionChanged event, Emitter<SettingsState> emit) async {
-    await _prefHelper.setString(sp_BingRegion, BingRegionEnum.definitionOf(event.region));
+  Future<void> _onRegionChanged(
+      SettingsEventRegionChanged event, Emitter<SettingsState> emit) async {
+    await _prefHelper.setString(
+        sp_BingRegion, BingRegionEnum.definitionOf(event.region));
     if (!isClosed) {
       emit(state.copyWith(selectedRegion: event.region));
     }
   }
 
-  Future<void> _onLockWallpaperToggled(SettingsEventLockWallpaperToggled event, Emitter<SettingsState> emit) async {
+  Future<void> _onLockWallpaperToggled(SettingsEventLockWallpaperToggled event,
+      Emitter<SettingsState> emit) async {
     await _prefHelper.setBool(sp_IncludeLockWallpaper, event.value);
     if (!isClosed) {
       emit(state.copyWith(includeLockWallpaper: event.value));
     }
   }
 
-  Future<void> _onSmartCropToggled(SettingsEventSmartCropToggled event, Emitter<SettingsState> emit) async {
+  Future<void> _onSmartCropToggled(
+      SettingsEventSmartCropToggled event, Emitter<SettingsState> emit) async {
     if (event.value) {
-      await SmartCropProfileManager.setSmartCropLevel(SmartCropProfileManager.defaultLevel);
+      await SmartCropProfileManager.setSmartCropLevel(
+          SmartCropProfileManager.defaultLevel);
     } else {
       await SmartCropProfileManager.setSmartCropLevel(0);
     }
-    
+
     final newLevel = await SmartCropProfileManager.getCurrentLevel();
-    
+
     if (!isClosed) {
       emit(state.copyWith(
         isSmartCropEnabled: event.value,
@@ -92,7 +102,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     }
   }
 
-  Future<void> _onSmartCropLevelChanged(SettingsEventSmartCropLevelChanged event, Emitter<SettingsState> emit) async {
+  Future<void> _onSmartCropLevelChanged(
+      SettingsEventSmartCropLevelChanged event,
+      Emitter<SettingsState> emit) async {
     await SmartCropProfileManager.setSmartCropLevel(event.level);
     if (!isClosed) {
       emit(state.copyWith(
@@ -102,9 +114,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     }
   }
 
-  Future<void> _onSubjectScalingToggled(SettingsEventSubjectScalingToggled event, Emitter<SettingsState> emit) async {
+  Future<void> _onSubjectScalingToggled(
+      SettingsEventSubjectScalingToggled event,
+      Emitter<SettingsState> emit) async {
     final settings = await SmartCropPreferences.getCropSettings();
-    await SmartCropPreferences.setCropSettings(settings.copyWith(enableSubjectScaling: event.value));
+    await SmartCropPreferences.setCropSettings(
+        settings.copyWith(enableSubjectScaling: event.value));
     if (!isClosed) {
       emit(state.copyWith(enableSubjectScaling: event.value));
     }
@@ -113,8 +128,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   Future<List<RegionItem>> _fetchThumbnails() async {
     final futures = BingRegionEnum.values.map((region) async {
       try {
-        final image = await _imageRepository.fetchThumbnailFromBing(
-            BingRegionEnum.definitionOf(region));
+        final image = await _imageRepository
+            .fetchThumbnailFromBing(BingRegionEnum.definitionOf(region));
         return RegionItem(region, image.url);
       } catch (e) {
         return RegionItem(region, "");

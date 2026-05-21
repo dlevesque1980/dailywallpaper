@@ -11,13 +11,13 @@ void main() {
     late ImageRepository repository;
 
     final testItem = ImageItem(
-      'Bing', 
-      'https://example.com/image.jpg', 
+      'Bing',
+      'https://example.com/image.jpg',
       'Test Description',
-      DateTime.now(), 
-      DateTime.now(), 
-      'test-id', 
-      null, 
+      DateTime.now(),
+      DateTime.now(),
+      'test-id',
+      null,
       'Test Copyright',
     );
 

@@ -52,18 +52,21 @@ void main() {
       act: (bloc) => bloc.add(const SettingsEvent.started()),
       expect: () => [
         isA<SettingsState>().having((s) => s.isLoading, 'loading', true),
-        isA<SettingsState>().having((s) => s.selectedRegion, 'region', BingRegionEnum.US)
-                           .having((s) => s.includeLockWallpaper, 'lock', true)
-                           .having((s) => s.isLoading, 'loading', false),
+        isA<SettingsState>()
+            .having((s) => s.selectedRegion, 'region', BingRegionEnum.US)
+            .having((s) => s.includeLockWallpaper, 'lock', true)
+            .having((s) => s.isLoading, 'loading', false),
       ],
     );
 
     blocTest<SettingsBloc, SettingsState>(
       'updates region when SettingsEventRegionChanged is called',
       build: () => settingsBloc,
-      act: (bloc) => bloc.add(const SettingsEvent.regionChanged(BingRegionEnum.France)),
+      act: (bloc) =>
+          bloc.add(const SettingsEvent.regionChanged(BingRegionEnum.France)),
       expect: () => [
-        isA<SettingsState>().having((s) => s.selectedRegion, 'region', BingRegionEnum.France),
+        isA<SettingsState>()
+            .having((s) => s.selectedRegion, 'region', BingRegionEnum.France),
       ],
       verify: (_) async {
         expect(await fakePrefs.getString(sp_BingRegion), 'fr-FR');

@@ -1,4 +1,4 @@
-import 'package:dailywallpaper/services/smart_crop/models/crop_coordinates.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_coordinates.dart';
 import 'dart:ui' as ui;
 
 class FakeCropCacheService {
@@ -7,12 +7,14 @@ class FakeCropCacheService {
   int getCacheCallCount = 0;
   int clearCallCount = 0;
 
-  Future<CropCoordinates?> getCachedCrop(String imageUrl, ui.Size targetSize, String settingsIdent) async {
+  Future<CropCoordinates?> getCachedCrop(
+      String imageUrl, ui.Size targetSize, String settingsIdent) async {
     getCacheCallCount++;
     return cachedCrop;
   }
 
-  Future<void> cacheCrop(String imageUrl, ui.Size targetSize, String settingsIdent, CropCoordinates coordinates) async {
+  Future<void> cacheCrop(String imageUrl, ui.Size targetSize,
+      String settingsIdent, CropCoordinates coordinates) async {
     cacheCallCount++;
     cachedCrop = coordinates;
   }

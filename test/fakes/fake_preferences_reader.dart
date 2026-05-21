@@ -45,7 +45,7 @@ class FakePreferencesReader implements PreferencesReader {
 
   @override
   Future<List<String>> getStringListWithDefault(
-      String key, List<String> defValue) async =>
+          String key, List<String> defValue) async =>
       (_store[key] as List?)?.cast<String>() ?? defValue;
 
   @override

@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dailywallpaper/core/database/image_storage.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/core/utils/datetime_helper.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseHelper implements ImageStorage {
@@ -23,7 +25,8 @@ class DatabaseHelper implements ImageStorage {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, "wallpaper.db");
 
-    var database = await openDatabase(path, version: 3, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    var database = await openDatabase(path,
+        version: 4, onCreate: _onCreate, onUpgrade: _onUpgrade);
 
     return database;
   }
@@ -31,7 +34,7 @@ class DatabaseHelper implements ImageStorage {
   void _onCreate(Database db, int version) async {
     // When creating the db, create the table
     await db.execute(
-        "CREATE TABLE DailyImages (id INTEGER PRIMARY KEY, Source TEXT, Url TEXT, Description text, StartTime TEXT, EndTime TEXT, ImageIdent TEXT, TriggerUrl TEXT, Copyright TEXT, DisplayOrder INTEGER DEFAULT 0)");
+        "CREATE TABLE DailyImages (id INTEGER PRIMARY KEY, Source TEXT, Url TEXT, Description text, StartTime TEXT, EndTime TEXT, ImageIdent TEXT, TriggerUrl TEXT, Copyright TEXT, DisplayOrder INTEGER DEFAULT 0, LocalSourcePath TEXT, LocalProcessedPath TEXT, CropResultJson TEXT)");
 
     // Create indexes for better performance on history queries
     await db.execute("CREATE INDEX idx_start_time ON DailyImages(StartTime)");
@@ -43,7 +46,8 @@ class DatabaseHelper implements ImageStorage {
 
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      await db.execute("ALTER TABLE DailyImages ADD COLUMN DisplayOrder INTEGER DEFAULT 0");
+      await db.execute(
+          "ALTER TABLE DailyImages ADD COLUMN DisplayOrder INTEGER DEFAULT 0");
       // Populate DisplayOrder with id for existing records
       await db.execute("UPDATE DailyImages SET DisplayOrder = id");
       print("Upgraded database to version 2");
@@ -51,6 +55,15 @@ class DatabaseHelper implements ImageStorage {
     if (oldVersion < 3) {
       await db.execute("DROP INDEX IF EXISTS idx_date_start_time");
       print("Upgraded database to version 3");
+    }
+    if (oldVersion < 4) {
+      await db
+          .execute("ALTER TABLE DailyImages ADD COLUMN LocalSourcePath TEXT");
+      await db.execute(
+          "ALTER TABLE DailyImages ADD COLUMN LocalProcessedPath TEXT");
+      await db
+          .execute("ALTER TABLE DailyImages ADD COLUMN CropResultJson TEXT");
+      print("Upgraded database to version 4");
     }
   }
 
@@ -60,7 +73,7 @@ class DatabaseHelper implements ImageStorage {
 
     var id = await theDb.transaction((txn) async {
       var id = await txn.rawInsert(
-          'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright, DisplayOrder) VALUES(?,?,?,?,?,?,?,?,?)',
+          'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright, DisplayOrder, LocalSourcePath, LocalProcessedPath, CropResultJson) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
           [
             image.url,
             image.source,
@@ -70,7 +83,10 @@ class DatabaseHelper implements ImageStorage {
             image.imageIdent,
             image.triggerUrl,
             image.copyright,
-            image.displayOrder
+            image.displayOrder,
+            image.localSourcePath,
+            image.localProcessedPath,
+            image.cropResultJson
           ]);
       return id;
     });
@@ -97,7 +113,8 @@ class DatabaseHelper implements ImageStorage {
     if (theDb == null) return [];
 
     List<Map> list = await theDb.rawQuery(
-        "SELECT * FROM DailyImages ORDER BY StartTime DESC, DisplayOrder ASC LIMIT ?", [limit]);
+        "SELECT * FROM DailyImages ORDER BY StartTime DESC, DisplayOrder ASC LIMIT ?",
+        [limit]);
 
     return list.map((map) => ImageItem.fromMap(map)).toList();
   }
@@ -194,7 +211,7 @@ class DatabaseHelper implements ImageStorage {
 
         for (final image in images) {
           batch.rawInsert(
-              'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright, DisplayOrder) VALUES(?,?,?,?,?,?,?,?,?)',
+              'INSERT INTO DailyImages(Url, Source, Description, StartTime, EndTime, ImageIdent, TriggerUrl, Copyright, DisplayOrder, LocalSourcePath, LocalProcessedPath, CropResultJson) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
               [
                 image.url,
                 image.source,
@@ -204,7 +221,10 @@ class DatabaseHelper implements ImageStorage {
                 image.imageIdent,
                 image.triggerUrl,
                 image.copyright,
-                image.displayOrder
+                image.displayOrder,
+                image.localSourcePath,
+                image.localProcessedPath,
+                image.cropResultJson
               ]);
         }
 
@@ -283,6 +303,83 @@ class DatabaseHelper implements ImageStorage {
     } catch (e) {
       print('Error getting database stats: $e');
       return {};
+    }
+  }
+
+  @override
+  Future<bool> updateImagePaths(
+    String imageIdent, {
+    String? localSourcePath,
+    String? localProcessedPath,
+    String? cropResultJson,
+  }) async {
+    var theDb = await db;
+    if (theDb == null) return false;
+
+    final updates = <String, dynamic>{};
+    if (localSourcePath != null) updates['LocalSourcePath'] = localSourcePath;
+    if (localProcessedPath != null)
+      updates['LocalProcessedPath'] = localProcessedPath;
+    if (cropResultJson != null) updates['CropResultJson'] = cropResultJson;
+
+    if (updates.isEmpty) return true;
+
+    final count = await theDb.update(
+      'DailyImages',
+      updates,
+      where: 'ImageIdent = ?',
+      whereArgs: [imageIdent],
+    );
+
+    return count > 0;
+  }
+
+  @override
+  Future<void> cleanupOldFilesAndReferences({int daysToKeepFiles = 2}) async {
+    var theDb = await db;
+    if (theDb == null) return;
+
+    try {
+      // Query all images older than 2 days that still have local paths
+      final List<Map<String, dynamic>> list = await theDb.rawQuery(
+          "SELECT ImageIdent, LocalSourcePath, LocalProcessedPath FROM DailyImages WHERE EndTime < datetime('now', '-' || ? || ' days') AND (LocalSourcePath IS NOT NULL OR LocalProcessedPath IS NOT NULL)",
+          [daysToKeepFiles]);
+
+      for (final row in list) {
+        final String? imageIdent = row['ImageIdent'] as String?;
+        final String? sourcePath = row['LocalSourcePath'] as String?;
+        final String? processedPath = row['LocalProcessedPath'] as String?;
+
+        if (sourcePath != null) {
+          final file = File(sourcePath);
+          if (await file.exists()) {
+            await file.delete().catchError((_) => file);
+          }
+        }
+        if (processedPath != null) {
+          final file = File(processedPath);
+          if (await file.exists()) {
+            await file.delete().catchError((_) => file);
+          }
+        }
+
+        if (imageIdent != null) {
+          final appDir = await getApplicationDocumentsDirectory();
+          final cropFile =
+              File('${appDir.path}/wallpapers/${imageIdent}_crop.json');
+          if (await cropFile.exists()) {
+            await cropFile.delete().catchError((_) => cropFile);
+          }
+        }
+      }
+
+      // Update the database paths to NULL for these old records
+      await theDb.rawUpdate(
+          "UPDATE DailyImages SET LocalSourcePath = NULL, LocalProcessedPath = NULL WHERE EndTime < datetime('now', '-' || ? || ' days')",
+          [daysToKeepFiles]);
+      print("Database and physical files cleanup completed.");
+    } catch (e) {
+      print("Error in cleanupOldFilesAndReferences: $e");
     }
   }
 }

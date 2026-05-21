@@ -18,9 +18,9 @@ class FakeHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     lastCalledUri = request.url;
     lastCalledHeaders = request.headers;
-    
+
     if (shouldThrow) throw Exception('Network error');
-    
+
     return http.StreamedResponse(
       Stream.value(utf8.encode(fakeBody)),
       fakeStatusCode,
