@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
+import 'package:dailywallpaper/features/smart_crop/models/crop_result.dart';
 
 class CropInfoDialog extends StatelessWidget {
   final ImageItem image;
@@ -9,7 +10,14 @@ class CropInfoDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final result = image.smartCropResult;
+    var result = image.smartCropResult;
+    if (result == null && image.cropResultJson != null) {
+      try {
+        result = CropResult.deserialize(image.cropResultJson!);
+        image.smartCropResult = result;
+      } catch (_) {}
+    }
+
     if (result == null) {
       return AlertDialog(
         content: Text(AppLocalizations.of(context)!.analysisInProgress),

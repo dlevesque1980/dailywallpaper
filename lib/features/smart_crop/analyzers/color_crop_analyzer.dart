@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:isolate';
+import 'dart:io';
 import '../interfaces/crop_analyzer.dart';
 import '../interfaces/analyzer_metadata.dart';
 import '../interfaces/analysis_context.dart';
@@ -55,13 +56,21 @@ class ColorCropAnalyzer extends BaseCropAnalyzer {
     try {
       final imageData = await _getImageData(image, context);
       
-    final result = await Isolate.run(() => _performColorAnalysisIsolate({
-        'imageWidth': imageSize.width,
-        'imageHeight': imageSize.height,
-        'targetAspectRatio': targetAspectRatio,
-        'imageData': imageData,
-        'strategyName': strategyName,
-      }));
+      final result = Platform.environment.containsKey('FLUTTER_TEST')
+          ? _performColorAnalysisIsolate({
+              'imageWidth': imageSize.width,
+              'imageHeight': imageSize.height,
+              'targetAspectRatio': targetAspectRatio,
+              'imageData': imageData,
+              'strategyName': strategyName,
+            })
+          : await Isolate.run(() => _performColorAnalysisIsolate({
+              'imageWidth': imageSize.width,
+              'imageHeight': imageSize.height,
+              'targetAspectRatio': targetAspectRatio,
+              'imageData': imageData,
+              'strategyName': strategyName,
+            }));
 
       return CropScore(
         coordinates: result['best'] as CropCoordinates,

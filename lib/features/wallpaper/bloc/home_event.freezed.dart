@@ -56,6 +56,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult Function(HomeEventWallpaperUpdateRequested value)?
         wallpaperUpdateRequested,
     TResult Function(HomeEventCropStatusChanged value)? cropStatusChanged,
+    TResult Function(HomeEventAppResumed value)? appResumed,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -71,6 +72,8 @@ extension HomeEventPatterns on HomeEvent {
         return wallpaperUpdateRequested(_that);
       case HomeEventCropStatusChanged() when cropStatusChanged != null:
         return cropStatusChanged(_that);
+      case HomeEventAppResumed() when appResumed != null:
+        return appResumed(_that);
       case _:
         return orElse();
     }
@@ -98,6 +101,7 @@ extension HomeEventPatterns on HomeEvent {
         wallpaperUpdateRequested,
     required TResult Function(HomeEventCropStatusChanged value)
         cropStatusChanged,
+    required TResult Function(HomeEventAppResumed value) appResumed,
   }) {
     final _that = this;
     switch (_that) {
@@ -111,6 +115,8 @@ extension HomeEventPatterns on HomeEvent {
         return wallpaperUpdateRequested(_that);
       case HomeEventCropStatusChanged():
         return cropStatusChanged(_that);
+      case HomeEventAppResumed():
+        return appResumed(_that);
     }
   }
 
@@ -134,6 +140,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult? Function(HomeEventWallpaperUpdateRequested value)?
         wallpaperUpdateRequested,
     TResult? Function(HomeEventCropStatusChanged value)? cropStatusChanged,
+    TResult? Function(HomeEventAppResumed value)? appResumed,
   }) {
     final _that = this;
     switch (_that) {
@@ -148,6 +155,8 @@ extension HomeEventPatterns on HomeEvent {
         return wallpaperUpdateRequested(_that);
       case HomeEventCropStatusChanged() when cropStatusChanged != null:
         return cropStatusChanged(_that);
+      case HomeEventAppResumed() when appResumed != null:
+        return appResumed(_that);
       case _:
         return null;
     }
@@ -172,6 +181,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult Function(int newIndex)? indexChanged,
     TResult Function()? wallpaperUpdateRequested,
     TResult Function(String imageIdent, bool isProcessing)? cropStatusChanged,
+    TResult Function()? appResumed,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -187,6 +197,8 @@ extension HomeEventPatterns on HomeEvent {
         return wallpaperUpdateRequested();
       case HomeEventCropStatusChanged() when cropStatusChanged != null:
         return cropStatusChanged(_that.imageIdent, _that.isProcessing);
+      case HomeEventAppResumed() when appResumed != null:
+        return appResumed();
       case _:
         return orElse();
     }
@@ -213,6 +225,7 @@ extension HomeEventPatterns on HomeEvent {
     required TResult Function() wallpaperUpdateRequested,
     required TResult Function(String imageIdent, bool isProcessing)
         cropStatusChanged,
+    required TResult Function() appResumed,
   }) {
     final _that = this;
     switch (_that) {
@@ -226,6 +239,8 @@ extension HomeEventPatterns on HomeEvent {
         return wallpaperUpdateRequested();
       case HomeEventCropStatusChanged():
         return cropStatusChanged(_that.imageIdent, _that.isProcessing);
+      case HomeEventAppResumed():
+        return appResumed();
     }
   }
 
@@ -248,6 +263,7 @@ extension HomeEventPatterns on HomeEvent {
     TResult? Function(int newIndex)? indexChanged,
     TResult? Function()? wallpaperUpdateRequested,
     TResult? Function(String imageIdent, bool isProcessing)? cropStatusChanged,
+    TResult? Function()? appResumed,
   }) {
     final _that = this;
     switch (_that) {
@@ -262,6 +278,8 @@ extension HomeEventPatterns on HomeEvent {
         return wallpaperUpdateRequested();
       case HomeEventCropStatusChanged() when cropStatusChanged != null:
         return cropStatusChanged(_that.imageIdent, _that.isProcessing);
+      case HomeEventAppResumed() when appResumed != null:
+        return appResumed();
       case _:
         return null;
     }
@@ -469,6 +487,26 @@ class _$HomeEventCropStatusChangedCopyWithImpl<$Res>
           : isProcessing // ignore: cast_nullable_to_non_nullable
               as bool,
     ));
+  }
+}
+
+/// @nodoc
+
+class HomeEventAppResumed implements HomeEvent {
+  const HomeEventAppResumed();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is HomeEventAppResumed);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'HomeEvent.appResumed()';
   }
 }
 

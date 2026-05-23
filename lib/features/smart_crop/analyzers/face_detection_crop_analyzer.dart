@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:isolate';
 import '../interfaces/crop_analyzer.dart';
 import '../interfaces/analyzer_metadata.dart';
 import '../interfaces/analysis_context.dart';
@@ -9,6 +8,7 @@ import '../models/crop_score.dart';
 import '../models/crop_coordinates.dart';
 import '../models/crop_settings.dart';
 import 'face/face_analyzer_helpers.dart';
+import '../utils/analyzer_isolate_pool.dart';
 
 /// Face detection analyzer for smart cropping
 class FaceDetectionCropAnalyzer extends BaseCropAnalyzer {
@@ -58,12 +58,12 @@ class FaceDetectionCropAnalyzer extends BaseCropAnalyzer {
     try {
       final imageData = await _getImageData(image, context);
 
-      // Execute CPU-heavy grid check inside background Isolate
-      final faces = await Isolate.run(() => performFaceAnalysisIsolate({
+      // Execute CPU-heavy grid check via pooled isolate
+      final faces = await AnalyzerIsolatePool.instance.run(performFaceAnalysisIsolate, {
         'imageWidth': imageSize.width,
         'imageHeight': imageSize.height,
         'imageData': imageData,
-      }));
+      });
 
       if (faces.isEmpty) {
         final centerCrop = _getCenterCrop(imageSize, targetAspectRatio);

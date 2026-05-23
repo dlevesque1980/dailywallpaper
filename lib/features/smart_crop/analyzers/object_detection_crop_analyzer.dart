@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:isolate';
 import '../interfaces/crop_analyzer.dart';
 import '../interfaces/analyzer_metadata.dart';
 import '../interfaces/analysis_context.dart';
@@ -10,6 +9,7 @@ import '../models/crop_coordinates.dart';
 import '../models/crop_settings.dart';
 import 'utils/analyzer_utils.dart';
 import 'object/object_detector.dart';
+import '../utils/analyzer_isolate_pool.dart';
 
 class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
   static const String _analyzerName = 'object_detection';
@@ -55,13 +55,13 @@ class ObjectDetectionCropAnalyzer extends BaseCropAnalyzer {
     try {
       final imageData = await _getImageData(image, context);
       
-      final result = await Isolate.run(() => _performObjectAnalysisIsolate({
+      final result = await AnalyzerIsolatePool.instance.run(_performObjectAnalysisIsolate, {
         'imageWidth': imageSize.width,
         'imageHeight': imageSize.height,
         'targetAspectRatio': targetAspectRatio,
         'imageData': imageData,
         'strategyName': strategyName,
-      }));
+      });
 
       final objects = result['objects'] as List;
       if (objects.isEmpty) {

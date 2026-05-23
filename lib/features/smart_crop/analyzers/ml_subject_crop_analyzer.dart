@@ -39,7 +39,7 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
           name: _analyzerName,
           priority: _analyzerPriority,
           weight: _analyzerWeight,
-          maxProcessingTime: const Duration(milliseconds: 5000),
+          maxProcessingTime: const Duration(milliseconds: 3000),
           metadata: const AnalyzerMetadata(
             description:
                 'ML Kit subject segmentation for precise crop detection',
@@ -132,7 +132,7 @@ class MlSubjectCropAnalyzer extends BaseCropAnalyzer {
 
       final result =
           await Isolate.run(() => runMlSegmentationInIsolate(payload))
-              .timeout(const Duration(seconds: 4));
+              .timeout(const Duration(milliseconds: 2500));
 
       if (result.error != null) {
         throw Exception(result.error);

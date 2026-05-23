@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/features/smart_crop/smart_cropper.dart';
@@ -16,9 +17,18 @@ import 'package:dailywallpaper/features/smart_crop/services/crop_image_resolver.
 /// Service de préchargement intelligent des images
 /// Gère le chargement parallèle et la mise en cache optimisée
 class ImagePreloaderService implements ImagePreloader {
-  static final ImagePreloaderService _instance =
+  static ImagePreloaderService _instance =
       ImagePreloaderService._internal(ImageCacheServiceImpl());
   factory ImagePreloaderService() => _instance;
+
+  @visibleForTesting
+  static void setInstance(ImagePreloaderService instance) {
+    _instance = instance;
+  }
+
+  @visibleForTesting
+  ImagePreloaderService.forTesting(ImageCacheService imageCache)
+      : _imageCache = imageCache;
 
   final ImageCacheService _imageCache;
 
@@ -66,6 +76,39 @@ class ImagePreloaderService implements ImagePreloader {
   Future<void> preloadCurrentImageWithCrop(ImageItem imageItem) async {
     final cacheKey = _getCacheKey(imageItem);
     final processKey = _getProcessKey(imageItem);
+
+    // If the cropped image is already on disk, load it directly and short-circuit
+    if (imageItem.localProcessedPath != null) {
+      final file = File(imageItem.localProcessedPath!);
+      if (await file.exists()) {
+        if (!_processedImages.containsKey(processKey) &&
+            !_processingTasks.containsKey(processKey)) {
+          final loadingProcessedFuture = () async {
+            final img = await _imageCache.loadProcessedImage(imageItem.imageIdent);
+            if (img != null) {
+              _processedImages[processKey] = img;
+              SmartCropper.cacheProcessedImage(imageItem.imageIdent, img);
+
+              // Hydrate crop coordinates from JSON file
+              if (imageItem.cropResultJson == null) {
+                try {
+                  final json = await _imageCache.loadCropResultJson(imageItem.imageIdent);
+                  if (json != null) {
+                    imageItem.cropResultJson = json;
+                    imageItem.smartCropResult = CropResult.deserialize(json);
+                  }
+                } catch (_) {}
+              }
+            }
+            return img;
+          }();
+          _processingTasks[processKey] = loadingProcessedFuture;
+          await loadingProcessedFuture;
+          _processingTasks.remove(processKey);
+        }
+        return;
+      }
+    }
 
     // 1. Download source if needed
     if (!_preloadedImages.containsKey(cacheKey) &&
@@ -165,28 +208,69 @@ class ImagePreloaderService implements ImagePreloader {
   /// Précharge une image individuelle et déclenche le Smart Crop en arrière-plan
   Future<void> _preloadSingleImage(ImageItem imageItem, int priority) async {
     final cacheKey = _getCacheKey(imageItem);
+    final processKey = _getProcessKey(imageItem);
 
-    // Éviter le double chargement
-    if (_preloadedImages.containsKey(cacheKey) ||
-        _loadingTasks.containsKey(cacheKey)) {
+    // If already in memory, nothing to do
+    if (_processedImages.containsKey(processKey)) {
       return;
     }
 
-    try {
-      // 1. Charger l'image source (téléchargement ou cache)
-      final loadingFuture = _loadImage(imageItem);
-      _loadingTasks[cacheKey] = loadingFuture;
+    // If cropped image is already on disk, load it directly and short-circuit
+    if (imageItem.localProcessedPath != null) {
+      final file = File(imageItem.localProcessedPath!);
+      if (await file.exists()) {
+        if (!_processingTasks.containsKey(processKey)) {
+          final loadingProcessedFuture = () async {
+            final img = await _imageCache.loadProcessedImage(imageItem.imageIdent);
+            if (img != null) {
+              _processedImages[processKey] = img;
+              SmartCropper.cacheProcessedImage(imageItem.imageIdent, img);
 
-      final image = await loadingFuture;
-      if (image != null) {
-        _preloadedImages[cacheKey] = image;
-        // 2. Déclencher le prétraitement Smart Crop en arrière-plan (file d'attente séquentielle)
-        unawaited(_enqueuePreprocessing(imageItem, image));
+              // Hydrate crop coordinates from JSON file
+              if (imageItem.cropResultJson == null) {
+                try {
+                  final json = await _imageCache.loadCropResultJson(imageItem.imageIdent);
+                  if (json != null) {
+                    imageItem.cropResultJson = json;
+                    imageItem.smartCropResult = CropResult.deserialize(json);
+                  }
+                } catch (_) {}
+              }
+            }
+            return img;
+          }();
+          _processingTasks[processKey] = loadingProcessedFuture;
+          await loadingProcessedFuture;
+          _processingTasks.remove(processKey);
+        }
+        return;
       }
-    } catch (e) {
-      debugPrint('Erreur préchargement image ${imageItem.url}: $e');
-    } finally {
-      _loadingTasks.remove(cacheKey);
+    }
+
+    // Éviter le double chargement de l'image source
+    if (!_preloadedImages.containsKey(cacheKey) &&
+        !_loadingTasks.containsKey(cacheKey)) {
+      try {
+        final loadingFuture = _loadImage(imageItem);
+        _loadingTasks[cacheKey] = loadingFuture;
+
+        final image = await loadingFuture;
+        if (image != null) {
+          _preloadedImages[cacheKey] = image;
+        }
+      } catch (e) {
+        debugPrint('Erreur préchargement image ${imageItem.url}: $e');
+      } finally {
+        _loadingTasks.remove(cacheKey);
+      }
+    }
+
+    // Déclencher le prétraitement Smart Crop si l'image source est disponible et que le crop n'est pas prêt
+    final sourceImage = _preloadedImages[cacheKey];
+    if (sourceImage != null &&
+        !_processedImages.containsKey(processKey) &&
+        !_processingTasks.containsKey(processKey)) {
+      unawaited(_enqueuePreprocessing(imageItem, sourceImage));
     }
   }
 

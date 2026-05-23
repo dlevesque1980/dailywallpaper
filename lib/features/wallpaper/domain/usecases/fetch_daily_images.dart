@@ -10,6 +10,7 @@ import 'package:dailywallpaper/core/preferences/pref_helper_adapter.dart';
 import 'package:dailywallpaper/core/database/image_storage.dart';
 import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dailywallpaper/data/datasources/nasa_service.dart';
 
 class FetchDailyImagesUseCase {
   final ImageStorage _dbHelper;
@@ -64,22 +65,32 @@ class FetchDailyImagesUseCase {
   }
 
   Future<ImageItem?> _bingHandler({bool forceRefresh = false}) async {
-    ImageItem? image;
     var region = await _prefHelper.getStringWithDefault(sp_BingRegion, 'en-US');
-    var imageIdent = "bing.$region";
+    var dateStr = DateTimeHelper.formatDateKey(DateTime.now());
+    var imageIdent = "bing.$region.$dateStr";
 
-    if (forceRefresh) {
-      await _dbHelper.deleteImageByIdent(imageIdent);
-    } else {
-      image = await _dbHelper.getCurrentImage(imageIdent);
-    }
+    try {
+      if (forceRefresh) {
+        await _dbHelper.deleteImageByIdent(imageIdent);
+      } else {
+        final cached = await _dbHelper.getCurrentImage(imageIdent);
+        if (cached != null) return cached;
+      }
 
-    if (image == null) {
-      image = await _imageRepository.fetchFromBing(region);
-      image.displayOrder = 0;
-      await _dbHelper.insertImage(image);
+      final image = await _withRetry<ImageItem>(
+        () => _imageRepository.fetchFromBing(region),
+      );
+
+      if (image != null) {
+        image.imageIdent = imageIdent;
+        image.displayOrder = 0;
+        await _dbHelper.insertImage(image);
+      }
+      return image;
+    } catch (e) {
+      debugPrint('Error loading Bing image: $e');
+      return null;
     }
-    return image;
   }
 
   Future<List<ImageItem>> _fetchPexelsParallel(
@@ -104,16 +115,19 @@ class FetchDailyImagesUseCase {
       {bool forceRefresh = false}) async {
     try {
       var imageIdent = 'pexels.$category.$dateStr';
-      ImageItem? pexelsImage;
 
       if (forceRefresh) {
         await _dbHelper.deleteImageByIdent(imageIdent);
       } else {
-        pexelsImage = await _dbHelper.getCurrentImage(imageIdent);
+        final cached = await _dbHelper.getCurrentImage(imageIdent);
+        if (cached != null) return cached;
       }
 
-      if (pexelsImage == null) {
-        pexelsImage = await _imageRepository.fetchFromPexels(category);
+      final pexelsImage = await _withRetry<ImageItem>(
+        () => _imageRepository.fetchFromPexels(category),
+      );
+
+      if (pexelsImage != null) {
         pexelsImage.imageIdent = imageIdent;
         pexelsImage.displayOrder = order;
         await _dbHelper.insertImage(pexelsImage);
@@ -130,17 +144,37 @@ class FetchDailyImagesUseCase {
     var imageIdent = 'nasa.$dateStr';
 
     try {
-      ImageItem? nasaImage;
-
       if (forceRefresh) {
         await _dbHelper.deleteImageByIdent(imageIdent);
+        await _prefHelper.setString('nasa_skip_date', '');
       } else {
-        nasaImage = await _dbHelper.getCurrentImage(imageIdent);
+        final cached = await _dbHelper.getCurrentImage(imageIdent);
+        if (cached != null) return cached;
+
+        final skipDate =
+            await _prefHelper.getStringWithDefault('nasa_skip_date', '');
+        if (skipDate == dateStr) return null;
       }
 
-      if (nasaImage == null) {
-        nasaImage = await _imageRepository.fetchFromNASA();
-        // Use the ident from service if possible, but ensure consistency
+      final nasaImage = await _withRetry<ImageItem>(
+        () => _imageRepository.fetchFromNASA(),
+        onException: (e) async {
+          if (e is NASAException) {
+            if (e.type == NASAErrorType.noContent ||
+                e.type == NASAErrorType.invalidApiKey ||
+                e.type == NASAErrorType.invalidDate) {
+              debugPrint('NASA APOD échec définitif (${e.type}): ${e.message}');
+              if (e.type == NASAErrorType.noContent) {
+                await _prefHelper.setString('nasa_skip_date', dateStr);
+              }
+              return true; // definitive
+            }
+          }
+          return false; // transient
+        },
+      );
+
+      if (nasaImage != null) {
         nasaImage.imageIdent = imageIdent;
         nasaImage.displayOrder = 999;
         await _dbHelper.insertImage(nasaImage);
@@ -151,6 +185,37 @@ class FetchDailyImagesUseCase {
       debugPrint('Error loading NASA APOD: $e');
       return null;
     }
+  }
+
+  /// Helper: exécute [fn] jusqu'à [maxAttempts] fois avec backoff exponentiel.
+  /// [onException] : retourne vrai pour abandonner immédiatement (erreur définitive).
+  Future<T?> _withRetry<T>(
+    Future<T> Function() fn, {
+    int maxAttempts = 3,
+    FutureOr<bool> Function(Exception)? onException,
+  }) async {
+    final backoff = Platform.environment.containsKey('FLUTTER_TEST')
+        ? const [0, 0, 0]
+        : const [0, 2, 4];
+    for (int i = 0; i < maxAttempts; i++) {
+      if (i > 0 && backoff[i] > 0) {
+        await Future.delayed(Duration(seconds: backoff[i]));
+      }
+      try {
+        return await fn();
+      } on Exception catch (e) {
+        if (onException != null) {
+          final isDefinitive = await onException(e);
+          if (isDefinitive) return null;
+        }
+        if (i == maxAttempts - 1) {
+          debugPrint('Retry failed after $maxAttempts attempts: $e');
+          return null;
+        }
+        debugPrint('Retry ${i + 1}/$maxAttempts failed: $e. Retrying...');
+      }
+    }
+    return null;
   }
 
   /// Retourne les dernières images mises en cache (Zero-Latency Carousel)

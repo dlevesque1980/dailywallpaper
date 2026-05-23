@@ -8,7 +8,7 @@ import 'package:dailywallpaper/data/datasources/nasa_data_source.dart';
 
 class NasaService implements NasaDataSource {
   static const String _baseUrl = 'https://api.nasa.gov/planetary/apod';
-  static const int _timeoutSeconds = 5;
+  static const int _timeoutSeconds = 15;
 
   static DateTime? _lastRequestTime;
   static const Duration _minRequestInterval = Duration(milliseconds: 100);
