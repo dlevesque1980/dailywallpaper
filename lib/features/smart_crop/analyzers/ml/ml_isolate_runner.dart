@@ -39,12 +39,13 @@ class MlIsolateResult {
 Future<MlIsolateResult> runMlSegmentationInIsolate(
     MlIsolatePayload payload) async {
   File? tempFile;
+  MlSegmentationService? segmentationService;
   try {
     tempFile = File(
         '${payload.tempDirPath}/ml_input_${DateTime.now().microsecondsSinceEpoch}.png');
     await tempFile.writeAsBytes(payload.pngBytes);
 
-    final segmentationService = MlSegmentationServiceImpl();
+    segmentationService = MlSegmentationServiceImpl();
     final result = await segmentationService
         .processImage(tempFile)
         .timeout(const Duration(seconds: 4));
@@ -69,6 +70,9 @@ Future<MlIsolateResult> runMlSegmentationInIsolate(
   } catch (e) {
     return MlIsolateResult(confidence: 0.0, error: e.toString());
   } finally {
+    try {
+      segmentationService?.dispose();
+    } catch (_) {}
     if (tempFile != null && tempFile.existsSync()) {
       try {
         tempFile.deleteSync();

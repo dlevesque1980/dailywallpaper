@@ -21,11 +21,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ValueNotifier<int> _currentIndex = ValueNotifier(0);
+  DateTime? _lastResumeTime;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _lastResumeTime = DateTime.now();
   }
 
   @override
@@ -33,6 +35,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _currentIndex.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final now = DateTime.now();
+      if (_lastResumeTime != null) {
+        if (_lastResumeTime!.day != now.day) {
+          context.read<HomeBloc>().add(const HomeEvent.started());
+        } else {
+          context.read<HomeBloc>().add(const HomeEvent.appResumed());
+        }
+      }
+      _lastResumeTime = now;
+    }
   }
 
   void _onChange(int index, bool refresh) {

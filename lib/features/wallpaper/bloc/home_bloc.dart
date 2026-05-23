@@ -40,6 +40,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeEventIndexChanged>(_onIndexChanged);
     on<HomeEventWallpaperUpdateRequested>(_onWallpaperUpdateRequested);
     on<HomeEventCropStatusChanged>(_onCropStatusChanged);
+    on<HomeEventAppResumed>(_onAppResumed);
   }
 
   bool _isCropReady(ImageItem image) {
@@ -312,6 +313,32 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         }
       },
     );
+  }
+
+  Future<void> _onAppResumed(
+      HomeEventAppResumed event, Emitter<HomeState> emit) async {
+    final lastAttempt =
+        await _prefs.getIntWithDefault('last_fetch_attempt_time', 0);
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Debounce of 1 hour (3,600,000 ms) to avoid spamming third-party APIs
+    if (now - lastAttempt < 3600000) return;
+    await _prefs.setInt('last_fetch_attempt_time', now);
+
+    try {
+      final freshImages = await _fetchDailyImagesUseCase(forceRefresh: false);
+
+      state.mapOrNull(loaded: (loadedState) {
+        if (freshImages.length > loadedState.list.length) {
+          if (!isClosed) {
+            emit(loadedState.copyWith(list: freshImages));
+            _preloaderService.preloadImages(freshImages, loadedState.imageIndex);
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('Error during app resumed fetch retry: $e');
+    }
   }
 
   Future<void> _onWallpaperUpdateRequested(

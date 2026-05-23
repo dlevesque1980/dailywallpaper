@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dailywallpaper/features/smart_crop/analyzers/ml/ml_isolate_runner.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('MlIsolateRunner', () {
     test('MlIsolatePayload should be transmissible (only primitive types)', () {
       final payload = MlIsolatePayload(

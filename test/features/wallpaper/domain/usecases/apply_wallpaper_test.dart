@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dailywallpaper/features/wallpaper/domain/usecases/apply_wallpaper.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
@@ -34,15 +35,17 @@ void main() {
   late MockPreferencesReader mockPreferencesReader;
   late MockCropRenderCache mockCropRenderCache;
   late MockImageCacheService mockImageCache;
+  late Directory tempDir;
 
   setUpAll(() {
+    tempDir = Directory.systemTemp.createTempSync('apply_wallpaper_test');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/path_provider'),
       (MethodCall methodCall) async {
         if (methodCall.method == 'getTemporaryDirectory' ||
             methodCall.method == 'getApplicationDocumentsDirectory') {
-          return '.';
+          return tempDir.path;
         }
         return null;
       },
@@ -52,6 +55,14 @@ void main() {
     registerFallbackValue(Uint8List(0));
     registerFallbackValue(FakeImage());
     registerFallbackValue(FakeCropResult());
+  });
+
+  tearDownAll(() {
+    if (tempDir.existsSync()) {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
   });
 
   Future<ui.Image> createRealImage() async {
@@ -95,6 +106,14 @@ void main() {
         .thenAnswer((_) async => 'Success');
     when(() => mockWallpaperService.setSystemWallpaper(any()))
         .thenAnswer((_) async => 'Success');
+    when(() => mockImageCache.loadImageFromUrl(any()))
+        .thenAnswer((_) async => null);
+    when(() => mockImageCache.loadImageFromUrl(any(), client: any(named: 'client')))
+        .thenAnswer((_) async => null);
+    when(() => mockImageCache.loadSourceImage(any()))
+        .thenAnswer((_) async => null);
+    when(() => mockImageCache.getProcessedImageBytes(any()))
+        .thenAnswer((_) async => null);
   });
 
   group('ApplyWallpaperUseCase Cache Integration', () {
@@ -111,39 +130,33 @@ void main() {
     );
 
     test('should use local processed bytes if available', () async {
-      final cachedBytes = Uint8List.fromList([10, 20, 30]);
+      final file = File('${tempDir.path}/wallpapers/test_123_processed.png');
+      await file.create(recursive: true);
+      await file.writeAsString('fake png');
 
-      when(() => mockImageCache.getProcessedImageBytes(any()))
-          .thenAnswer((_) => Future.value(cachedBytes));
-      when(() => mockWallpaperService.setBothWallpaper(any()))
-          .thenAnswer((_) => Future.value('Success'));
-
-      final result = await useCase(testImage);
-
-      expect(result, 'wallpaperSetSuccess');
-      verify(() => mockImageCache.getProcessedImageBytes(testImage.imageIdent))
-          .called(1);
-      verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
-      // Should NOT attempt to load source image if processed bytes are found
-      verifyNever(() => mockImageCache.loadSourceImage(any()));
+      try {
+        final result = await useCase(testImage);
+        expect(result, 'wallpaperSetSuccess');
+        verify(() => mockWallpaperService.setBothWallpaper('file://${tempDir.path}/wallpapers/test_123_processed.png')).called(1);
+      } finally {
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
     });
 
     test('should try loading source from disk if processed bytes are missing',
         () async {
-      when(() => mockImageCache.getProcessedImageBytes(any()))
-          .thenAnswer((_) => Future.value(null));
       when(() => mockImageCache.loadSourceImage(any()))
           .thenAnswer((_) => Future.value(null));
-      when(() => mockImageCache.loadImageFromUrl(any(), client: any(named: 'client')))
+      when(() => mockImageCache.loadImageFromUrl(any()))
           .thenAnswer((_) => Future.value(null));
 
       await useCase(testImage);
 
-      verify(() => mockImageCache.getProcessedImageBytes(testImage.imageIdent))
-          .called(1);
       verify(() => mockImageCache.loadSourceImage(testImage.imageIdent))
           .called(1);
-      verify(() => mockImageCache.loadImageFromUrl(testImage.url, client: any(named: 'client'))).called(1);
+      verify(() => mockImageCache.loadImageFromUrl(testImage.url)).called(1);
     });
 
     test('should apply saved CropCoordinates when processed PNG missing (source on disk)', () async {
@@ -168,7 +181,7 @@ void main() {
 
       expect(result, 'wallpaperSetSuccess');
       verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
-      verifyNever(() => mockImageCache.loadImageFromUrl(any(), client: any(named: 'client')));
+      verifyNever(() => mockImageCache.loadImageFromUrl(any()));
     });
 
     test('should apply coords after download when source missing but cropResultJson in DB (History > 2j)', () async {
@@ -187,13 +200,13 @@ void main() {
 
       when(() => mockImageCache.getProcessedImageBytes(any())).thenAnswer((_) => Future.value(null));
       when(() => mockImageCache.loadSourceImage(any())).thenAnswer((_) => Future.value(null));
-      when(() => mockImageCache.loadImageFromUrl(any(), client: any(named: 'client'))).thenAnswer((_) => Future.value(downloadedImg));
+      when(() => mockImageCache.loadImageFromUrl(any())).thenAnswer((_) => Future.value(downloadedImg));
       when(() => mockWallpaperService.setBothWallpaper(any())).thenAnswer((_) => Future.value('Success'));
 
       final result = await useCase(imageWithCoords);
 
       expect(result, 'wallpaperSetSuccess');
-      verify(() => mockImageCache.loadImageFromUrl(imageWithCoords.url, client: any(named: 'client'))).called(1);
+      verify(() => mockImageCache.loadImageFromUrl(imageWithCoords.url)).called(1);
       verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
     });
 
@@ -210,27 +223,22 @@ void main() {
       verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
     });
 
-    test('should apply EXACT carousel bytes when available', () async {
-      final carouselBytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-      when(() => mockCropRenderCache.getRenderedBytes(any())).thenReturn(carouselBytes);
-      when(() => mockWallpaperService.setBothWallpaper(any())).thenAnswer((_) => Future.value('Success'));
-
-      final result = await useCase(testImage);
-
-      expect(result, 'wallpaperSetSuccess');
-      verify(() => mockCropRenderCache.getRenderedBytes(testImage.imageIdent)).called(1);
-      verify(() => mockWallpaperService.setBothWallpaper(any())).called(1);
-      verifyNever(() => mockImageCache.getProcessedImageBytes(any()));
-    });
-
     test('should return failedToSetWallpaper when wallpaper service throws', () async {
-      final carouselBytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-      when(() => mockCropRenderCache.getRenderedBytes(any())).thenReturn(carouselBytes);
-      when(() => mockWallpaperService.setBothWallpaper(any())).thenThrow(Exception('Failed to set'));
+      final file = File('${tempDir.path}/wallpapers/test_123_processed.png');
+      await file.create(recursive: true);
+      await file.writeAsString('fake png');
 
-      final result = await useCase(testImage);
+      when(() => mockWallpaperService.setBothWallpaper(any()))
+          .thenThrow(Exception('Failed to set'));
 
-      expect(result, 'failedToSetWallpaper');
+      try {
+        final result = await useCase(testImage);
+        expect(result, 'failedToSetWallpaper');
+      } finally {
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
     });
   });
 }

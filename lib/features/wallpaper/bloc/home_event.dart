@@ -13,4 +13,5 @@ sealed class HomeEvent with _$HomeEvent {
     required String imageIdent,
     required bool isProcessing,
   }) = HomeEventCropStatusChanged;
+  const factory HomeEvent.appResumed() = HomeEventAppResumed;
 }

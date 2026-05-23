@@ -7,6 +7,7 @@ import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/features/wallpaper/domain/usecases/fetch_daily_images.dart';
 import 'package:dailywallpaper/data/repositories/image_repository.dart';
 import 'package:dailywallpaper/core/preferences/pref_consts.dart';
+import 'package:dailywallpaper/core/utils/datetime_helper.dart';
 import '../../../fakes/fake_image_storage.dart';
 import '../../../fakes/fake_image_data_source.dart';
 import '../../../fakes/fake_preferences_reader.dart';
@@ -95,7 +96,9 @@ void main() {
       // Arrange
       fakePrefs.put(sp_BingRegion, 'en-US');
       fakePrefs.put(sp_PexelsCategories, []); // No pexels for simplicity
-      final storedImage = mockImage.copyWith(imageIdent: 'bing.en-US');
+      final dateStr = DateTimeHelper.formatDateKey(DateTime.now());
+      final expectedIdent = 'bing.en-US.$dateStr';
+      final storedImage = mockImage.copyWith(imageIdent: expectedIdent);
       fakeStorage.seed(storedImage);
 
       // Act
@@ -105,7 +108,7 @@ void main() {
       expect(result.length,
           2); // Bing from storage + NASA from source (since NASA wasn't in storage)
       expect(fakeStorage.insertCallCount, 1); // Only NASA was inserted
-      expect(result.any((img) => img.imageIdent == 'bing.en-US'), true);
+      expect(result.any((img) => img.imageIdent == expectedIdent), true);
     });
 
     test('should force refresh from repository even if images exist in storage',
@@ -113,11 +116,13 @@ void main() {
       // Arrange
       fakePrefs.put(sp_BingRegion, 'en-US');
       fakePrefs.put(sp_PexelsCategories, []);
+      final dateStr = DateTimeHelper.formatDateKey(DateTime.now());
+      final expectedIdent = 'bing.en-US.$dateStr';
       final storedImage =
-          mockImage.copyWith(imageIdent: 'bing.en-US', description: 'Old');
+          mockImage.copyWith(imageIdent: expectedIdent, description: 'Old');
       fakeStorage.seed(storedImage);
       fakeDataSource.bingResult =
-          mockImage.copyWith(imageIdent: 'bing.en-US', description: 'New');
+          mockImage.copyWith(imageIdent: expectedIdent, description: 'New');
 
       // Act
       final result = await useCase(forceRefresh: true);

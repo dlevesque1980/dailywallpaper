@@ -108,10 +108,23 @@ class SmartCropEngine {
               analysisSettings, degradationLevel)
           : analysisSettings;
 
+      // Pre-fetch rawRgba once so all analyzers share the same pixel buffer.
+      // Eliminates repeated image.toByteData() calls across analyzers.
+      final sharedMetadata = Map<String, dynamic>.from(metadata ?? {});
+      try {
+        final byteData =
+            await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (byteData != null) {
+          sharedMetadata['rawRgba'] = byteData.buffer.asUint8List();
+        }
+      } catch (_) {
+        // Non-fatal: analyzers will fall back to their own lazy-decode.
+      }
+
       final context = AnalysisContext(
           imageId: imageId,
           settings: effectiveSettings,
-          metadata: metadata ?? {});
+          metadata: sharedMetadata);
 
       if (_shouldSkipSmartCrop(image, targetSize, effectiveSettings)) {
         stopwatch.stop();

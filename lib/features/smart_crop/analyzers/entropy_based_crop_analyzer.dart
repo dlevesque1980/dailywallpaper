@@ -1,6 +1,5 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
-import 'dart:isolate';
 import '../interfaces/crop_analyzer.dart';
 import '../interfaces/analyzer_metadata.dart';
 import '../interfaces/analysis_context.dart';
@@ -8,6 +7,7 @@ import '../models/crop_score.dart';
 import '../models/crop_coordinates.dart';
 import '../models/crop_settings.dart';
 import 'entropy/entropy_analyzer_helpers.dart';
+import '../utils/analyzer_isolate_pool.dart';
 
 /// Crop analyzer that uses image entropy to detect content density
 ///
@@ -65,13 +65,13 @@ class EntropyBasedCropAnalyzer extends BaseCropAnalyzer {
     // Get image data for entropy calculation (lazy-cached)
     final imageData = await _getImageData(image, context);
 
-    final result = await Isolate.run(() => performEntropyAnalysisIsolate({
+    final result = await AnalyzerIsolatePool.instance.run(performEntropyAnalysisIsolate, {
       'imageWidth': imageSize.width,
       'imageHeight': imageSize.height,
       'targetAspectRatio': targetAspectRatio,
       'imageData': imageData,
       'strategyName': strategyName,
-    }));
+    });
 
     final bestCrop = result['bestCrop'] as CropCoordinates? ??
         _getCenterCrop(imageSize, targetAspectRatio);

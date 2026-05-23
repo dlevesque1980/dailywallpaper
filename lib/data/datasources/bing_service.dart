@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:dailywallpaper/data/models/bing/bing_images.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/data/datasources/bing_data_source.dart';
+import 'package:dailywallpaper/core/utils/datetime_helper.dart';
 
 class BingService implements BingDataSource {
   static const String _baseUrl = 'https://www.bing.com';
@@ -54,13 +55,15 @@ class BingService implements BingDataSource {
     final imageUrl =
         '$_baseUrl${bingImage.url.replaceAll("1920x1080", resolution)}';
 
+    final dateStr = DateTimeHelper.formatDateKey(bingImage.startDate);
+
     return ImageItem(
       "Bing image of the day",
       imageUrl,
       copyrightParts[0].trim(),
       bingImage.startDate.toUtc(),
       bingImage.endDate.toUtc(),
-      "bing.$region",
+      "bing.$region.$dateStr",
       null,
       photographer,
     );

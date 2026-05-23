@@ -79,6 +79,7 @@ void main() {
     "image_ident",
     null,
     "Copyright",
+    localProcessedPath: 'fake_processed_path',
   );
 
   final mockImage2 = ImageItem(
@@ -90,6 +91,7 @@ void main() {
     "image_ident_2",
     null,
     "Copyright 2",
+    localProcessedPath: 'fake_processed_path_2',
   );
 
   group('HomeBloc', () {

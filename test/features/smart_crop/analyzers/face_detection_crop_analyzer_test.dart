@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dailywallpaper/features/smart_crop/analyzers/face_detection_crop_analyzer.dart';
 import 'package:dailywallpaper/features/smart_crop/models/crop_score.dart';
 import 'package:dailywallpaper/features/smart_crop/models/crop_settings.dart';
+import 'package:dailywallpaper/features/smart_crop/utils/analyzer_isolate_pool.dart';
 
 void main() {
   group('FaceDetectionCropAnalyzer', () {
@@ -15,6 +16,10 @@ void main() {
 
     tearDown(() {
       analyzer.dispose();
+    });
+
+    tearDownAll(() {
+      AnalyzerIsolatePool.instance.dispose();
     });
 
     group('Analyzer Properties', () {
