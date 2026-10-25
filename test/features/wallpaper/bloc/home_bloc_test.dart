@@ -1,16 +1,14 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
+import 'package:dailywallpaper/core/preferences/pref_consts.dart';
+import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
 import 'package:dailywallpaper/features/wallpaper/bloc/home_bloc.dart';
 import 'package:dailywallpaper/features/wallpaper/bloc/home_event.dart';
 import 'package:dailywallpaper/features/wallpaper/bloc/home_state.dart';
-import 'package:dailywallpaper/features/wallpaper/domain/usecases/fetch_daily_images.dart';
 import 'package:dailywallpaper/features/wallpaper/domain/usecases/apply_wallpaper.dart';
-import 'package:dailywallpaper/core/preferences/preferences_reader.dart';
-import 'package:dailywallpaper/core/preferences/pref_consts.dart';
-import 'package:dailywallpaper/features/wallpaper/domain/usecases/request_initial_permissions.dart';
-import '../../../fakes/fake_image_preloader_service.dart';
+import 'package:dailywallpaper/features/wallpaper/domain/usecases/fetch_daily_images.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 class MockFetchDailyImagesUseCase extends Mock
     implements FetchDailyImagesUseCase {}
@@ -19,245 +17,138 @@ class MockApplyWallpaperUseCase extends Mock implements ApplyWallpaperUseCase {}
 
 class MockPreferencesReader extends Mock implements PreferencesReader {}
 
-class MockRequestInitialPermissionsUseCase extends Mock
-    implements RequestInitialPermissionsUseCase {}
-
-class ImageItemFake extends Fake implements ImageItem {}
+class FakeImageItem extends Fake implements ImageItem {}
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   setUpAll(() {
-    registerFallbackValue(ImageItemFake());
+    registerFallbackValue(FakeImageItem());
   });
 
-  late MockFetchDailyImagesUseCase mockFetchUseCase;
-  late MockApplyWallpaperUseCase mockApplyUseCase;
-  late MockPreferencesReader mockPrefs;
-  late MockRequestInitialPermissionsUseCase mockRequestPermissions;
-  late FakeImagePreloaderService fakePreloader;
-  late HomeBloc homeBloc;
+  late MockFetchDailyImagesUseCase fetchImages;
+  late MockApplyWallpaperUseCase applyWallpaper;
+  late MockPreferencesReader preferences;
+  late HomeBloc bloc;
+
+  final image = ImageItem(
+    id: 'one',
+    date: DateTime(2026, 10, 25),
+    source: 'external-service',
+    imageUrl: 'https://res.cloudinary.com/example/one.avif',
+    createdAt: DateTime.utc(2026, 10, 25),
+  );
+  final secondImage = ImageItem(
+    id: 'two',
+    date: DateTime(2026, 10, 25),
+    source: 'external-service',
+    imageUrl: 'https://res.cloudinary.com/example/two.avif',
+    createdAt: DateTime.utc(2026, 10, 25, 1),
+  );
 
   setUp(() {
-    mockFetchUseCase = MockFetchDailyImagesUseCase();
-    mockApplyUseCase = MockApplyWallpaperUseCase();
-    mockPrefs = MockPreferencesReader();
-    mockRequestPermissions = MockRequestInitialPermissionsUseCase();
-    fakePreloader = FakeImagePreloaderService();
-
-    // Default mock setup for Prefs to avoid null errors on HomeBloc init
-    when(() => mockPrefs.getIntWithDefault(sp_LastViewedIndex, 0))
-        .thenAnswer((_) async => 0);
-    when(() => mockPrefs.getString(sp_LastSetWallpaperId))
+    fetchImages = MockFetchDailyImagesUseCase();
+    applyWallpaper = MockApplyWallpaperUseCase();
+    preferences = MockPreferencesReader();
+    when(() => preferences.getString(lastSetWallpaperId))
         .thenAnswer((_) async => null);
-    when(() => mockPrefs.getIntWithDefault(sp_LastSetWallpaperTime, 0))
+    when(() => preferences.getIntWithDefault(lastViewedWallpaperIndex, 0))
         .thenAnswer((_) async => 0);
-    when(() => mockPrefs.setInt(any(), any())).thenAnswer((_) async => true);
-    when(() => mockPrefs.setString(any(), any())).thenAnswer((_) async => true);
-    when(() => mockRequestPermissions()).thenAnswer((_) async => {});
-    when(() => mockFetchUseCase.getCachedImages()).thenAnswer((_) async => []);
-
-    homeBloc = HomeBloc(
-      fetchDailyImagesUseCase: mockFetchUseCase,
-      applyWallpaperUseCase: mockApplyUseCase,
-      preloaderService: fakePreloader,
-      prefs: mockPrefs,
-      requestInitialPermissionsUseCase: mockRequestPermissions,
+    when(() => preferences.getIntWithDefault(lastSetWallpaperTime, 0))
+        .thenAnswer((_) async => 0);
+    when(() => preferences.setInt(any(), any())).thenAnswer((_) async => true);
+    when(() => preferences.setString(any(), any()))
+        .thenAnswer((_) async => true);
+    bloc = HomeBloc(
+      fetchDailyImagesUseCase: fetchImages,
+      applyWallpaperUseCase: applyWallpaper,
+      prefs: preferences,
     );
   });
 
-  tearDown(() {
-    homeBloc.close();
-  });
+  tearDown(() => bloc.close());
 
-  final mockImage = ImageItem(
-    "Source",
-    "https://example.com/image.jpg",
-    "Description",
-    DateTime.now(),
-    DateTime.now().add(const Duration(days: 1)),
-    "image_ident",
-    null,
-    "Copyright",
-    localProcessedPath: 'fake_processed_path',
+  blocTest<HomeBloc, HomeState>(
+    'loads latest wallpapers from the repository',
+    build: () {
+      when(() => fetchImages()).thenAnswer((_) async => [image]);
+      return bloc;
+    },
+    act: (bloc) => bloc.add(const HomeEvent.started()),
+    expect: () => [
+      const HomeState.loading(),
+      HomeState.loaded(list: [image]),
+    ],
   );
 
-  final mockImage2 = ImageItem(
-    "Source",
-    "https://example.com/image2.jpg",
-    "Description 2",
-    DateTime.now(),
-    DateTime.now().add(const Duration(days: 1)),
-    "image_ident_2",
-    null,
-    "Copyright 2",
-    localProcessedPath: 'fake_processed_path_2',
+  blocTest<HomeBloc, HomeState>(
+    'restores the recently applied wallpaper by its Supabase id',
+    build: () {
+      when(() => fetchImages()).thenAnswer((_) async => [image, secondImage]);
+      when(() => preferences.getString(lastSetWallpaperId))
+          .thenAnswer((_) async => 'two');
+      when(() => preferences.getIntWithDefault(lastSetWallpaperTime, 0))
+          .thenAnswer(
+        (_) async => DateTime.now().millisecondsSinceEpoch - 10000,
+      );
+      return bloc;
+    },
+    act: (bloc) => bloc.add(const HomeEvent.started()),
+    expect: () => [
+      const HomeState.loading(),
+      HomeState.loaded(
+        list: [image, secondImage],
+        imageIndex: 1,
+        wallpaperMessage: 'wallpaperSetSuccess',
+      ),
+    ],
   );
 
-  group('HomeBloc', () {
-    test('initial state is HomeState.initial()', () {
-      expect(homeBloc.state, const HomeState.initial());
-    });
+  blocTest<HomeBloc, HomeState>(
+    'reports an empty Supabase response',
+    build: () {
+      when(() => fetchImages()).thenAnswer((_) async => []);
+      return bloc;
+    },
+    act: (bloc) => bloc.add(const HomeEvent.started()),
+    expect: () => [
+      const HomeState.loading(),
+      const HomeState.error(
+        'failedToFetchWallpapers: Supabase returned no wallpapers.',
+      ),
+    ],
+  );
 
-    blocTest<HomeBloc, HomeState>(
-      'recovers applied wallpaper state using imageIdent instead of corrupted sp_LastViewedIndex',
-      build: () {
-        // Simuler un faux index 0 (corrompu) mais un lastSetId correspondant à l'image à l'index 1
-        when(() => mockPrefs.getIntWithDefault(sp_LastViewedIndex, 0))
-            .thenAnswer((_) async => 0);
-        when(() => mockPrefs.getString(sp_LastSetWallpaperId))
-            .thenAnswer((_) async => "image_ident_2");
-        when(() => mockPrefs.getIntWithDefault(sp_LastSetWallpaperTime, 0))
-            .thenAnswer((_) async =>
-                DateTime.now().millisecondsSinceEpoch -
-                10000); // Il y a 10 secondes (< 30s)
+  blocTest<HomeBloc, HomeState>(
+    'persists the carousel index',
+    build: () => bloc,
+    seed: () => HomeState.loaded(list: [image, secondImage]),
+    act: (bloc) => bloc.add(const HomeEvent.indexChanged(1)),
+    expect: () => [
+      HomeState.loaded(list: [image, secondImage], imageIndex: 1),
+    ],
+    verify: (_) {
+      verify(() => preferences.setInt(lastViewedWallpaperIndex, 1)).called(1);
+    },
+  );
 
-        when(() => mockFetchUseCase(forceRefresh: false))
-            .thenAnswer((_) async => [mockImage, mockImage2]);
-
-        return homeBloc;
-      },
-      act: (bloc) => bloc.add(const HomeEvent.started()),
-      expect: () => [
-        // L'index doit être 1, et on doit avoir le message de succès !
-        HomeState.loaded(
-            list: [mockImage, mockImage2],
-            imageIndex: 1,
-            wallpaperMessage: 'wallpaperSetSuccess',
-            isCropProcessing: false,
-            isSourceLoading: true),
-      ],
-    );
-
-    blocTest<HomeBloc, HomeState>(
-      'ignores outdated sp_LastSetWallpaperTime (older than 30s)',
-      build: () {
-        when(() => mockPrefs.getIntWithDefault(sp_LastViewedIndex, 0))
-            .thenAnswer((_) async => 0);
-        when(() => mockPrefs.getString(sp_LastSetWallpaperId))
-            .thenAnswer((_) async => "image_ident");
-        when(() => mockPrefs.getIntWithDefault(sp_LastSetWallpaperTime, 0))
-            .thenAnswer((_) async =>
-                DateTime.now().millisecondsSinceEpoch -
-                40000); // Il y a 40 secondes (> 30s)
-
-        when(() => mockFetchUseCase(forceRefresh: false))
-            .thenAnswer((_) async => [mockImage]);
-
-        return homeBloc;
-      },
-      act: (bloc) => bloc.add(const HomeEvent.started()),
-      expect: () => [
-        // Le message doit être null car expiré
-        HomeState.loaded(
-            list: [mockImage],
-            imageIndex: 0,
-            wallpaperMessage: null,
-            isCropProcessing: false,
-            isSourceLoading: true),
-      ],
-    );
-
-    blocTest<HomeBloc, HomeState>(
-      'emits [loaded] when HomeEventStarted is successful',
-      build: () {
-        when(() => mockFetchUseCase(forceRefresh: false))
-            .thenAnswer((_) async => [mockImage]);
-        return homeBloc;
-      },
-      act: (bloc) => bloc.add(const HomeEvent.started()),
-      expect: () => [
-        HomeState.loaded(list: [mockImage], imageIndex: 0, isCropProcessing: false, isSourceLoading: true),
-      ],
-      verify: (_) {
-        verify(() => mockRequestPermissions()).called(1);
-        verify(() => mockFetchUseCase(forceRefresh: false)).called(1);
-        expect(fakePreloader.preloadCallCount, 1);
-      },
-    );
-
-    blocTest<HomeBloc, HomeState>(
-      'emits [error] when FetchDailyImagesUseCase fails',
-      build: () {
-        when(() => mockFetchUseCase(forceRefresh: false))
-            .thenThrow(Exception('Fetch error'));
-        return homeBloc;
-      },
-      act: (bloc) => bloc.add(const HomeEvent.started()),
-      expect: () => [
-        const HomeState.error(
-            'failedToFetchWallpapers: Exception: Fetch error'),
-      ],
-    );
-
-    blocTest<HomeBloc, HomeState>(
-      'emits loaded with new index when HomeEventIndexChanged is called',
-      build: () => homeBloc,
-      seed: () => HomeState.loaded(list: [mockImage, mockImage], imageIndex: 0),
-      act: (bloc) => bloc.add(const HomeEvent.indexChanged(1)),
-      expect: () => [
-        HomeState.loaded(
-            list: [mockImage, mockImage],
-            imageIndex: 1,
-            wallpaperMessage: null,
-            isCropProcessing: false,
-            isSourceLoading: true),
-      ],
-      verify: (_) {
-        expect(fakePreloader.preloadCallCount, 1);
-      },
-    );
-
-    blocTest<HomeBloc, HomeState>(
-      'emits loaded with wallpaper message when HomeEventWallpaperUpdateRequested is successful',
-      build: () {
-        when(() => mockApplyUseCase(any())).thenAnswer((_) async => 'Success');
-        return homeBloc;
-      },
-      seed: () => HomeState.loaded(list: [mockImage], imageIndex: 0),
-      act: (bloc) => bloc.add(const HomeEvent.wallpaperUpdateRequested()),
-      expect: () => [
-        HomeState.loaded(
-            list: [mockImage], imageIndex: 0, isSettingWallpaper: true),
-        HomeState.loaded(
-            list: [mockImage],
-            imageIndex: 0,
-            isSettingWallpaper: false,
-            wallpaperMessage: 'Success'),
-      ],
-    );
-
-    blocTest<HomeBloc, HomeState>(
-      'Cache-First: emits cached images instantly, then emits fresh images after network load',
-      build: () {
-        when(() => mockFetchUseCase.getCachedImages())
-            .thenAnswer((_) async => [mockImage]);
-        when(() => mockFetchUseCase(forceRefresh: false))
-            .thenAnswer((_) async => [mockImage, mockImage2]);
-        return homeBloc;
-      },
-      act: (bloc) => bloc.add(const HomeEvent.started()),
-      expect: () => [
-        HomeState.loaded(list: [mockImage], imageIndex: 0, isCropProcessing: false, isSourceLoading: true),
-        HomeState.loaded(list: [mockImage, mockImage2], imageIndex: 0, isCropProcessing: false, isSourceLoading: true),
-      ],
-    );
-
-    blocTest<HomeBloc, HomeState>(
-      'should emit loaded even if preloadCurrentImageWithCrop times out (8s)',
-      build: () {
-        fakePreloader.shouldTimeout = true;
-        when(() => mockFetchUseCase(forceRefresh: false))
-            .thenAnswer((_) async => [mockImage]);
-        return homeBloc;
-      },
-      act: (bloc) => bloc.add(const HomeEvent.started()),
-      expect: () => [
-        HomeState.loaded(list: [mockImage], imageIndex: 0, isCropProcessing: false, isSourceLoading: true),
-      ],
-      verify: (_) {
-        expect(fakePreloader.preloadCurrentImageWithCropCallCount, 1);
-      },
-    );
-  });
+  blocTest<HomeBloc, HomeState>(
+    'applies the selected URL without image processing',
+    build: () {
+      when(() => applyWallpaper(image))
+          .thenAnswer((_) async => 'wallpaperSetSuccess');
+      return bloc;
+    },
+    seed: () => HomeState.loaded(list: [image]),
+    act: (bloc) => bloc.add(const HomeEvent.wallpaperUpdateRequested()),
+    expect: () => [
+      HomeState.loaded(list: [image], isSettingWallpaper: true),
+      HomeState.loaded(
+        list: [image],
+        wallpaperMessage: 'wallpaperSetSuccess',
+      ),
+    ],
+    verify: (_) {
+      verify(() => preferences.setString(lastSetWallpaperId, 'one')).called(1);
+      verify(() => applyWallpaper(image)).called(1);
+    },
+  );
 }

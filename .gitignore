@@ -76,3 +76,4 @@
 wallpaper.db
 *.db
 tool/output/
+dart_defines.json

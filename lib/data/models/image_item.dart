@@ -1,83 +1,95 @@
-import '../../features/smart_crop/models/crop_result.dart';
-
 class ImageItem {
-  String url = "",
-      description = "",
-      imageIdent = "",
-      copyright = "",
-      source = "";
-  String? triggerUrl = "";
-  DateTime startTime = DateTime.fromMicrosecondsSinceEpoch(0),
-      endTime = DateTime.fromMicrosecondsSinceEpoch(0);
+  const ImageItem({
+    required this.id,
+    required this.date,
+    required this.source,
+    required this.imageUrl,
+    required this.createdAt,
+    this.title,
+    this.category,
+    this.credit,
+    this.sourceUrl,
+    this.cloudinary,
+    this.focal,
+    this.cropStrategy,
+    this.crop,
+    this.generatedAt,
+    this.settingsHash,
+  });
 
-  /// Order of the image in the list
-  int displayOrder = 0;
+  final String id;
+  final DateTime date;
+  final String source;
+  final String imageUrl;
+  final DateTime createdAt;
+  final String? title;
+  final String? category;
+  final String? credit;
+  final String? sourceUrl;
+  final Map<String, dynamic>? cloudinary;
+  final Map<String, dynamic>? focal;
+  final String? cropStrategy;
+  final Map<String, dynamic>? crop;
+  final DateTime? generatedAt;
+  final String? settingsHash;
 
-  /// Result of the smart crop analysis for this image
-  CropResult? smartCropResult;
-
-  /// Chemins de fichiers locaux pour la persistance
-  String? localSourcePath;
-  String? localProcessedPath;
-  String? cropResultJson;
-
-  ImageItem(this.source, this.url, this.description, this.startTime,
-      this.endTime, this.imageIdent, this.triggerUrl, this.copyright,
-      {this.displayOrder = 0,
-      this.localSourcePath,
-      this.localProcessedPath,
-      this.cropResultJson});
-
-  ImageItem.fromMap(Map map) {
-    source = (map["Source"] as String?) ?? '';
-    url = (map["Url"] as String?) ?? '';
-    description = (map["Description"] as String?) ?? '';
-    startTime = map["StartTime"] != null
-        ? DateTime.parse(map["StartTime"]!)
-        : DateTime.now();
-    endTime = map["EndTime"] != null
-        ? DateTime.parse(map["EndTime"]!)
-        : DateTime.now().add(const Duration(days: 1));
-    imageIdent = (map["ImageIdent"] as String?) ?? '';
-    triggerUrl = map["TriggerUrl"] as String?;
-    copyright = (map["Copyright"] as String?) ?? '';
-    displayOrder = (map["DisplayOrder"] as int?) ?? 0;
-    localSourcePath = map["LocalSourcePath"] as String?;
-    localProcessedPath = map["LocalProcessedPath"] as String?;
-    cropResultJson = map["CropResultJson"] as String?;
+  factory ImageItem.fromJson(Map<String, dynamic> json) {
+    return ImageItem(
+      id: _requiredString(json, 'id'),
+      date: DateTime.parse(_requiredString(json, 'date')),
+      source: _requiredString(json, 'source'),
+      imageUrl: _requiredString(json, 'image_url'),
+      createdAt: DateTime.parse(_requiredString(json, 'created_at')),
+      title: json['title'] as String?,
+      category: _optionalString(json['category'], 'category'),
+      credit: json['credit'] as String?,
+      sourceUrl: json['source_url'] as String?,
+      cloudinary: _optionalJsonObject(json['cloudinary'], 'cloudinary'),
+      focal: _optionalJsonObject(json['focal'], 'focal'),
+      cropStrategy: json['crop_strategy'] as String?,
+      crop: _optionalJsonObject(json['crop'], 'crop'),
+      generatedAt: _optionalDateTime(json['generated_at'], 'generated_at'),
+      settingsHash: json['settings_hash'] as String?,
+    );
   }
 
-  /// Create a copy of this ImageItem with updated fields
-  ImageItem copyWith({
-    String? source,
-    String? url,
-    String? description,
-    DateTime? startTime,
-    DateTime? endTime,
-    String? imageIdent,
-    String? triggerUrl,
-    String? copyright,
-    CropResult? smartCropResult,
-    int? displayOrder,
-    String? localSourcePath,
-    String? localProcessedPath,
-    String? cropResultJson,
-  }) {
-    final item = ImageItem(
-      source ?? this.source,
-      url ?? this.url,
-      description ?? this.description,
-      startTime ?? this.startTime,
-      endTime ?? this.endTime,
-      imageIdent ?? this.imageIdent,
-      triggerUrl ?? this.triggerUrl,
-      copyright ?? this.copyright,
-      displayOrder: displayOrder ?? this.displayOrder,
-      localSourcePath: localSourcePath ?? this.localSourcePath,
-      localProcessedPath: localProcessedPath ?? this.localProcessedPath,
-      cropResultJson: cropResultJson ?? this.cropResultJson,
-    );
-    item.smartCropResult = smartCropResult ?? this.smartCropResult;
-    return item;
+  String get displayTitle {
+    final normalizedSource = source.trim().toLowerCase();
+    if (normalizedSource.startsWith('bing')) return 'Bing Daily Image';
+    if (normalizedSource.startsWith('pexel')) {
+      final categoryName = category?.trim();
+      return categoryName == null || categoryName.isEmpty
+          ? 'Pexel'
+          : 'Pexel $categoryName';
+    }
+    if (normalizedSource.startsWith('nasa')) return 'NASA APOD';
+    return source;
+  }
+
+  static String _requiredString(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is String && value.isNotEmpty) return value;
+    throw FormatException('Wallpaper field "$key" must be a non-empty string.');
+  }
+
+  static Map<String, dynamic>? _optionalJsonObject(
+    Object? value,
+    String field,
+  ) {
+    if (value == null) return null;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    throw FormatException('Wallpaper field "$field" must be a JSON object.');
+  }
+
+  static String? _optionalString(Object? value, String field) {
+    if (value == null) return null;
+    if (value is String) return value;
+    throw FormatException('Wallpaper field "$field" must be a string.');
+  }
+
+  static DateTime? _optionalDateTime(Object? value, String field) {
+    if (value == null) return null;
+    if (value is String) return DateTime.parse(value);
+    throw FormatException('Wallpaper field "$field" must be a date string.');
   }
 }

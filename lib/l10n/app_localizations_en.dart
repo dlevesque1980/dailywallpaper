@@ -12,37 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Daily Wallpaper';
 
   @override
-  String get analysisInProgress => 'Analysis in progress...';
-
-  @override
-  String get cropAnalysis => 'Crop Analysis';
-
-  @override
-  String get strategy => 'Strategy';
-
-  @override
-  String get confidence => 'Confidence';
-
-  @override
-  String get targetAspect => 'Target Aspect';
-
-  @override
-  String get coordinatesNormalized => 'Coordinates (Normalized)';
-
-  @override
-  String get subjectDetection => 'Subject Detection';
-
-  @override
-  String get bounds => 'Bounds';
-
-  @override
-  String get close => 'CLOSE';
-
-  @override
-  String get optimizingWallpapers => 'Optimizing wallpapers...';
-
-  @override
-  String get analyzingForCrop => 'Analyzing for the best crop';
+  String get loadingWallpapers => 'Loading wallpapers...';
 
   @override
   String get settings => 'Settings';
@@ -65,7 +35,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noWallpapersDownloadedToday =>
-      'No wallpapers have been downloaded yet today.\nCheck back later or visit the Home page to download today\'s images.';
+      'No wallpapers are available for today yet.';
 
   @override
   String noWallpapersSavedForDate(String date) {
@@ -80,20 +50,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noHistoricalImagesFound =>
-      'No historical images found in the database.';
-
-  @override
-  String get databaseError => 'Database Error';
+      'No historical wallpapers are available yet.';
 
   @override
   String get connectionError => 'Connection Error';
 
   @override
   String get error => 'Error';
-
-  @override
-  String get databaseErrorMessage =>
-      'There was a problem accessing the image database. This might be a temporary issue.';
 
   @override
   String get networkErrorMessage =>
@@ -124,37 +87,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get applyWallpaperToLockScreen => 'Apply wallpaper to lock screen';
 
   @override
-  String get bingRegion => 'Bing region';
+  String get includeNasaImages => 'Include NASA images';
 
   @override
-  String get selectPreferredRegion =>
-      'Select your preferred region for Bing images';
+  String get includeNasaImagesDescription =>
+      'Allow the downloader to fetch NASA images';
 
   @override
-  String get pexelsCategories => 'Pexels Categories';
+  String get pexelsCategories => 'Pexels categories';
 
   @override
-  String get selectAtLeastOneCategory => 'Please select at least one category';
+  String get selectAtLeastOneCategory => 'Select at least one category';
 
   @override
-  String get noMoreThanFiveCategories => 'No more than 5 categories';
+  String get noMoreThanThreeCategories =>
+      'Select no more than three categories';
 
   @override
-  String get mlEngineStatus => 'ML Engine Status';
+  String get cancel => 'Cancel';
 
   @override
-  String get simulatedEmulator => 'Simulated (Emulator)';
-
-  @override
-  String get active => 'Active';
-
-  @override
-  String get modelSubjectSegmentation =>
-      'Model: Subject Segmentation v8 (Mobile f16)';
-
-  @override
-  String get realMlDisabledEmulator =>
-      '⚠️ Real ML is disabled on emulator to avoid crashes.';
+  String get save => 'Save';
 
   @override
   String get selectRegion => 'Select Region';

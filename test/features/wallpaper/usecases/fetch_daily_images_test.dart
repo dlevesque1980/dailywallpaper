@@ -1,192 +1,42 @@
-import 'dart:io';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:dailywallpaper/data/models/image_item.dart';
-import 'package:dailywallpaper/features/wallpaper/domain/usecases/fetch_daily_images.dart';
 import 'package:dailywallpaper/data/repositories/image_repository.dart';
-import 'package:dailywallpaper/core/preferences/pref_consts.dart';
-import 'package:dailywallpaper/core/utils/datetime_helper.dart';
-import '../../../fakes/fake_image_storage.dart';
-import '../../../fakes/fake_image_data_source.dart';
-import '../../../fakes/fake_preferences_reader.dart';
+import 'package:dailywallpaper/features/wallpaper/domain/usecases/fetch_daily_images.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
-class MockPathProviderPlatform extends Mock
-    with MockPlatformInterfaceMixin
-    implements PathProviderPlatform {}
+class MockImageRepository extends Mock implements ImageRepository {}
 
 void main() {
-  late FakeImageStorage fakeStorage;
-  late FakeImageDataSource fakeDataSource;
-  late FakePreferencesReader fakePrefs;
-  late ImageRepository imageRepository;
+  late MockImageRepository repository;
   late FetchDailyImagesUseCase useCase;
-  late MockPathProviderPlatform mockPathProvider;
-  late Directory tempDir;
 
-  setUpAll(() {
-    tempDir = Directory.systemTemp.createTempSync('fetch_images_test');
-  });
-
-  tearDownAll(() {
-    if (tempDir.existsSync()) {
-      tempDir.deleteSync(recursive: true);
-    }
-  });
+  final images = [
+    ImageItem(
+      id: 'daily',
+      date: DateTime(2026, 10, 25),
+      source: 'external-service',
+      imageUrl: 'https://res.cloudinary.com/example/daily.avif',
+      createdAt: DateTime.utc(2026, 10, 25),
+    ),
+  ];
 
   setUp(() {
-    mockPathProvider = MockPathProviderPlatform();
-    PathProviderPlatform.instance = mockPathProvider;
-    when(() => mockPathProvider.getApplicationDocumentsPath())
-        .thenAnswer((_) async => tempDir.path);
-    when(() => mockPathProvider.getTemporaryPath())
-        .thenAnswer((_) async => tempDir.path);
-
-    fakeStorage = FakeImageStorage();
-    fakeDataSource = FakeImageDataSource();
-    fakePrefs = FakePreferencesReader();
-    imageRepository = ImageRepository(
-      bingDataSource: fakeDataSource,
-      pexelsDataSource: fakeDataSource,
-      nasaDataSource: fakeDataSource,
-    );
-    useCase = FetchDailyImagesUseCase(
-      dbHelper: fakeStorage,
-      imageRepository: imageRepository,
-      prefHelper: fakePrefs,
-    );
+    repository = MockImageRepository();
+    useCase = FetchDailyImagesUseCase(imageRepository: repository);
   });
 
-  final mockImage = ImageItem(
-    "Source",
-    "https://example.com/image.jpg",
-    "Description",
-    DateTime.now(),
-    DateTime.now().add(const Duration(days: 1)),
-    "bing.en-US",
-    null,
-    "Copyright",
-  );
+  test('returns the latest wallpapers from the repository', () async {
+    when(() => repository.fetchLatestWallpapers())
+        .thenAnswer((_) async => images);
 
-  group('FetchDailyImagesUseCase', () {
-    test('should return images from repository when cache is empty', () async {
-      // Arrange
-      fakePrefs.put(sp_BingRegion, 'en-US');
-      fakePrefs.put(sp_PexelsCategories, ['nature']);
-      fakeDataSource.bingResult = mockImage.copyWith(imageIdent: 'bing.en-US');
-      fakeDataSource.pexelsResult =
-          mockImage.copyWith(imageIdent: 'pexels.nature');
-      fakeDataSource.nasaResult = mockImage.copyWith(imageIdent: 'nasa.apod');
+    expect(await useCase(), images);
+    verify(() => repository.fetchLatestWallpapers()).called(1);
+  });
 
-      // Act
-      final result = await useCase(forceRefresh: false);
+  test('propagates repository errors', () async {
+    when(() => repository.fetchLatestWallpapers())
+        .thenAnswer((_) async => throw Exception('Supabase is unavailable'));
 
-      // Assert
-      expect(result.length, 3);
-      expect(fakeStorage.insertCallCount, 3);
-      expect(result.any((img) => img.imageIdent.contains('bing')), true);
-      expect(result.any((img) => img.imageIdent.contains('pexels')), true);
-      expect(result.any((img) => img.imageIdent.contains('nasa')), true);
-    });
-
-    test(
-        'should return images from storage when they exist and not force refresh',
-        () async {
-      // Arrange
-      fakePrefs.put(sp_BingRegion, 'en-US');
-      fakePrefs.put(sp_PexelsCategories, []); // No pexels for simplicity
-      final dateStr = DateTimeHelper.formatDateKey(DateTime.now());
-      final expectedIdent = 'bing.en-US.$dateStr';
-      final storedImage = mockImage.copyWith(imageIdent: expectedIdent);
-      fakeStorage.seed(storedImage);
-
-      // Act
-      final result = await useCase(forceRefresh: false);
-
-      // Assert
-      expect(result.length,
-          2); // Bing from storage + NASA from source (since NASA wasn't in storage)
-      expect(fakeStorage.insertCallCount, 1); // Only NASA was inserted
-      expect(result.any((img) => img.imageIdent == expectedIdent), true);
-    });
-
-    test('should force refresh from repository even if images exist in storage',
-        () async {
-      // Arrange
-      fakePrefs.put(sp_BingRegion, 'en-US');
-      fakePrefs.put(sp_PexelsCategories, []);
-      final dateStr = DateTimeHelper.formatDateKey(DateTime.now());
-      final expectedIdent = 'bing.en-US.$dateStr';
-      final storedImage =
-          mockImage.copyWith(imageIdent: expectedIdent, description: 'Old');
-      fakeStorage.seed(storedImage);
-      fakeDataSource.bingResult =
-          mockImage.copyWith(imageIdent: expectedIdent, description: 'New');
-
-      // Act
-      final result = await useCase(forceRefresh: true);
-
-      // Assert
-      expect(
-          fakeStorage.deleteCallCount, 2); // Bing + NASA deleted before fetch
-      expect(result.any((img) => img.description == 'New'), true);
-    });
-
-    test('should return partial list if one provider fails', () async {
-      // Arrange
-      fakePrefs.put(sp_BingRegion, 'en-US');
-      fakePrefs.put(sp_PexelsCategories, []);
-      fakeDataSource.nasaShouldThrow = true;
-      fakeDataSource.throwMessage = 'NASA Error';
-
-      // Act
-      final result = await useCase(forceRefresh: false);
-
-      // Assert
-      // Bing succeeds, NASA fails (has try-catch)
-      expect(result.length, 1);
-      expect(result.first.imageIdent.contains('bing'), true);
-    });
-
-    test(
-        'getCachedImages should return only cached images from latest day sorted by displayOrder',
-        () async {
-      // Arrange
-      final oldImage = mockImage.copyWith(
-        imageIdent: 'old_bing',
-        startTime: DateTime.now().subtract(const Duration(days: 5)),
-        endTime: DateTime.now().subtract(const Duration(days: 4)),
-        displayOrder: 0,
-      );
-      final recentBing = mockImage.copyWith(
-        imageIdent: 'recent_bing',
-        startTime: DateTime.now(),
-        endTime: DateTime.now().add(const Duration(days: 1)),
-        displayOrder: 0,
-      );
-      final recentNasa = mockImage.copyWith(
-        imageIdent: 'recent_nasa',
-        startTime: DateTime.now()
-            .add(const Duration(minutes: 5)), // slightly different start time
-        endTime: DateTime.now().add(const Duration(days: 1)),
-        displayOrder: 999,
-      );
-
-      fakeStorage.seed(oldImage);
-      fakeStorage.seed(recentBing);
-      fakeStorage.seed(recentNasa);
-
-      // Act
-      final result = await useCase.getCachedImages();
-
-      // Assert
-      expect(result.length,
-          2); // oldImage is filtered out because it is not from the latest batch
-      expect(
-          result[0].imageIdent, 'recent_bing'); // sorted first (displayOrder 0)
-      expect(result[1].imageIdent,
-          'recent_nasa'); // sorted second (displayOrder 999)
-    });
+    await expectLater(useCase(), throwsException);
   });
 }

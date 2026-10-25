@@ -55,14 +55,14 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest(HistoryState.loaded(
       images: [
         ImageItem(
-          'test', // source
-          'test', // url
-          'test', // description
-          now, // startTime
-          now, // endTime
-          '1', // imageIdent
-          'test', // triggerUrl
-          'test', // copyright
+          id: '1',
+          date: now,
+          source: 'test',
+          imageUrl: 'https://example.com/test.avif',
+          createdAt: now,
+          title: 'test',
+          sourceUrl: 'https://example.com/source',
+          credit: 'test',
         )
       ],
       selectedDate: now,
@@ -80,14 +80,14 @@ void main() {
     when(() => mockHistoryBloc.state).thenReturn(HistoryState.loaded(
       images: [
         ImageItem(
-          'test', // source
-          'test', // url
-          'test', // description
-          now, // startTime
-          now, // endTime
-          '1', // imageIdent
-          'test', // triggerUrl
-          'test', // copyright
+          id: '1',
+          date: now,
+          source: 'test',
+          imageUrl: 'https://example.com/test.avif',
+          createdAt: now,
+          title: 'test',
+          sourceUrl: 'https://example.com/source',
+          credit: 'test',
         )
       ],
       selectedDate: now,

@@ -51,33 +51,23 @@ extension SettingsEventPatterns on SettingsEvent {
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
     TResult Function(SettingsEventStarted value)? started,
-    TResult Function(SettingsEventRegionChanged value)? regionChanged,
     TResult Function(SettingsEventLockWallpaperToggled value)?
         lockWallpaperToggled,
-    TResult Function(SettingsEventSmartCropToggled value)? smartCropToggled,
-    TResult Function(SettingsEventSmartCropLevelChanged value)?
-        smartCropLevelChanged,
-    TResult Function(SettingsEventSubjectScalingToggled value)?
-        subjectScalingToggled,
+    TResult Function(SettingsEventNasaToggled value)? nasaToggled,
+    TResult Function(SettingsEventCategoriesChanged value)? categoriesChanged,
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case SettingsEventStarted() when started != null:
         return started(_that);
-      case SettingsEventRegionChanged() when regionChanged != null:
-        return regionChanged(_that);
       case SettingsEventLockWallpaperToggled()
           when lockWallpaperToggled != null:
         return lockWallpaperToggled(_that);
-      case SettingsEventSmartCropToggled() when smartCropToggled != null:
-        return smartCropToggled(_that);
-      case SettingsEventSmartCropLevelChanged()
-          when smartCropLevelChanged != null:
-        return smartCropLevelChanged(_that);
-      case SettingsEventSubjectScalingToggled()
-          when subjectScalingToggled != null:
-        return subjectScalingToggled(_that);
+      case SettingsEventNasaToggled() when nasaToggled != null:
+        return nasaToggled(_that);
+      case SettingsEventCategoriesChanged() when categoriesChanged != null:
+        return categoriesChanged(_that);
       case _:
         return orElse();
     }
@@ -99,30 +89,22 @@ extension SettingsEventPatterns on SettingsEvent {
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(SettingsEventStarted value) started,
-    required TResult Function(SettingsEventRegionChanged value) regionChanged,
     required TResult Function(SettingsEventLockWallpaperToggled value)
         lockWallpaperToggled,
-    required TResult Function(SettingsEventSmartCropToggled value)
-        smartCropToggled,
-    required TResult Function(SettingsEventSmartCropLevelChanged value)
-        smartCropLevelChanged,
-    required TResult Function(SettingsEventSubjectScalingToggled value)
-        subjectScalingToggled,
+    required TResult Function(SettingsEventNasaToggled value) nasaToggled,
+    required TResult Function(SettingsEventCategoriesChanged value)
+        categoriesChanged,
   }) {
     final _that = this;
     switch (_that) {
       case SettingsEventStarted():
         return started(_that);
-      case SettingsEventRegionChanged():
-        return regionChanged(_that);
       case SettingsEventLockWallpaperToggled():
         return lockWallpaperToggled(_that);
-      case SettingsEventSmartCropToggled():
-        return smartCropToggled(_that);
-      case SettingsEventSmartCropLevelChanged():
-        return smartCropLevelChanged(_that);
-      case SettingsEventSubjectScalingToggled():
-        return subjectScalingToggled(_that);
+      case SettingsEventNasaToggled():
+        return nasaToggled(_that);
+      case SettingsEventCategoriesChanged():
+        return categoriesChanged(_that);
     }
   }
 
@@ -141,32 +123,22 @@ extension SettingsEventPatterns on SettingsEvent {
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(SettingsEventStarted value)? started,
-    TResult? Function(SettingsEventRegionChanged value)? regionChanged,
     TResult? Function(SettingsEventLockWallpaperToggled value)?
         lockWallpaperToggled,
-    TResult? Function(SettingsEventSmartCropToggled value)? smartCropToggled,
-    TResult? Function(SettingsEventSmartCropLevelChanged value)?
-        smartCropLevelChanged,
-    TResult? Function(SettingsEventSubjectScalingToggled value)?
-        subjectScalingToggled,
+    TResult? Function(SettingsEventNasaToggled value)? nasaToggled,
+    TResult? Function(SettingsEventCategoriesChanged value)? categoriesChanged,
   }) {
     final _that = this;
     switch (_that) {
       case SettingsEventStarted() when started != null:
         return started(_that);
-      case SettingsEventRegionChanged() when regionChanged != null:
-        return regionChanged(_that);
       case SettingsEventLockWallpaperToggled()
           when lockWallpaperToggled != null:
         return lockWallpaperToggled(_that);
-      case SettingsEventSmartCropToggled() when smartCropToggled != null:
-        return smartCropToggled(_that);
-      case SettingsEventSmartCropLevelChanged()
-          when smartCropLevelChanged != null:
-        return smartCropLevelChanged(_that);
-      case SettingsEventSubjectScalingToggled()
-          when subjectScalingToggled != null:
-        return subjectScalingToggled(_that);
+      case SettingsEventNasaToggled() when nasaToggled != null:
+        return nasaToggled(_that);
+      case SettingsEventCategoriesChanged() when categoriesChanged != null:
+        return categoriesChanged(_that);
       case _:
         return null;
     }
@@ -187,30 +159,22 @@ extension SettingsEventPatterns on SettingsEvent {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? started,
-    TResult Function(BingRegionEnum region)? regionChanged,
     TResult Function(bool value)? lockWallpaperToggled,
-    TResult Function(bool value)? smartCropToggled,
-    TResult Function(int level)? smartCropLevelChanged,
-    TResult Function(bool value)? subjectScalingToggled,
+    TResult Function(bool value)? nasaToggled,
+    TResult Function(List<String> categories)? categoriesChanged,
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case SettingsEventStarted() when started != null:
         return started();
-      case SettingsEventRegionChanged() when regionChanged != null:
-        return regionChanged(_that.region);
       case SettingsEventLockWallpaperToggled()
           when lockWallpaperToggled != null:
         return lockWallpaperToggled(_that.value);
-      case SettingsEventSmartCropToggled() when smartCropToggled != null:
-        return smartCropToggled(_that.value);
-      case SettingsEventSmartCropLevelChanged()
-          when smartCropLevelChanged != null:
-        return smartCropLevelChanged(_that.level);
-      case SettingsEventSubjectScalingToggled()
-          when subjectScalingToggled != null:
-        return subjectScalingToggled(_that.value);
+      case SettingsEventNasaToggled() when nasaToggled != null:
+        return nasaToggled(_that.value);
+      case SettingsEventCategoriesChanged() when categoriesChanged != null:
+        return categoriesChanged(_that.categories);
       case _:
         return orElse();
     }
@@ -232,26 +196,20 @@ extension SettingsEventPatterns on SettingsEvent {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() started,
-    required TResult Function(BingRegionEnum region) regionChanged,
     required TResult Function(bool value) lockWallpaperToggled,
-    required TResult Function(bool value) smartCropToggled,
-    required TResult Function(int level) smartCropLevelChanged,
-    required TResult Function(bool value) subjectScalingToggled,
+    required TResult Function(bool value) nasaToggled,
+    required TResult Function(List<String> categories) categoriesChanged,
   }) {
     final _that = this;
     switch (_that) {
       case SettingsEventStarted():
         return started();
-      case SettingsEventRegionChanged():
-        return regionChanged(_that.region);
       case SettingsEventLockWallpaperToggled():
         return lockWallpaperToggled(_that.value);
-      case SettingsEventSmartCropToggled():
-        return smartCropToggled(_that.value);
-      case SettingsEventSmartCropLevelChanged():
-        return smartCropLevelChanged(_that.level);
-      case SettingsEventSubjectScalingToggled():
-        return subjectScalingToggled(_that.value);
+      case SettingsEventNasaToggled():
+        return nasaToggled(_that.value);
+      case SettingsEventCategoriesChanged():
+        return categoriesChanged(_that.categories);
     }
   }
 
@@ -270,29 +228,21 @@ extension SettingsEventPatterns on SettingsEvent {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? started,
-    TResult? Function(BingRegionEnum region)? regionChanged,
     TResult? Function(bool value)? lockWallpaperToggled,
-    TResult? Function(bool value)? smartCropToggled,
-    TResult? Function(int level)? smartCropLevelChanged,
-    TResult? Function(bool value)? subjectScalingToggled,
+    TResult? Function(bool value)? nasaToggled,
+    TResult? Function(List<String> categories)? categoriesChanged,
   }) {
     final _that = this;
     switch (_that) {
       case SettingsEventStarted() when started != null:
         return started();
-      case SettingsEventRegionChanged() when regionChanged != null:
-        return regionChanged(_that.region);
       case SettingsEventLockWallpaperToggled()
           when lockWallpaperToggled != null:
         return lockWallpaperToggled(_that.value);
-      case SettingsEventSmartCropToggled() when smartCropToggled != null:
-        return smartCropToggled(_that.value);
-      case SettingsEventSmartCropLevelChanged()
-          when smartCropLevelChanged != null:
-        return smartCropLevelChanged(_that.level);
-      case SettingsEventSubjectScalingToggled()
-          when subjectScalingToggled != null:
-        return subjectScalingToggled(_that.value);
+      case SettingsEventNasaToggled() when nasaToggled != null:
+        return nasaToggled(_that.value);
+      case SettingsEventCategoriesChanged() when categoriesChanged != null:
+        return categoriesChanged(_that.categories);
       case _:
         return null;
     }
@@ -316,72 +266,6 @@ class SettingsEventStarted implements SettingsEvent {
   @override
   String toString() {
     return 'SettingsEvent.started()';
-  }
-}
-
-/// @nodoc
-
-class SettingsEventRegionChanged implements SettingsEvent {
-  const SettingsEventRegionChanged(this.region);
-
-  final BingRegionEnum region;
-
-  /// Create a copy of SettingsEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @pragma('vm:prefer-inline')
-  $SettingsEventRegionChangedCopyWith<SettingsEventRegionChanged>
-      get copyWith =>
-          _$SettingsEventRegionChangedCopyWithImpl<SettingsEventRegionChanged>(
-              this, _$identity);
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SettingsEventRegionChanged &&
-            (identical(other.region, region) || other.region == region));
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, region);
-
-  @override
-  String toString() {
-    return 'SettingsEvent.regionChanged(region: $region)';
-  }
-}
-
-/// @nodoc
-abstract mixin class $SettingsEventRegionChangedCopyWith<$Res>
-    implements $SettingsEventCopyWith<$Res> {
-  factory $SettingsEventRegionChangedCopyWith(SettingsEventRegionChanged value,
-          $Res Function(SettingsEventRegionChanged) _then) =
-      _$SettingsEventRegionChangedCopyWithImpl;
-  @useResult
-  $Res call({BingRegionEnum region});
-}
-
-/// @nodoc
-class _$SettingsEventRegionChangedCopyWithImpl<$Res>
-    implements $SettingsEventRegionChangedCopyWith<$Res> {
-  _$SettingsEventRegionChangedCopyWithImpl(this._self, this._then);
-
-  final SettingsEventRegionChanged _self;
-  final $Res Function(SettingsEventRegionChanged) _then;
-
-  /// Create a copy of SettingsEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  $Res call({
-    Object? region = null,
-  }) {
-    return _then(SettingsEventRegionChanged(
-      null == region
-          ? _self.region
-          : region // ignore: cast_nullable_to_non_nullable
-              as BingRegionEnum,
-    ));
   }
 }
 
@@ -453,8 +337,8 @@ class _$SettingsEventLockWallpaperToggledCopyWithImpl<$Res>
 
 /// @nodoc
 
-class SettingsEventSmartCropToggled implements SettingsEvent {
-  const SettingsEventSmartCropToggled(this.value);
+class SettingsEventNasaToggled implements SettingsEvent {
+  const SettingsEventNasaToggled(this.value);
 
   final bool value;
 
@@ -462,15 +346,15 @@ class SettingsEventSmartCropToggled implements SettingsEvent {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $SettingsEventSmartCropToggledCopyWith<SettingsEventSmartCropToggled>
-      get copyWith => _$SettingsEventSmartCropToggledCopyWithImpl<
-          SettingsEventSmartCropToggled>(this, _$identity);
+  $SettingsEventNasaToggledCopyWith<SettingsEventNasaToggled> get copyWith =>
+      _$SettingsEventNasaToggledCopyWithImpl<SettingsEventNasaToggled>(
+          this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is SettingsEventSmartCropToggled &&
+            other is SettingsEventNasaToggled &&
             (identical(other.value, value) || other.value == value));
   }
 
@@ -479,28 +363,27 @@ class SettingsEventSmartCropToggled implements SettingsEvent {
 
   @override
   String toString() {
-    return 'SettingsEvent.smartCropToggled(value: $value)';
+    return 'SettingsEvent.nasaToggled(value: $value)';
   }
 }
 
 /// @nodoc
-abstract mixin class $SettingsEventSmartCropToggledCopyWith<$Res>
+abstract mixin class $SettingsEventNasaToggledCopyWith<$Res>
     implements $SettingsEventCopyWith<$Res> {
-  factory $SettingsEventSmartCropToggledCopyWith(
-          SettingsEventSmartCropToggled value,
-          $Res Function(SettingsEventSmartCropToggled) _then) =
-      _$SettingsEventSmartCropToggledCopyWithImpl;
+  factory $SettingsEventNasaToggledCopyWith(SettingsEventNasaToggled value,
+          $Res Function(SettingsEventNasaToggled) _then) =
+      _$SettingsEventNasaToggledCopyWithImpl;
   @useResult
   $Res call({bool value});
 }
 
 /// @nodoc
-class _$SettingsEventSmartCropToggledCopyWithImpl<$Res>
-    implements $SettingsEventSmartCropToggledCopyWith<$Res> {
-  _$SettingsEventSmartCropToggledCopyWithImpl(this._self, this._then);
+class _$SettingsEventNasaToggledCopyWithImpl<$Res>
+    implements $SettingsEventNasaToggledCopyWith<$Res> {
+  _$SettingsEventNasaToggledCopyWithImpl(this._self, this._then);
 
-  final SettingsEventSmartCropToggled _self;
-  final $Res Function(SettingsEventSmartCropToggled) _then;
+  final SettingsEventNasaToggled _self;
+  final $Res Function(SettingsEventNasaToggled) _then;
 
   /// Create a copy of SettingsEvent
   /// with the given fields replaced by the non-null parameter values.
@@ -508,7 +391,7 @@ class _$SettingsEventSmartCropToggledCopyWithImpl<$Res>
   $Res call({
     Object? value = null,
   }) {
-    return _then(SettingsEventSmartCropToggled(
+    return _then(SettingsEventNasaToggled(
       null == value
           ? _self.value
           : value // ignore: cast_nullable_to_non_nullable
@@ -519,134 +402,74 @@ class _$SettingsEventSmartCropToggledCopyWithImpl<$Res>
 
 /// @nodoc
 
-class SettingsEventSmartCropLevelChanged implements SettingsEvent {
-  const SettingsEventSmartCropLevelChanged(this.level);
+class SettingsEventCategoriesChanged implements SettingsEvent {
+  const SettingsEventCategoriesChanged(final List<String> categories)
+      : _categories = categories;
 
-  final int level;
+  final List<String> _categories;
+  List<String> get categories {
+    if (_categories is EqualUnmodifiableListView) return _categories;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_categories);
+  }
 
   /// Create a copy of SettingsEvent
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @pragma('vm:prefer-inline')
-  $SettingsEventSmartCropLevelChangedCopyWith<
-          SettingsEventSmartCropLevelChanged>
-      get copyWith => _$SettingsEventSmartCropLevelChangedCopyWithImpl<
-          SettingsEventSmartCropLevelChanged>(this, _$identity);
+  $SettingsEventCategoriesChangedCopyWith<SettingsEventCategoriesChanged>
+      get copyWith => _$SettingsEventCategoriesChangedCopyWithImpl<
+          SettingsEventCategoriesChanged>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is SettingsEventSmartCropLevelChanged &&
-            (identical(other.level, level) || other.level == level));
+            other is SettingsEventCategoriesChanged &&
+            const DeepCollectionEquality()
+                .equals(other._categories, _categories));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, level);
+  int get hashCode => Object.hash(
+      runtimeType, const DeepCollectionEquality().hash(_categories));
 
   @override
   String toString() {
-    return 'SettingsEvent.smartCropLevelChanged(level: $level)';
+    return 'SettingsEvent.categoriesChanged(categories: $categories)';
   }
 }
 
 /// @nodoc
-abstract mixin class $SettingsEventSmartCropLevelChangedCopyWith<$Res>
+abstract mixin class $SettingsEventCategoriesChangedCopyWith<$Res>
     implements $SettingsEventCopyWith<$Res> {
-  factory $SettingsEventSmartCropLevelChangedCopyWith(
-          SettingsEventSmartCropLevelChanged value,
-          $Res Function(SettingsEventSmartCropLevelChanged) _then) =
-      _$SettingsEventSmartCropLevelChangedCopyWithImpl;
+  factory $SettingsEventCategoriesChangedCopyWith(
+          SettingsEventCategoriesChanged value,
+          $Res Function(SettingsEventCategoriesChanged) _then) =
+      _$SettingsEventCategoriesChangedCopyWithImpl;
   @useResult
-  $Res call({int level});
+  $Res call({List<String> categories});
 }
 
 /// @nodoc
-class _$SettingsEventSmartCropLevelChangedCopyWithImpl<$Res>
-    implements $SettingsEventSmartCropLevelChangedCopyWith<$Res> {
-  _$SettingsEventSmartCropLevelChangedCopyWithImpl(this._self, this._then);
+class _$SettingsEventCategoriesChangedCopyWithImpl<$Res>
+    implements $SettingsEventCategoriesChangedCopyWith<$Res> {
+  _$SettingsEventCategoriesChangedCopyWithImpl(this._self, this._then);
 
-  final SettingsEventSmartCropLevelChanged _self;
-  final $Res Function(SettingsEventSmartCropLevelChanged) _then;
+  final SettingsEventCategoriesChanged _self;
+  final $Res Function(SettingsEventCategoriesChanged) _then;
 
   /// Create a copy of SettingsEvent
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   $Res call({
-    Object? level = null,
+    Object? categories = null,
   }) {
-    return _then(SettingsEventSmartCropLevelChanged(
-      null == level
-          ? _self.level
-          : level // ignore: cast_nullable_to_non_nullable
-              as int,
-    ));
-  }
-}
-
-/// @nodoc
-
-class SettingsEventSubjectScalingToggled implements SettingsEvent {
-  const SettingsEventSubjectScalingToggled(this.value);
-
-  final bool value;
-
-  /// Create a copy of SettingsEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @pragma('vm:prefer-inline')
-  $SettingsEventSubjectScalingToggledCopyWith<
-          SettingsEventSubjectScalingToggled>
-      get copyWith => _$SettingsEventSubjectScalingToggledCopyWithImpl<
-          SettingsEventSubjectScalingToggled>(this, _$identity);
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is SettingsEventSubjectScalingToggled &&
-            (identical(other.value, value) || other.value == value));
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, value);
-
-  @override
-  String toString() {
-    return 'SettingsEvent.subjectScalingToggled(value: $value)';
-  }
-}
-
-/// @nodoc
-abstract mixin class $SettingsEventSubjectScalingToggledCopyWith<$Res>
-    implements $SettingsEventCopyWith<$Res> {
-  factory $SettingsEventSubjectScalingToggledCopyWith(
-          SettingsEventSubjectScalingToggled value,
-          $Res Function(SettingsEventSubjectScalingToggled) _then) =
-      _$SettingsEventSubjectScalingToggledCopyWithImpl;
-  @useResult
-  $Res call({bool value});
-}
-
-/// @nodoc
-class _$SettingsEventSubjectScalingToggledCopyWithImpl<$Res>
-    implements $SettingsEventSubjectScalingToggledCopyWith<$Res> {
-  _$SettingsEventSubjectScalingToggledCopyWithImpl(this._self, this._then);
-
-  final SettingsEventSubjectScalingToggled _self;
-  final $Res Function(SettingsEventSubjectScalingToggled) _then;
-
-  /// Create a copy of SettingsEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  $Res call({
-    Object? value = null,
-  }) {
-    return _then(SettingsEventSubjectScalingToggled(
-      null == value
-          ? _self.value
-          : value // ignore: cast_nullable_to_non_nullable
-              as bool,
+    return _then(SettingsEventCategoriesChanged(
+      null == categories
+          ? _self._categories
+          : categories // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }

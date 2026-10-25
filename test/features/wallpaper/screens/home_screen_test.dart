@@ -26,14 +26,13 @@ void main() {
   });
 
   final mockImage = ImageItem(
-    "Source",
-    "https://example.com/image.jpg",
-    "Description",
-    DateTime.now(),
-    DateTime.now().add(const Duration(days: 1)),
-    "image_ident",
-    null,
-    "Copyright",
+    id: 'image_ident',
+    date: DateTime.now(),
+    source: 'Source',
+    imageUrl: 'https://example.com/image.jpg',
+    createdAt: DateTime.now(),
+    title: 'Description',
+    credit: 'Copyright',
   );
 
   Widget createWidgetUnderTest() {
@@ -72,7 +71,7 @@ void main() {
     final Carousel carousel = tester.widget(carouselFinder);
 
     // Simuler le fait que le PageView change de page (e.g., causé par Material You)
-    carousel.onChange?.call(1, false);
+    carousel.onChange(1, false);
 
     // Vérifier que le BLoC n'a reçu AUCUN événement indexChanged
     verifyNever(() => mockHomeBloc.add(const HomeEvent.indexChanged(1)));
@@ -97,7 +96,7 @@ void main() {
     final Carousel carousel = tester.widget(carouselFinder);
 
     // Simuler un changement de page
-    carousel.onChange?.call(1, false);
+    carousel.onChange(1, false);
 
     // Vérifier que le BLoC A BIEN reçu l'événement
     verify(() => mockHomeBloc.add(const HomeEvent.indexChanged(1))).called(1);

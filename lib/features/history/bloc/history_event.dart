@@ -9,6 +9,4 @@ sealed class HistoryEvent with _$HistoryEvent {
       HistoryEventDateSelected;
   const factory HistoryEvent.wallpaperUpdateRequested(int index) =
       HistoryEventWallpaperUpdateRequested;
-  const factory HistoryEvent.indexChanged(int index) =
-      HistoryEventIndexChanged;
 }

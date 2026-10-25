@@ -1,32 +1,41 @@
 # Project Guidelines
 
 ## Code Style
-- This is a Dart/Flutter app. Use `dart format .` and `flutter analyze` to keep code consistent.
-- Linting is configured via `analysis_options.yaml` at the repo root.
-- Generated code lives in `*.g.dart` (json_serializable / built_value). Do not edit generated files manually; regenerate them using build_runner.
+- This is a Dart/Flutter app. Format changed Dart files with `dart format` and
+  validate with `flutter analyze`.
+- Linting is configured in the repository-root `analysis_options.yaml`.
+- Freezed unions are generated; update their source declarations and regenerate
+  with `dart run build_runner build`.
 
 ## Architecture
-- UI code lives under `lib/screen/` and reusable widgets under `lib/widget/`.
-- Business logic is in `lib/bloc/` + `lib/bloc_state/` and exposed via small InheritedWidget providers in `lib/bloc_provider/` (e.g., `HomeProvider`, `SettingsProvider`).
-- HTTP APIs are implemented under `lib/api/` (Bing / Pexels / NASA).
-- Models are under `lib/models/` (mix of plain Dart models and `json_serializable` / `built_value`).
-- Services such as caching and smart-crop are in `lib/services/`.
+- UI lives under `lib/features/` and reusable widgets under `lib/widgets/`.
+- Feature state and orchestration use `flutter_bloc`.
+- The read-only Supabase REST data source is
+  `lib/data/datasources/supabase_wallpaper_data_source.dart`; repository
+  operations live in `lib/data/repositories/image_repository.dart`.
+- `ImageItem` maps a row from the Supabase `wallpapers` table.
+- The app renders Cloudinary `image_url` values directly. Image generation and
+  crop preparation happen in an external service, not in Flutter.
+- Shared Preferences stores the lock-screen option and carousel selection.
 
 ## Build & Test
 - Install dependencies: `flutter pub get`
-- Regenerate generated sources: `flutter pub run build_runner build --delete-conflicting-outputs`
-- Run the app: `flutter run -d <device>` (Android only; only Android platform enabled in `pubspec.yaml`).
-- Run tests via the provided helper: `dart test_runner.dart unit|integration|all|fast`.
-- For analysis: `flutter analyze`.
+- Regenerate Freezed sources: `dart run build_runner build`
+- Run on Android 12 or later: `flutter run -d <device>`
+- Run tests: `flutter test`
+- Analyze: `flutter analyze`
 
-## Project Conventions
-- Configuration is loaded from `.env` (gitignored). Ensure `.env` contains at least `PEXELS_API_KEY` and `NASA_API_KEY`.
-- The app uses a local SQLite database (`wallpaper.db`) via `sqflite`.
-- Most screens use a stream-based BLoC pattern and a small custom provider layer (no `flutter_bloc` package).
+## Configuration and Security
+- Supply `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` with Dart build defines.
+- The app does not bundle or read `.env`; use only a public publishable key in
+  the client. Never use a Supabase secret or legacy `service_role` key there.
+- Supabase Row Level Security permits reads of wallpapers and downloader
+  settings. Global NASA settings are changed through the authenticated
+  `update-downloader-settings` Edge Function; its admin email allowlist and
+  secret key stay in Supabase Function secrets.
+- Store auth refresh tokens only in secure storage.
+- Keep secret keys on a trusted server. Do not commit credentials.
 
-## Integration Points
-- Bing Image of the Day is accessed via `lib/api/bing_service.dart` and `bing_data.json`.
-- Pexels and NASA require API keys in `.env` (see `lib/api/pexels_service.dart` and `lib/api/nasa_service.dart`).
-
-## Security
-- Do not commit `.env` or API keys. `.gitignore` already excludes `.env`.
+## Android
+- The app's Android minimum SDK is 31 for AVIF support.
+- Android platform configuration is under `android/`.

@@ -6,7 +6,6 @@ import 'package:dailywallpaper/features/history/bloc/history_bloc.dart';
 import 'package:dailywallpaper/features/history/bloc/history_state.dart';
 import 'package:dailywallpaper/features/history/screens/widgets/history_app_bar.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
-import 'package:dailywallpaper/data/models/image_item.dart';
 
 class MockHistoryBloc extends Mock implements HistoryBloc {}
 
@@ -34,7 +33,6 @@ void main() {
               notifierIndex: notifierIndex,
               onDateSelected: (_) {},
               onShowImageInfo: (_, __) {},
-              onShowCropInfo: (_, __) {},
             ),
           ),
         ),
@@ -55,7 +53,8 @@ void main() {
     expect(find.byIcon(Icons.more_vert), findsOneWidget);
   });
 
-  testWidgets('HistoryAppBar popup menu has specific items',
+  testWidgets(
+      'HistoryAppBar popup menu has navigation items without crop tools',
       (WidgetTester tester) async {
     final now = DateTime.now();
     await tester.pumpWidget(createWidgetUnderTest(HistoryState.loaded(
@@ -68,7 +67,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.center_focus_strong), findsOneWidget);
+    expect(find.byIcon(Icons.center_focus_strong), findsNothing);
     expect(find.byIcon(Icons.settings), findsOneWidget);
     expect(find.byIcon(Icons.home), findsOneWidget);
   });

@@ -1,67 +1,47 @@
-# DailyWallpaper Documentation
+# Architecture
 
-Welcome to the official documentation for **DailyWallpaper**, a modern Flutter application for fetching, processing, and applying daily wallpapers from multiple sources.
+Daily Wallpaper is a read-only Flutter client for a Supabase `wallpapers` table.
+An external service creates and crops the images, uploads them to Cloudinary,
+and writes their ready-to-display URLs and metadata to Supabase.
 
-This document explains the software architecture, design choices, and supported features of the app.
+## Data flow
 
----
+- `SupabaseWallpaperDataSource` performs authenticated REST `GET` requests
+  using the public `SUPABASE_PUBLISHABLE_KEY` build define.
+- `ImageRepository` exposes the newest available date and historical records.
+- `ImageItem` maps the Supabase row, including the canonical `image_url` and
+  optional Cloudinary/crop metadata.
+- Home and History BLoCs load records and expose loading, empty, and error
+  states.
+- `CarouselItem` renders the Cloudinary URL directly. Applying a wallpaper
+  downloads the same URL as bytes and passes it to the Android wallpaper
+  plugin without running image analysis.
 
-## 1. Architecture
+## Supabase access
 
-The app is built on a clear, modular architecture that separates business logic, state management, and user interface.
+The app reads `public.wallpapers` and the singleton
+`public.downloader_settings` row. It reads and updates the shared NASA option
+and Pexels category selection directly through PostgREST with the public
+publishable key. No Supabase Auth session or sign-in is used for settings.
+Row-level security permits anonymous updates to the settings columns, while
+database constraints restrict Pexels categories to the supported options and
+limit selection to one through three. The downloader reads
+`downloader_settings.include_nasa` and `downloader_settings.pexels_categories`.
+Wallpaper rows use nullable `category` for Pexels records; the ingestion
+service stores the selected Pexels category on each inserted image, while
+Bing and NASA rows leave it null. Daily and history carousels order Bing first,
+Pexels by the category selector order, and NASA last. The app bar uses a
+source label while the info sheet renders the original title and credit as
+HTML, including links.
 
-### 1.1 State Management (BLoC Pattern)
-DailyWallpaper uses the **BLoC (Business Logic Component)** pattern for global state management. The architecture is organized by feature:
-- **Home (`lib/features/wallpaper/`)**: Manages the main screen, display, and selection of the wallpaper of the day.
-- **History (`lib/features/history/`)**: Handles the history of previously retrieved images.
-- **Settings (`lib/features/settings/`)**: Manages user preferences (image sources, regions, crop settings).
+Pass only `SUPABASE_URL` and the public `SUPABASE_PUBLISHABLE_KEY` as build
+defines. The publishable key is included in the client binary and is public by
+design. Never pass a secret or legacy service-role key to the app. The app does
+not bundle or read `.env`.
 
-Each module contains its own `Bloc`, `State`, `Provider` (for dependency injection), and `Screens`.
+## Local state and Android
 
-### 1.2 Data Layer Structure
-- **Models (`lib/data/models/`)**: Uses `built_value` and `json_serializable` for strong typing and safe serialization of data from external APIs (Bing, NASA, Pexels).
-- **Repositories (`lib/data/repositories/`)**: Abstracts data access. The `ImageRepository` orchestrates access to different services (Bing, NASA, Pexels).
-- **Local Database**: Uses `sqflite` (e.g. `wallpaper.db` and `crop_cache.db`) to store history and expensive image calculations. User preferences are stored with `shared_preferences`.
-
-### 1.3 Smart Crop Engine
-The project’s technical core lives in `lib/features/smart_crop/`. This engine uses multiple analyzers to identify the best crop area so images fit vertical mobile screens without losing the main subject.
-
-For a **high-level explanation** (two-phase analyse vs apply, diagrams, caching, app integration), see **[SMART_CROP.md](SMART_CROP.md)**.
-
----
-
-## 2. Design and UI/UX
-
-The interface is designed for an **immersive** and smooth experience, keeping the image front and center.
-
-- **Immersive / Edge-to-Edge**: The UI hides or makes system bars transparent so the image is displayed fullscreen (`SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge)`).
-- **Transparency and Layers**: Menus and informational text use transparency and overlays so they do not block the wallpaper view.
-- **Reusable Components**: Widgets are centralized and modular (`lib/widgets/`: carousel, buttons, image info, descriptive text, etc.).
-- **Performance Optimization**: Image rendering uses optimized components (`OptimizedImageWidget`) combined with a preloader service (`ImagePreloaderService`) that anticipates loading to avoid stuttering during swipes or history scrolling.
-
----
-
-## 3. Supported Features
-
-### 3.1 Multiple Image Sources
-The app supports multiple sources and integrates via secure APIs stored in `.env`:
-- **Bing**: Bing’s image of the day with support for changing region.
-- **NASA**: Astronomy Picture of the Day (APOD).
-- **Pexels**: High-quality photo search by configurable categories.
-
-### 3.2 Smart Crop
-A device-side image analysis engine centers the wallpaper around the most interesting part of the image:
-- Face detection (`FaceDetectionCropAnalyzer`).
-- Object and subject detection via machine learning (`MLSubjectCropAnalyzer`, `SubjectDetectionCropAnalyzer`).
-- Entropy and color-based analysis (`EntropyBasedCropAnalyzer`, `ColorCropAnalyzer`).
-- Composition-aware cropping with the rule of thirds (`RuleOfThirdsCropAnalyzer`, `EnhancedCompositionCropAnalyzer`).
-
-### 3.3 History and Cache Management
-- Users can browse an unlimited history of wallpapers and revisit previous days (`HistoryScreen`).
-- **Intelligent Cache Manager (`IntelligentCacheManager`)**: Automatically purges old images and stores crop profiles to avoid recalculating images that were already processed.
-
-### 3.4 Wallpaper Setting
-Using a custom or third-party plugin (`setwallpaper`), the app can apply the selected image as the home screen wallpaper, lock screen wallpaper, or both.
-
-### 3.5 Quality and Battery Management
-The Smart Crop system includes performance profilers (`BatteryOptimizer`, `PerformanceProfiler`) to dynamically adjust analysis complexity based on battery state and device hardware.
+Shared Preferences stores the lock-screen option and carousel selection.
+Wallpaper rows and history are not stored in SQLite. Android's minimum SDK is
+31 (Android 12) for AVIF decoding; the app uses the existing Android target
+SDK configuration.

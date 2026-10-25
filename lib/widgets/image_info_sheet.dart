@@ -1,65 +1,99 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:dailywallpaper/data/models/image_item.dart';
-import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class ImageInfoBottomSheet extends StatelessWidget {
-  final ImageItem image;
+import 'html_text.dart';
 
-  const ImageInfoBottomSheet({Key? key, required this.image}) : super(key: key);
+class ImageInfoBottomSheet extends StatelessWidget {
+  const ImageInfoBottomSheet({super.key, required this.image});
+
+  final ImageItem image;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              image.description,
-              style:
-                  const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16.0),
-            Html(
-              data: image.copyright,
-              style: {
-                "body": Style(
-                  fontSize: FontSize(15.0),
-                  margin: Margins.zero,
-                  padding: HtmlPaddings.zero,
+    final title = image.title?.trim();
+    final credit = image.credit?.trim();
+    final sourceUri = Uri.tryParse(image.sourceUrl ?? '');
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HtmlText(
+                data: title?.isNotEmpty == true ? title! : image.displayTitle,
+                style: Theme.of(context).textTheme.titleLarge!,
+                linkStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  decoration: TextDecoration.underline,
                 ),
-                "a": Style(
-                  color: Colors.blue,
-                  textDecoration: TextDecoration.underline,
+                onLinkTap: (url) {
+                  unawaited(_openLink(context, url));
+                },
+              ),
+              const SizedBox(height: 12),
+              Text('Source: ${image.source}'),
+              if (credit?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                HtmlText(
+                  data: credit!,
+                  style: Theme.of(context).textTheme.bodyMedium!,
+                  linkStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                  onLinkTap: (url) {
+                    unawaited(_openLink(context, url));
+                  },
                 ),
-              },
-              onLinkTap: (url, attributes, element) async {
-                if (url != null) {
-                  await _launchUrl(url);
-                }
-              },
-            ),
-          ],
+              ],
+              if (sourceUri != null &&
+                  (sourceUri.scheme == 'https' || sourceUri.scheme == 'http'))
+                TextButton.icon(
+                  onPressed: () => _openLink(context, sourceUri.toString()),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Open source'),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _launchUrl(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(
-        uri,
-        mode: LaunchMode.inAppBrowserView,
-        browserConfiguration: const BrowserConfiguration(
-          showTitle: true,
-        ),
-      );
-    } else {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _openLink(BuildContext context, String? url) async {
+    final uri = Uri.tryParse(url ?? '');
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      _showLinkError(context, 'This link is invalid or unsupported.');
+      return;
     }
+
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+          context.mounted) {
+        _showLinkError(context, 'Could not open source URL.');
+      }
+    } on PlatformException catch (error) {
+      if (context.mounted) {
+        _showLinkError(context, 'Could not open source URL: $error');
+      }
+    }
+  }
+
+  void _showLinkError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }

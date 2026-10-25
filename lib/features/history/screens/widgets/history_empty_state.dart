@@ -9,12 +9,12 @@ class HistoryEmptyState extends StatelessWidget {
   final Function(DateTime) onDateSelected;
 
   const HistoryEmptyState({
-    Key? key,
+    super.key,
     required this.state,
     required this.isToday,
     required this.formattedDate,
     required this.onDateSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

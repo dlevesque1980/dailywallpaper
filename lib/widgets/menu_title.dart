@@ -3,19 +3,17 @@ import 'package:flutter/material.dart';
 
 class MenuTitle extends StatelessWidget {
   const MenuTitle({
-    required Key key,
-    required List<ImageItem> images,
-    required int imageIndex,
-  })  : _imageIndex = imageIndex,
-        _images = images,
-        super(key: key);
+    super.key,
+    required this.images,
+    required this.imageIndex,
+  });
 
-  final int _imageIndex;
-  final List<ImageItem> _images;
+  final int imageIndex;
+  final List<ImageItem> images;
   @override
   Widget build(BuildContext context) {
-    return new Expanded(
-      child: new Text(_images[_imageIndex].source,
+    return Expanded(
+      child: Text(images[imageIndex].displayTitle,
           style: TextStyle(
               fontSize: 20, fontWeight: FontWeight.w500, color: Colors.white)),
     );
