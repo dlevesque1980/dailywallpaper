@@ -14,14 +14,12 @@ T _$identity<T>(T value) => value;
 
 /// @nodoc
 mixin _$SettingsState {
-  BingRegionEnum get selectedRegion;
   bool get includeLockWallpaper;
-  bool get isSmartCropEnabled;
-  int get smartCropLevel;
-  bool get enableSubjectScaling;
-  DeviceCapability? get deviceCapability;
-  List<RegionItem> get thumbnails;
+  bool get includeNasa;
+  List<String> get selectedCategories;
   bool get isLoading;
+  bool get isSavingNasa;
+  bool get isSavingCategories;
   String? get error;
 
   /// Create a copy of SettingsState
@@ -37,41 +35,35 @@ mixin _$SettingsState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is SettingsState &&
-            (identical(other.selectedRegion, selectedRegion) ||
-                other.selectedRegion == selectedRegion) &&
             (identical(other.includeLockWallpaper, includeLockWallpaper) ||
                 other.includeLockWallpaper == includeLockWallpaper) &&
-            (identical(other.isSmartCropEnabled, isSmartCropEnabled) ||
-                other.isSmartCropEnabled == isSmartCropEnabled) &&
-            (identical(other.smartCropLevel, smartCropLevel) ||
-                other.smartCropLevel == smartCropLevel) &&
-            (identical(other.enableSubjectScaling, enableSubjectScaling) ||
-                other.enableSubjectScaling == enableSubjectScaling) &&
-            (identical(other.deviceCapability, deviceCapability) ||
-                other.deviceCapability == deviceCapability) &&
+            (identical(other.includeNasa, includeNasa) ||
+                other.includeNasa == includeNasa) &&
             const DeepCollectionEquality()
-                .equals(other.thumbnails, thumbnails) &&
+                .equals(other.selectedCategories, selectedCategories) &&
             (identical(other.isLoading, isLoading) ||
                 other.isLoading == isLoading) &&
+            (identical(other.isSavingNasa, isSavingNasa) ||
+                other.isSavingNasa == isSavingNasa) &&
+            (identical(other.isSavingCategories, isSavingCategories) ||
+                other.isSavingCategories == isSavingCategories) &&
             (identical(other.error, error) || other.error == error));
   }
 
   @override
   int get hashCode => Object.hash(
       runtimeType,
-      selectedRegion,
       includeLockWallpaper,
-      isSmartCropEnabled,
-      smartCropLevel,
-      enableSubjectScaling,
-      deviceCapability,
-      const DeepCollectionEquality().hash(thumbnails),
+      includeNasa,
+      const DeepCollectionEquality().hash(selectedCategories),
       isLoading,
+      isSavingNasa,
+      isSavingCategories,
       error);
 
   @override
   String toString() {
-    return 'SettingsState(selectedRegion: $selectedRegion, includeLockWallpaper: $includeLockWallpaper, isSmartCropEnabled: $isSmartCropEnabled, smartCropLevel: $smartCropLevel, enableSubjectScaling: $enableSubjectScaling, deviceCapability: $deviceCapability, thumbnails: $thumbnails, isLoading: $isLoading, error: $error)';
+    return 'SettingsState(includeLockWallpaper: $includeLockWallpaper, includeNasa: $includeNasa, selectedCategories: $selectedCategories, isLoading: $isLoading, isSavingNasa: $isSavingNasa, isSavingCategories: $isSavingCategories, error: $error)';
   }
 }
 
@@ -82,14 +74,12 @@ abstract mixin class $SettingsStateCopyWith<$Res> {
       _$SettingsStateCopyWithImpl;
   @useResult
   $Res call(
-      {BingRegionEnum selectedRegion,
-      bool includeLockWallpaper,
-      bool isSmartCropEnabled,
-      int smartCropLevel,
-      bool enableSubjectScaling,
-      DeviceCapability? deviceCapability,
-      List<RegionItem> thumbnails,
+      {bool includeLockWallpaper,
+      bool includeNasa,
+      List<String> selectedCategories,
       bool isLoading,
+      bool isSavingNasa,
+      bool isSavingCategories,
       String? error});
 }
 
@@ -106,48 +96,38 @@ class _$SettingsStateCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? selectedRegion = null,
     Object? includeLockWallpaper = null,
-    Object? isSmartCropEnabled = null,
-    Object? smartCropLevel = null,
-    Object? enableSubjectScaling = null,
-    Object? deviceCapability = freezed,
-    Object? thumbnails = null,
+    Object? includeNasa = null,
+    Object? selectedCategories = null,
     Object? isLoading = null,
+    Object? isSavingNasa = null,
+    Object? isSavingCategories = null,
     Object? error = freezed,
   }) {
     return _then(_self.copyWith(
-      selectedRegion: null == selectedRegion
-          ? _self.selectedRegion
-          : selectedRegion // ignore: cast_nullable_to_non_nullable
-              as BingRegionEnum,
       includeLockWallpaper: null == includeLockWallpaper
           ? _self.includeLockWallpaper
           : includeLockWallpaper // ignore: cast_nullable_to_non_nullable
               as bool,
-      isSmartCropEnabled: null == isSmartCropEnabled
-          ? _self.isSmartCropEnabled
-          : isSmartCropEnabled // ignore: cast_nullable_to_non_nullable
+      includeNasa: null == includeNasa
+          ? _self.includeNasa
+          : includeNasa // ignore: cast_nullable_to_non_nullable
               as bool,
-      smartCropLevel: null == smartCropLevel
-          ? _self.smartCropLevel
-          : smartCropLevel // ignore: cast_nullable_to_non_nullable
-              as int,
-      enableSubjectScaling: null == enableSubjectScaling
-          ? _self.enableSubjectScaling
-          : enableSubjectScaling // ignore: cast_nullable_to_non_nullable
-              as bool,
-      deviceCapability: freezed == deviceCapability
-          ? _self.deviceCapability
-          : deviceCapability // ignore: cast_nullable_to_non_nullable
-              as DeviceCapability?,
-      thumbnails: null == thumbnails
-          ? _self.thumbnails
-          : thumbnails // ignore: cast_nullable_to_non_nullable
-              as List<RegionItem>,
+      selectedCategories: null == selectedCategories
+          ? _self.selectedCategories
+          : selectedCategories // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       isLoading: null == isLoading
           ? _self.isLoading
           : isLoading // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isSavingNasa: null == isSavingNasa
+          ? _self.isSavingNasa
+          : isSavingNasa // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isSavingCategories: null == isSavingCategories
+          ? _self.isSavingCategories
+          : isSavingCategories // ignore: cast_nullable_to_non_nullable
               as bool,
       error: freezed == error
           ? _self.error
@@ -249,14 +229,12 @@ extension SettingsStatePatterns on SettingsState {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(
-            BingRegionEnum selectedRegion,
             bool includeLockWallpaper,
-            bool isSmartCropEnabled,
-            int smartCropLevel,
-            bool enableSubjectScaling,
-            DeviceCapability? deviceCapability,
-            List<RegionItem> thumbnails,
+            bool includeNasa,
+            List<String> selectedCategories,
             bool isLoading,
+            bool isSavingNasa,
+            bool isSavingCategories,
             String? error)?
         $default, {
     required TResult orElse(),
@@ -265,14 +243,12 @@ extension SettingsStatePatterns on SettingsState {
     switch (_that) {
       case _SettingsState() when $default != null:
         return $default(
-            _that.selectedRegion,
             _that.includeLockWallpaper,
-            _that.isSmartCropEnabled,
-            _that.smartCropLevel,
-            _that.enableSubjectScaling,
-            _that.deviceCapability,
-            _that.thumbnails,
+            _that.includeNasa,
+            _that.selectedCategories,
             _that.isLoading,
+            _that.isSavingNasa,
+            _that.isSavingCategories,
             _that.error);
       case _:
         return orElse();
@@ -295,14 +271,12 @@ extension SettingsStatePatterns on SettingsState {
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
     TResult Function(
-            BingRegionEnum selectedRegion,
             bool includeLockWallpaper,
-            bool isSmartCropEnabled,
-            int smartCropLevel,
-            bool enableSubjectScaling,
-            DeviceCapability? deviceCapability,
-            List<RegionItem> thumbnails,
+            bool includeNasa,
+            List<String> selectedCategories,
             bool isLoading,
+            bool isSavingNasa,
+            bool isSavingCategories,
             String? error)
         $default,
   ) {
@@ -310,14 +284,12 @@ extension SettingsStatePatterns on SettingsState {
     switch (_that) {
       case _SettingsState():
         return $default(
-            _that.selectedRegion,
             _that.includeLockWallpaper,
-            _that.isSmartCropEnabled,
-            _that.smartCropLevel,
-            _that.enableSubjectScaling,
-            _that.deviceCapability,
-            _that.thumbnails,
+            _that.includeNasa,
+            _that.selectedCategories,
             _that.isLoading,
+            _that.isSavingNasa,
+            _that.isSavingCategories,
             _that.error);
     }
   }
@@ -337,14 +309,12 @@ extension SettingsStatePatterns on SettingsState {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(
-            BingRegionEnum selectedRegion,
             bool includeLockWallpaper,
-            bool isSmartCropEnabled,
-            int smartCropLevel,
-            bool enableSubjectScaling,
-            DeviceCapability? deviceCapability,
-            List<RegionItem> thumbnails,
+            bool includeNasa,
+            List<String> selectedCategories,
             bool isLoading,
+            bool isSavingNasa,
+            bool isSavingCategories,
             String? error)?
         $default,
   ) {
@@ -352,14 +322,12 @@ extension SettingsStatePatterns on SettingsState {
     switch (_that) {
       case _SettingsState() when $default != null:
         return $default(
-            _that.selectedRegion,
             _that.includeLockWallpaper,
-            _that.isSmartCropEnabled,
-            _that.smartCropLevel,
-            _that.enableSubjectScaling,
-            _that.deviceCapability,
-            _that.thumbnails,
+            _that.includeNasa,
+            _that.selectedCategories,
             _that.isLoading,
+            _that.isSavingNasa,
+            _that.isSavingCategories,
             _that.error);
       case _:
         return null;
@@ -371,40 +339,43 @@ extension SettingsStatePatterns on SettingsState {
 
 class _SettingsState implements SettingsState {
   const _SettingsState(
-      {required this.selectedRegion,
-      required this.includeLockWallpaper,
-      required this.isSmartCropEnabled,
-      required this.smartCropLevel,
-      required this.enableSubjectScaling,
-      this.deviceCapability,
-      required final List<RegionItem> thumbnails,
+      {required this.includeLockWallpaper,
+      this.includeNasa = true,
+      final List<String> selectedCategories = const [
+        'portrait',
+        'people',
+        'animals'
+      ],
       this.isLoading = false,
+      this.isSavingNasa = false,
+      this.isSavingCategories = false,
       this.error})
-      : _thumbnails = thumbnails;
+      : _selectedCategories = selectedCategories;
 
-  @override
-  final BingRegionEnum selectedRegion;
   @override
   final bool includeLockWallpaper;
   @override
-  final bool isSmartCropEnabled;
+  @JsonKey()
+  final bool includeNasa;
+  final List<String> _selectedCategories;
   @override
-  final int smartCropLevel;
-  @override
-  final bool enableSubjectScaling;
-  @override
-  final DeviceCapability? deviceCapability;
-  final List<RegionItem> _thumbnails;
-  @override
-  List<RegionItem> get thumbnails {
-    if (_thumbnails is EqualUnmodifiableListView) return _thumbnails;
+  @JsonKey()
+  List<String> get selectedCategories {
+    if (_selectedCategories is EqualUnmodifiableListView)
+      return _selectedCategories;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_thumbnails);
+    return EqualUnmodifiableListView(_selectedCategories);
   }
 
   @override
   @JsonKey()
   final bool isLoading;
+  @override
+  @JsonKey()
+  final bool isSavingNasa;
+  @override
+  @JsonKey()
+  final bool isSavingCategories;
   @override
   final String? error;
 
@@ -421,41 +392,35 @@ class _SettingsState implements SettingsState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _SettingsState &&
-            (identical(other.selectedRegion, selectedRegion) ||
-                other.selectedRegion == selectedRegion) &&
             (identical(other.includeLockWallpaper, includeLockWallpaper) ||
                 other.includeLockWallpaper == includeLockWallpaper) &&
-            (identical(other.isSmartCropEnabled, isSmartCropEnabled) ||
-                other.isSmartCropEnabled == isSmartCropEnabled) &&
-            (identical(other.smartCropLevel, smartCropLevel) ||
-                other.smartCropLevel == smartCropLevel) &&
-            (identical(other.enableSubjectScaling, enableSubjectScaling) ||
-                other.enableSubjectScaling == enableSubjectScaling) &&
-            (identical(other.deviceCapability, deviceCapability) ||
-                other.deviceCapability == deviceCapability) &&
+            (identical(other.includeNasa, includeNasa) ||
+                other.includeNasa == includeNasa) &&
             const DeepCollectionEquality()
-                .equals(other._thumbnails, _thumbnails) &&
+                .equals(other._selectedCategories, _selectedCategories) &&
             (identical(other.isLoading, isLoading) ||
                 other.isLoading == isLoading) &&
+            (identical(other.isSavingNasa, isSavingNasa) ||
+                other.isSavingNasa == isSavingNasa) &&
+            (identical(other.isSavingCategories, isSavingCategories) ||
+                other.isSavingCategories == isSavingCategories) &&
             (identical(other.error, error) || other.error == error));
   }
 
   @override
   int get hashCode => Object.hash(
       runtimeType,
-      selectedRegion,
       includeLockWallpaper,
-      isSmartCropEnabled,
-      smartCropLevel,
-      enableSubjectScaling,
-      deviceCapability,
-      const DeepCollectionEquality().hash(_thumbnails),
+      includeNasa,
+      const DeepCollectionEquality().hash(_selectedCategories),
       isLoading,
+      isSavingNasa,
+      isSavingCategories,
       error);
 
   @override
   String toString() {
-    return 'SettingsState(selectedRegion: $selectedRegion, includeLockWallpaper: $includeLockWallpaper, isSmartCropEnabled: $isSmartCropEnabled, smartCropLevel: $smartCropLevel, enableSubjectScaling: $enableSubjectScaling, deviceCapability: $deviceCapability, thumbnails: $thumbnails, isLoading: $isLoading, error: $error)';
+    return 'SettingsState(includeLockWallpaper: $includeLockWallpaper, includeNasa: $includeNasa, selectedCategories: $selectedCategories, isLoading: $isLoading, isSavingNasa: $isSavingNasa, isSavingCategories: $isSavingCategories, error: $error)';
   }
 }
 
@@ -468,14 +433,12 @@ abstract mixin class _$SettingsStateCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {BingRegionEnum selectedRegion,
-      bool includeLockWallpaper,
-      bool isSmartCropEnabled,
-      int smartCropLevel,
-      bool enableSubjectScaling,
-      DeviceCapability? deviceCapability,
-      List<RegionItem> thumbnails,
+      {bool includeLockWallpaper,
+      bool includeNasa,
+      List<String> selectedCategories,
       bool isLoading,
+      bool isSavingNasa,
+      bool isSavingCategories,
       String? error});
 }
 
@@ -492,48 +455,38 @@ class __$SettingsStateCopyWithImpl<$Res>
   @override
   @pragma('vm:prefer-inline')
   $Res call({
-    Object? selectedRegion = null,
     Object? includeLockWallpaper = null,
-    Object? isSmartCropEnabled = null,
-    Object? smartCropLevel = null,
-    Object? enableSubjectScaling = null,
-    Object? deviceCapability = freezed,
-    Object? thumbnails = null,
+    Object? includeNasa = null,
+    Object? selectedCategories = null,
     Object? isLoading = null,
+    Object? isSavingNasa = null,
+    Object? isSavingCategories = null,
     Object? error = freezed,
   }) {
     return _then(_SettingsState(
-      selectedRegion: null == selectedRegion
-          ? _self.selectedRegion
-          : selectedRegion // ignore: cast_nullable_to_non_nullable
-              as BingRegionEnum,
       includeLockWallpaper: null == includeLockWallpaper
           ? _self.includeLockWallpaper
           : includeLockWallpaper // ignore: cast_nullable_to_non_nullable
               as bool,
-      isSmartCropEnabled: null == isSmartCropEnabled
-          ? _self.isSmartCropEnabled
-          : isSmartCropEnabled // ignore: cast_nullable_to_non_nullable
+      includeNasa: null == includeNasa
+          ? _self.includeNasa
+          : includeNasa // ignore: cast_nullable_to_non_nullable
               as bool,
-      smartCropLevel: null == smartCropLevel
-          ? _self.smartCropLevel
-          : smartCropLevel // ignore: cast_nullable_to_non_nullable
-              as int,
-      enableSubjectScaling: null == enableSubjectScaling
-          ? _self.enableSubjectScaling
-          : enableSubjectScaling // ignore: cast_nullable_to_non_nullable
-              as bool,
-      deviceCapability: freezed == deviceCapability
-          ? _self.deviceCapability
-          : deviceCapability // ignore: cast_nullable_to_non_nullable
-              as DeviceCapability?,
-      thumbnails: null == thumbnails
-          ? _self._thumbnails
-          : thumbnails // ignore: cast_nullable_to_non_nullable
-              as List<RegionItem>,
+      selectedCategories: null == selectedCategories
+          ? _self._selectedCategories
+          : selectedCategories // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       isLoading: null == isLoading
           ? _self.isLoading
           : isLoading // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isSavingNasa: null == isSavingNasa
+          ? _self.isSavingNasa
+          : isSavingNasa // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isSavingCategories: null == isSavingCategories
+          ? _self.isSavingCategories
+          : isSavingCategories // ignore: cast_nullable_to_non_nullable
               as bool,
       error: freezed == error
           ? _self.error

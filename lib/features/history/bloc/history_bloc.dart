@@ -1,116 +1,84 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dailywallpaper/features/history/bloc/history_event.dart';
 import 'package:dailywallpaper/features/history/bloc/history_state.dart';
 import 'package:dailywallpaper/features/history/domain/usecases/fetch_history_usecase.dart';
 import 'package:dailywallpaper/features/wallpaper/domain/usecases/apply_wallpaper.dart';
-import 'package:dailywallpaper/services/image_preloader.dart';
-import 'package:dailywallpaper/services/image_preloader_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
-  final FetchHistoryUseCase _fetchHistoryUseCase;
-  final ApplyWallpaperUseCase _applyWallpaperUseCase;
-  final ImagePreloader _preloaderService;
-
   HistoryBloc({
     FetchHistoryUseCase? fetchHistoryUseCase,
     ApplyWallpaperUseCase? applyWallpaperUseCase,
-    ImagePreloader? preloaderService,
   })  : _fetchHistoryUseCase = fetchHistoryUseCase ?? FetchHistoryUseCase(),
         _applyWallpaperUseCase =
             applyWallpaperUseCase ?? ApplyWallpaperUseCase(),
-        _preloaderService = preloaderService ?? ImagePreloaderService(),
         super(HistoryState.initial(selectedDate: DateTime.now())) {
     on<HistoryEventStarted>(_onStarted);
     on<HistoryEventDateSelected>(_onDateSelected);
     on<HistoryEventWallpaperUpdateRequested>(_onWallpaperUpdateRequested);
-    on<HistoryEventIndexChanged>(_onIndexChanged);
   }
 
+  final FetchHistoryUseCase _fetchHistoryUseCase;
+  final ApplyWallpaperUseCase _applyWallpaperUseCase;
+
   Future<void> _onStarted(
-      HistoryEventStarted event, Emitter<HistoryState> emit) async {
+    HistoryEventStarted event,
+    Emitter<HistoryState> emit,
+  ) async {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-
-    emit(HistoryState.loading(selectedDate: todayDate, availableDates: []));
+    emit(HistoryState.loading(
+        selectedDate: todayDate, availableDates: const []));
 
     try {
-      final availableDates = await _fetchHistoryUseCase.getAvailableDates();
-      final images = await _fetchHistoryUseCase.getImagesForDate(todayDate);
-
-      if (images.isNotEmpty) {
-        try {
-          await _preloaderService
-              .preloadCurrentImageWithCrop(images[0])
-              .timeout(const Duration(seconds: 8));
-        } catch (e) {
-          debugPrint(
-              'Warning: preloadCurrentImageWithCrop timed out or failed ($e)');
-        }
-      }
-
-      unawaited(_preloaderService.preloadImages(images, 0));
-
-      if (!isClosed) {
-        emit(HistoryState.loaded(
-          images: images,
-          selectedDate: todayDate,
-          availableDates: availableDates,
-        ));
-      }
-    } catch (e) {
+      final datesFuture = _fetchHistoryUseCase.getAvailableDates();
+      final imagesFuture = _fetchHistoryUseCase.getImagesForDate(todayDate);
+      final dates = await datesFuture;
+      final images = await imagesFuture;
+      if (isClosed) return;
+      emit(HistoryState.loaded(
+        images: images,
+        selectedDate: todayDate,
+        availableDates: dates,
+      ));
+    } catch (error) {
       if (!isClosed) {
         emit(HistoryState.error(
-          message: 'failedToInitializeHistory: $e',
+          message: 'failedToInitializeHistory: $error',
           selectedDate: todayDate,
-          availableDates: [],
+          availableDates: const [],
         ));
       }
     }
   }
 
   Future<void> _onDateSelected(
-      HistoryEventDateSelected event, Emitter<HistoryState> emit) async {
-    final currentState = state;
-    final availableDates = currentState.map(
+    HistoryEventDateSelected event,
+    Emitter<HistoryState> emit,
+  ) async {
+    final availableDates = state.map(
       initial: (s) => s.availableDates,
       loading: (s) => s.availableDates,
       loaded: (s) => s.availableDates,
       error: (s) => s.availableDates,
     );
-
     emit(HistoryState.loading(
-        selectedDate: event.date, availableDates: availableDates));
+      selectedDate: event.date,
+      availableDates: availableDates,
+    ));
 
     try {
       final images = await _fetchHistoryUseCase.getImagesForDate(event.date);
-      final newAvailableDates = await _fetchHistoryUseCase.getAvailableDates();
-
-      if (images.isNotEmpty) {
-        try {
-          await _preloaderService
-              .preloadCurrentImageWithCrop(images[0])
-              .timeout(const Duration(seconds: 8));
-        } catch (e) {
-          debugPrint(
-              'Warning: preloadCurrentImageWithCrop timed out or failed ($e)');
-        }
-      }
-
-      unawaited(_preloaderService.preloadImages(images, 0));
-
       if (!isClosed) {
         emit(HistoryState.loaded(
           images: images,
           selectedDate: event.date,
-          availableDates: newAvailableDates,
+          availableDates: availableDates,
         ));
       }
-    } catch (e) {
+    } catch (error) {
       if (!isClosed) {
         emit(HistoryState.error(
-          message: 'failedToLoadImagesForDate: $e',
+          message: 'failedToLoadImagesForDate: $error',
           selectedDate: event.date,
           availableDates: availableDates,
         ));
@@ -119,53 +87,40 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   }
 
   Future<void> _onWallpaperUpdateRequested(
-      HistoryEventWallpaperUpdateRequested event,
-      Emitter<HistoryState> emit) async {
+    HistoryEventWallpaperUpdateRequested event,
+    Emitter<HistoryState> emit,
+  ) async {
     await state.mapOrNull(
       loaded: (loadedState) async {
+        if (event.index < 0 || event.index >= loadedState.images.length) {
+          emit(loadedState.copyWith(
+            wallpaperMessage: 'invalidImageIndex',
+            isSettingWallpaper: false,
+          ));
+          return;
+        }
         emit(loadedState.copyWith(
-            isSettingWallpaper: true, wallpaperMessage: null));
+          isSettingWallpaper: true,
+          wallpaperMessage: null,
+        ));
         try {
-          if (event.index >= 0 && event.index < loadedState.images.length) {
-            final image = loadedState.images[event.index];
-            final message = await _applyWallpaperUseCase(image);
-
-            if (!isClosed) {
-              emit(loadedState.copyWith(
-                  isSettingWallpaper: false,
-                  wallpaperMessage: message ?? 'wallpaperSetSuccess'));
-            }
-          } else {
-            if (!isClosed) {
-              emit(loadedState.copyWith(
-                  isSettingWallpaper: false,
-                  wallpaperMessage: 'invalidImageIndex'));
-            }
-          }
-        } catch (e) {
+          final message =
+              await _applyWallpaperUseCase(loadedState.images[event.index]);
           if (!isClosed) {
             emit(loadedState.copyWith(
-                isSettingWallpaper: false,
-                wallpaperMessage: 'failedToSetWallpaper: $e'));
+              isSettingWallpaper: false,
+              wallpaperMessage: message,
+            ));
+          }
+        } catch (error) {
+          if (!isClosed) {
+            emit(loadedState.copyWith(
+              isSettingWallpaper: false,
+              wallpaperMessage: 'failedToSetWallpaper: $error',
+            ));
           }
         }
       },
     );
-  }
-
-  Future<void> _onIndexChanged(
-      HistoryEventIndexChanged event, Emitter<HistoryState> emit) async {
-    await state.mapOrNull(
-      loaded: (loadedState) async {
-        if (event.index >= 0 && event.index < loadedState.images.length) {
-          unawaited(_preloaderService.preloadImages(loadedState.images, event.index));
-        }
-      },
-    );
-  }
-
-  @override
-  Future<void> close() {
-    return super.close();
   }
 }

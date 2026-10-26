@@ -9,9 +9,5 @@ sealed class HomeEvent with _$HomeEvent {
   const factory HomeEvent.indexChanged(int newIndex) = HomeEventIndexChanged;
   const factory HomeEvent.wallpaperUpdateRequested() =
       HomeEventWallpaperUpdateRequested;
-  const factory HomeEvent.cropStatusChanged({
-    required String imageIdent,
-    required bool isProcessing,
-  }) = HomeEventCropStatusChanged;
   const factory HomeEvent.appResumed() = HomeEventAppResumed;
 }

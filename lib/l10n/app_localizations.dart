@@ -100,71 +100,11 @@ abstract class AppLocalizations {
   /// **'Daily Wallpaper'**
   String get appTitle;
 
-  /// No description provided for @analysisInProgress.
+  /// No description provided for @loadingWallpapers.
   ///
   /// In en, this message translates to:
-  /// **'Analysis in progress...'**
-  String get analysisInProgress;
-
-  /// No description provided for @cropAnalysis.
-  ///
-  /// In en, this message translates to:
-  /// **'Crop Analysis'**
-  String get cropAnalysis;
-
-  /// No description provided for @strategy.
-  ///
-  /// In en, this message translates to:
-  /// **'Strategy'**
-  String get strategy;
-
-  /// No description provided for @confidence.
-  ///
-  /// In en, this message translates to:
-  /// **'Confidence'**
-  String get confidence;
-
-  /// No description provided for @targetAspect.
-  ///
-  /// In en, this message translates to:
-  /// **'Target Aspect'**
-  String get targetAspect;
-
-  /// No description provided for @coordinatesNormalized.
-  ///
-  /// In en, this message translates to:
-  /// **'Coordinates (Normalized)'**
-  String get coordinatesNormalized;
-
-  /// No description provided for @subjectDetection.
-  ///
-  /// In en, this message translates to:
-  /// **'Subject Detection'**
-  String get subjectDetection;
-
-  /// No description provided for @bounds.
-  ///
-  /// In en, this message translates to:
-  /// **'Bounds'**
-  String get bounds;
-
-  /// No description provided for @close.
-  ///
-  /// In en, this message translates to:
-  /// **'CLOSE'**
-  String get close;
-
-  /// No description provided for @optimizingWallpapers.
-  ///
-  /// In en, this message translates to:
-  /// **'Optimizing wallpapers...'**
-  String get optimizingWallpapers;
-
-  /// No description provided for @analyzingForCrop.
-  ///
-  /// In en, this message translates to:
-  /// **'Analyzing for the best crop'**
-  String get analyzingForCrop;
+  /// **'Loading wallpapers...'**
+  String get loadingWallpapers;
 
   /// No description provided for @settings.
   ///
@@ -205,7 +145,7 @@ abstract class AppLocalizations {
   /// No description provided for @noWallpapersDownloadedToday.
   ///
   /// In en, this message translates to:
-  /// **'No wallpapers have been downloaded yet today.\nCheck back later or visit the Home page to download today\'s images.'**
+  /// **'No wallpapers are available for today yet.'**
   String get noWallpapersDownloadedToday;
 
   /// No description provided for @noWallpapersSavedForDate.
@@ -229,14 +169,8 @@ abstract class AppLocalizations {
   /// No description provided for @noHistoricalImagesFound.
   ///
   /// In en, this message translates to:
-  /// **'No historical images found in the database.'**
+  /// **'No historical wallpapers are available yet.'**
   String get noHistoricalImagesFound;
-
-  /// No description provided for @databaseError.
-  ///
-  /// In en, this message translates to:
-  /// **'Database Error'**
-  String get databaseError;
 
   /// No description provided for @connectionError.
   ///
@@ -249,12 +183,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error'**
   String get error;
-
-  /// No description provided for @databaseErrorMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'There was a problem accessing the image database. This might be a temporary issue.'**
-  String get databaseErrorMessage;
 
   /// No description provided for @networkErrorMessage.
   ///
@@ -304,65 +232,47 @@ abstract class AppLocalizations {
   /// **'Apply wallpaper to lock screen'**
   String get applyWallpaperToLockScreen;
 
-  /// No description provided for @bingRegion.
+  /// No description provided for @includeNasaImages.
   ///
   /// In en, this message translates to:
-  /// **'Bing region'**
-  String get bingRegion;
+  /// **'Include NASA images'**
+  String get includeNasaImages;
 
-  /// No description provided for @selectPreferredRegion.
+  /// No description provided for @includeNasaImagesDescription.
   ///
   /// In en, this message translates to:
-  /// **'Select your preferred region for Bing images'**
-  String get selectPreferredRegion;
+  /// **'Allow the downloader to fetch NASA images'**
+  String get includeNasaImagesDescription;
 
   /// No description provided for @pexelsCategories.
   ///
   /// In en, this message translates to:
-  /// **'Pexels Categories'**
+  /// **'Pexels categories'**
   String get pexelsCategories;
 
   /// No description provided for @selectAtLeastOneCategory.
   ///
   /// In en, this message translates to:
-  /// **'Please select at least one category'**
+  /// **'Select at least one category'**
   String get selectAtLeastOneCategory;
 
-  /// No description provided for @noMoreThanFiveCategories.
+  /// No description provided for @noMoreThanThreeCategories.
   ///
   /// In en, this message translates to:
-  /// **'No more than 5 categories'**
-  String get noMoreThanFiveCategories;
+  /// **'Select no more than three categories'**
+  String get noMoreThanThreeCategories;
 
-  /// No description provided for @mlEngineStatus.
+  /// No description provided for @cancel.
   ///
   /// In en, this message translates to:
-  /// **'ML Engine Status'**
-  String get mlEngineStatus;
+  /// **'Cancel'**
+  String get cancel;
 
-  /// No description provided for @simulatedEmulator.
+  /// No description provided for @save.
   ///
   /// In en, this message translates to:
-  /// **'Simulated (Emulator)'**
-  String get simulatedEmulator;
-
-  /// No description provided for @active.
-  ///
-  /// In en, this message translates to:
-  /// **'Active'**
-  String get active;
-
-  /// No description provided for @modelSubjectSegmentation.
-  ///
-  /// In en, this message translates to:
-  /// **'Model: Subject Segmentation v8 (Mobile f16)'**
-  String get modelSubjectSegmentation;
-
-  /// No description provided for @realMlDisabledEmulator.
-  ///
-  /// In en, this message translates to:
-  /// **'⚠️ Real ML is disabled on emulator to avoid crashes.'**
-  String get realMlDisabledEmulator;
+  /// **'Save'**
+  String get save;
 
   /// No description provided for @selectRegion.
   ///

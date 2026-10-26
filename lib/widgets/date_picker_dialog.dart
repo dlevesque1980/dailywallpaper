@@ -7,14 +7,14 @@ class DatePickerDialogCustom extends StatefulWidget {
   final Function(DateTime) onDateSelected;
 
   const DatePickerDialogCustom({
-    Key? key,
+    super.key,
     required this.selectedDate,
     required this.availableDates,
     required this.onDateSelected,
-  }) : super(key: key);
+  });
 
   @override
-  _DatePickerDialogCustomState createState() => _DatePickerDialogCustomState();
+  State<DatePickerDialogCustom> createState() => _DatePickerDialogCustomState();
 }
 
 class _DatePickerDialogCustomState extends State<DatePickerDialogCustom> {

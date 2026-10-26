@@ -10,15 +10,13 @@ class HistoryAppBar extends StatelessWidget implements PreferredSizeWidget {
   final ValueNotifier<int> notifierIndex;
   final Function(DateTime) onDateSelected;
   final void Function(BuildContext, ImageItem) onShowImageInfo;
-  final void Function(BuildContext, ImageItem) onShowCropInfo;
 
   const HistoryAppBar({
-    Key? key,
+    super.key,
     required this.notifierIndex,
     required this.onDateSelected,
     required this.onShowImageInfo,
-    required this.onShowCropInfo,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -77,21 +75,7 @@ class HistoryAppBar extends StatelessWidget implements PreferredSizeWidget {
               },
             ),
             PopupMenuButton<String>(
-              onSelected: (choice) {
-                if (choice == 'crop_info') {
-                  state.mapOrNull(loaded: (loadedState) {
-                    if (loadedState.images.isNotEmpty) {
-                      int safeIndex = notifierIndex.value;
-                      if (safeIndex >= loadedState.images.length) {
-                        safeIndex = loadedState.images.length - 1;
-                      }
-                      onShowCropInfo(context, loadedState.images[safeIndex]);
-                    }
-                  });
-                } else {
-                  Navigator.pushNamed(context, choice);
-                }
-              },
+              onSelected: (choice) => Navigator.pushNamed(context, choice),
               icon: Icon(
                 Icons.more_vert,
                 color: Colors.white,
@@ -104,16 +88,6 @@ class HistoryAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ],
               ),
               itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
-                PopupMenuItem<String>(
-                  value: 'crop_info',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.center_focus_strong, size: 20),
-                      const SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.cropAnalysis),
-                    ],
-                  ),
-                ),
                 PopupMenuItem<String>(
                   value: '/settings',
                   child: Row(

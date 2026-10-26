@@ -10,12 +10,12 @@ class DateSelector extends StatelessWidget {
   final bool isLoading;
 
   const DateSelector({
-    Key? key,
+    super.key,
     required this.selectedDate,
     required this.availableDates,
     required this.onDateSelected,
     this.isLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

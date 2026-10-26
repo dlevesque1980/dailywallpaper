@@ -11,10 +11,10 @@ class HistoryWallpaperFab extends StatelessWidget {
   final String Function(BuildContext, String) translateMessage;
 
   const HistoryWallpaperFab({
-    Key? key,
+    super.key,
     required this.notifierIndex,
     required this.translateMessage,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

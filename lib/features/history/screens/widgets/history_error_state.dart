@@ -9,19 +9,18 @@ class HistoryErrorState extends StatelessWidget {
   final Function(DateTime) onRetry;
 
   const HistoryErrorState({
-    Key? key,
+    super.key,
     required this.state,
     required this.error,
     required this.translatedMessage,
     required this.onRetry,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isDatabaseError = error.toLowerCase().contains('database') ||
-        error.toLowerCase().contains('sql');
     final isNetworkError = error.toLowerCase().contains('network') ||
-        error.toLowerCase().contains('connection');
+        error.toLowerCase().contains('connection') ||
+        error.toLowerCase().contains('supabase');
 
     return Center(
       child: Padding(
@@ -30,21 +29,15 @@ class HistoryErrorState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isDatabaseError
-                  ? Icons.storage_outlined
-                  : isNetworkError
-                      ? Icons.wifi_off_outlined
-                      : Icons.error_outline,
+              isNetworkError ? Icons.wifi_off_outlined : Icons.error_outline,
               size: 80,
               color: Colors.red[400],
             ),
             const SizedBox(height: 16),
             Text(
-              isDatabaseError
-                  ? AppLocalizations.of(context)!.databaseError
-                  : isNetworkError
-                      ? AppLocalizations.of(context)!.connectionError
-                      : AppLocalizations.of(context)!.error,
+              isNetworkError
+                  ? AppLocalizations.of(context)!.connectionError
+                  : AppLocalizations.of(context)!.error,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,

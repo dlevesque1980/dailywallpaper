@@ -1,0 +1,1 @@
+flutter build apk --release --dart-define-from-file=dart_defines.json

@@ -10,7 +10,7 @@ Ce document fusionne les principes de Clean Architecture, les contraintes de per
 - **Feature-First** : Organisation par fonctionnalité dans `lib/features/[feature_name]/`.
 - **Vertical Slices** : Chaque feature contient ses propres dossiers `bloc/`, `data/`, et `presentation/`.
 - **Loi des 250** : Aucun fichier ne doit dépasser **250 lignes**. Si la logique est trop complexe, extraire dans des **UseCases** (logique métier pure) ou des services spécialisés.
-- **Repositories** : Abstraire systématiquement les sources de données (API `http`, base locale `sqflite`, `shared_preferences`).
+- **Repositories** : Abstraire l'accès en lecture seule à Supabase REST et les préférences locales `shared_preferences`.
 
 ## 2. Définition des BLoCs & RxDart
 - **Dart 3.0+** : Utilisation obligatoire de `sealed class` pour les `Events` et les `States`.
@@ -20,15 +20,15 @@ Ce document fusionne les principes de Clean Architecture, les contraintes de per
 - **Sécurité Asynchrone** : Toujours vérifier `if (!isClosed)` avant chaque `emit` après une opération `await`.
 
 ## 3. Gestion des Dépendances (Plugins Android)
-- **Isolation des Plugins** : Les appels directs à `google_mlkit_subject_segmentation`, `setwallpaper`, `device_info_plus`, etc., sont interdits dans l'UI ou les BLoCs. Ils doivent résider dans des classes `Service` ou `DataSource` injectées.
+- **Isolation des Plugins** : Les appels directs à `setwallpaper` et aux services réseau sont interdits dans l'UI ou les BLoCs. Ils doivent résider dans des classes `Service` ou `DataSource` injectées.
 - **Injection par Constructeur** : Toutes les dépendances (Repositories/Services) doivent être passées au constructeur du BLoC pour faciliter les tests et le découplage.
-- **Environnement** : Utiliser `flutter_dotenv` pour toutes les configurations sensibles.
+- **Environnement** : Fournir `SUPABASE_PUBLISHABLE_KEY` comme build define. Ne jamais intégrer une clé Supabase `secret` ou `service_role` dans l'application cliente; réserver ces clés à un serveur de confiance.
 
 ## 4. UI & Présentation
 - **Séparation Stricte** : Aucune logique métier ou transformation de données brute dans les widgets.
 - **Interaction BLoC** :
     - **Action** : `context.read<MyBloc>().add(MyEvent())`.
-    - **UI** : `BlocBuilder<MyBloc, MyState>` avec `buildWhen` pour optimiser la performance (important pour `flutter_html`).
+    - **UI** : `BlocBuilder<MyBloc, MyState>` avec `buildWhen` pour limiter les reconstructions inutiles.
     - **Effets (Toasts/Navigation)** : `BlocListener<MyBloc, MyState>` pour `fluttertoast` et `url_launcher`.
 - **Localisation** : Utiliser `intl` pour extraire toutes les chaînes de caractères.
 

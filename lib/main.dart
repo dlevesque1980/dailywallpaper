@@ -4,31 +4,14 @@ import 'package:dailywallpaper/features/history/bloc/history_bloc.dart';
 import 'package:dailywallpaper/features/history/bloc/history_event.dart';
 import 'package:dailywallpaper/features/settings/bloc/settings_bloc.dart';
 import 'package:dailywallpaper/features/settings/bloc/settings_event.dart';
-import 'package:dailywallpaper/features/settings/bloc/pexels_categories_bloc.dart';
-import 'package:dailywallpaper/features/settings/bloc/pexels_categories_event.dart';
 import 'package:dailywallpaper/features/wallpaper/screens/home_screen.dart';
 import 'package:dailywallpaper/features/history/screens/history_screen.dart';
 import 'package:dailywallpaper/features/settings/screens/simplified_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/foundation.dart';
 
 import 'package:dailywallpaper/l10n/app_localizations.dart';
-import 'package:workmanager/workmanager.dart';
-import 'package:dailywallpaper/services/background/daily_fetch_task.dart';
-import 'package:dailywallpaper/services/background/background_scheduler.dart';
-
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((taskName, inputData) async {
-    if (taskName == DailyFetchTask.taskName) {
-      return await DailyFetchTask.execute();
-    }
-    return Future.value(true);
-  });
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,17 +27,6 @@ void main() async {
 
   // Full screen mode for maximum immersive experience
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
-  await dotenv.load(fileName: ".env");
-
-  // Initialize background workmanager
-  await Workmanager().initialize(
-    callbackDispatcher,
-    isInDebugMode: kDebugMode,
-  );
-
-  // Schedule next 5:00 AM fetch
-  await BackgroundScheduler.scheduleNextDailyFetch();
 
   runApp(const MyApp());
 }
@@ -82,12 +54,8 @@ class MyApp extends StatelessWidget {
                     create: (context) =>
                         SettingsBloc()..add(const SettingsEvent.started()),
                   ),
-                  BlocProvider<PexelsCategoriesBloc>(
-                    create: (context) => PexelsCategoriesBloc()
-                      ..add(const PexelsCategoriesEvent.started()),
-                  ),
                 ],
-                child: SimplifiedSettingsScreen(),
+                child: const SimplifiedSettingsScreen(),
               ),
           '/older': (context) => BlocProvider<HistoryBloc>(
                 create: (context) =>

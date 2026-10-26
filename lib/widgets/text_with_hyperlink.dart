@@ -5,10 +5,12 @@ class TextWithHyperLink extends StatelessWidget {
   final String text;
   final Color color;
   final Color hyperlinkColor;
-  TextWithHyperLink(
-      {required this.text,
-      this.color = Colors.blue,
-      this.hyperlinkColor = Colors.purple});
+  const TextWithHyperLink({
+    super.key,
+    required this.text,
+    this.color = Colors.blue,
+    this.hyperlinkColor = Colors.purple,
+  });
 
   List<TextSpan> extractUrl(String text) {
     List<TextSpan> textParts = <TextSpan>[];
@@ -29,12 +31,12 @@ class TextWithHyperLink extends StatelessWidget {
         TextSpan part = TextSpan(text: "$onlyText ", style: style);
         textParts.add(part);
         var urlText = text.substring(begin, end + 4);
-        var urlRegex = new RegExp(r"<a[\s]+([^>]+)>((?:.(?!\<\/a\>))*.)</a>");
+        var urlRegex = RegExp(r"<a[\s]+([^>]+)>((?:.(?!\<\/a\>))*.)</a>");
         var url = urlRegex.firstMatch(urlText);
         TextSpan link = TextSpan(
           text: url?.group(2),
           style: linkStyle,
-          recognizer: new TapGestureRecognizer()
+          recognizer: TapGestureRecognizer()
             ..onTap = () {
               // launch(
               //   url.group(1).replaceAll("href=\"", "").replaceAll("\"", ""),

@@ -54,7 +54,6 @@ extension HistoryEventPatterns on HistoryEvent {
     TResult Function(HistoryEventDateSelected value)? dateSelected,
     TResult Function(HistoryEventWallpaperUpdateRequested value)?
         wallpaperUpdateRequested,
-    TResult Function(HistoryEventIndexChanged value)? indexChanged,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -66,8 +65,6 @@ extension HistoryEventPatterns on HistoryEvent {
       case HistoryEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested(_that);
-      case HistoryEventIndexChanged() when indexChanged != null:
-        return indexChanged(_that);
       case _:
         return orElse();
     }
@@ -92,7 +89,6 @@ extension HistoryEventPatterns on HistoryEvent {
     required TResult Function(HistoryEventDateSelected value) dateSelected,
     required TResult Function(HistoryEventWallpaperUpdateRequested value)
         wallpaperUpdateRequested,
-    required TResult Function(HistoryEventIndexChanged value) indexChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -102,8 +98,6 @@ extension HistoryEventPatterns on HistoryEvent {
         return dateSelected(_that);
       case HistoryEventWallpaperUpdateRequested():
         return wallpaperUpdateRequested(_that);
-      case HistoryEventIndexChanged():
-        return indexChanged(_that);
     }
   }
 
@@ -125,7 +119,6 @@ extension HistoryEventPatterns on HistoryEvent {
     TResult? Function(HistoryEventDateSelected value)? dateSelected,
     TResult? Function(HistoryEventWallpaperUpdateRequested value)?
         wallpaperUpdateRequested,
-    TResult? Function(HistoryEventIndexChanged value)? indexChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -136,8 +129,6 @@ extension HistoryEventPatterns on HistoryEvent {
       case HistoryEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested(_that);
-      case HistoryEventIndexChanged() when indexChanged != null:
-        return indexChanged(_that);
       case _:
         return null;
     }
@@ -160,7 +151,6 @@ extension HistoryEventPatterns on HistoryEvent {
     TResult Function()? started,
     TResult Function(DateTime date)? dateSelected,
     TResult Function(int index)? wallpaperUpdateRequested,
-    TResult Function(int index)? indexChanged,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -172,8 +162,6 @@ extension HistoryEventPatterns on HistoryEvent {
       case HistoryEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested(_that.index);
-      case HistoryEventIndexChanged() when indexChanged != null:
-        return indexChanged(_that.index);
       case _:
         return orElse();
     }
@@ -197,7 +185,6 @@ extension HistoryEventPatterns on HistoryEvent {
     required TResult Function() started,
     required TResult Function(DateTime date) dateSelected,
     required TResult Function(int index) wallpaperUpdateRequested,
-    required TResult Function(int index) indexChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -207,8 +194,6 @@ extension HistoryEventPatterns on HistoryEvent {
         return dateSelected(_that.date);
       case HistoryEventWallpaperUpdateRequested():
         return wallpaperUpdateRequested(_that.index);
-      case HistoryEventIndexChanged():
-        return indexChanged(_that.index);
     }
   }
 
@@ -229,7 +214,6 @@ extension HistoryEventPatterns on HistoryEvent {
     TResult? Function()? started,
     TResult? Function(DateTime date)? dateSelected,
     TResult? Function(int index)? wallpaperUpdateRequested,
-    TResult? Function(int index)? indexChanged,
   }) {
     final _that = this;
     switch (_that) {
@@ -240,8 +224,6 @@ extension HistoryEventPatterns on HistoryEvent {
       case HistoryEventWallpaperUpdateRequested()
           when wallpaperUpdateRequested != null:
         return wallpaperUpdateRequested(_that.index);
-      case HistoryEventIndexChanged() when indexChanged != null:
-        return indexChanged(_that.index);
       case _:
         return null;
     }
@@ -392,71 +374,6 @@ class _$HistoryEventWallpaperUpdateRequestedCopyWithImpl<$Res>
     Object? index = null,
   }) {
     return _then(HistoryEventWallpaperUpdateRequested(
-      null == index
-          ? _self.index
-          : index // ignore: cast_nullable_to_non_nullable
-              as int,
-    ));
-  }
-}
-
-/// @nodoc
-
-class HistoryEventIndexChanged implements HistoryEvent {
-  const HistoryEventIndexChanged(this.index);
-
-  final int index;
-
-  /// Create a copy of HistoryEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @pragma('vm:prefer-inline')
-  $HistoryEventIndexChangedCopyWith<HistoryEventIndexChanged> get copyWith =>
-      _$HistoryEventIndexChangedCopyWithImpl<HistoryEventIndexChanged>(
-          this, _$identity);
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is HistoryEventIndexChanged &&
-            (identical(other.index, index) || other.index == index));
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, index);
-
-  @override
-  String toString() {
-    return 'HistoryEvent.indexChanged(index: $index)';
-  }
-}
-
-/// @nodoc
-abstract mixin class $HistoryEventIndexChangedCopyWith<$Res>
-    implements $HistoryEventCopyWith<$Res> {
-  factory $HistoryEventIndexChangedCopyWith(HistoryEventIndexChanged value,
-          $Res Function(HistoryEventIndexChanged) _then) =
-      _$HistoryEventIndexChangedCopyWithImpl;
-  @useResult
-  $Res call({int index});
-}
-
-/// @nodoc
-class _$HistoryEventIndexChangedCopyWithImpl<$Res>
-    implements $HistoryEventIndexChangedCopyWith<$Res> {
-  _$HistoryEventIndexChangedCopyWithImpl(this._self, this._then);
-
-  final HistoryEventIndexChanged _self;
-  final $Res Function(HistoryEventIndexChanged) _then;
-
-  /// Create a copy of HistoryEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  $Res call({
-    Object? index = null,
-  }) {
-    return _then(HistoryEventIndexChanged(
       null == index
           ? _self.index
           : index // ignore: cast_nullable_to_non_nullable

@@ -14,15 +14,12 @@ class PrefHelper {
     return p.setBool(key, value);
   }
 
-  static bool setDefaultBoolValue(String key, bool val) {
-    setBool(key, val);
-    return val;
-  }
-
   static Future<bool> getBoolWithDefault(String key, bool defValue) async {
-    var p = await prefs;
-    var val = await p.getBool(key) ?? setDefaultBoolValue(key, defValue);
-    return val;
+    final p = await prefs;
+    final value = p.getBool(key);
+    if (value != null) return value;
+    await p.setBool(key, defValue);
+    return defValue;
   }
 
   static Future<String?> getString(String key) async {
@@ -40,7 +37,7 @@ class PrefHelper {
     var val = await getString(key);
     if (val != null) return val;
 
-    setString(key, defValue);
+    await setString(key, defValue);
     return defValue;
   }
 
@@ -59,7 +56,7 @@ class PrefHelper {
     var val = await getStringList(key);
     if (val != null) return val;
 
-    setStringList(key, defValue);
+    await setStringList(key, defValue);
     return defValue;
   }
 
@@ -77,7 +74,7 @@ class PrefHelper {
     var val = await getInt(key);
     if (val != null) return val;
 
-    setInt(key, defValue);
+    await setInt(key, defValue);
     return defValue;
   }
 

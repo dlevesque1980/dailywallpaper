@@ -9,18 +9,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:dailywallpaper/l10n/app_localizations.dart';
-import 'package:dailywallpaper/widgets/crop_info_dialog.dart';
 import 'package:dailywallpaper/widgets/image_info_sheet.dart';
 import 'package:dailywallpaper/features/wallpaper/screens/widgets/home_loading_state.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
+
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final ValueNotifier<int> _currentIndex = ValueNotifier(0);
   DateTime? _lastResumeTime;
 
   @override
@@ -32,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    _currentIndex.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -53,11 +51,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _onChange(int index, bool refresh) {
-    // Always update the local index tracker so Info/Crop buttons reference the correct image.
-    if (_currentIndex.value != index) {
-      _currentIndex.value = index;
-    }
-
     // Block BLoC update while wallpaper is being set.
     // The GL surface momentarily drops to Size(0,0) during Android theme changes,
     // causing PageView to falsely report a jump to page 0.
@@ -88,13 +81,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     showModalBottomSheet<void>(
       context: context,
       builder: (BuildContext context) => ImageInfoBottomSheet(image: image),
-    );
-  }
-
-  void _showCropInfo(BuildContext context, ImageItem image) {
-    showDialog(
-      context: context,
-      builder: (context) => CropInfoDialog(image: image),
     );
   }
 
@@ -139,7 +125,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   String title = AppLocalizations.of(context)!.appTitle;
                   state.mapOrNull(loaded: (loadedState) {
                     if (loadedState.list.isNotEmpty) {
-                      title = loadedState.list[loadedState.imageIndex].source;
+                      final image = loadedState.list[loadedState.imageIndex];
+                      title = image.displayTitle;
                     }
                   });
 
@@ -176,27 +163,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         onPressed: () {
                           state.mapOrNull(loaded: (loadedState) {
                             if (loadedState.list.isNotEmpty) {
-                              _showImageInfo(context,
-                                  loadedState.list[_currentIndex.value]);
+                              _showImageInfo(
+                                context,
+                                loadedState.list[loadedState.imageIndex],
+                              );
                             }
                           });
                         },
                       ),
                       PopupMenuButton<String>(
-                        onSelected: (choice) {
+                        onSelected: (choice) async {
                           if (choice == '/settings') {
-                            Navigator.pushNamed(context, choice).then((_) {
-                              context
-                                  .read<HomeBloc>()
-                                  .add(const HomeEvent.refreshRequested());
-                            });
-                          } else if (choice == 'crop_info') {
-                            state.mapOrNull(loaded: (loadedState) {
-                              if (loadedState.list.isNotEmpty) {
-                                _showCropInfo(context,
-                                    loadedState.list[_currentIndex.value]);
-                              }
-                            });
+                            await Navigator.pushNamed(context, choice);
+                            if (!context.mounted) return;
+                            context
+                                .read<HomeBloc>()
+                                .add(const HomeEvent.refreshRequested());
                           } else {
                             Navigator.pushNamed(context, choice);
                           }
@@ -214,17 +196,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                         itemBuilder: (BuildContext context) =>
                             <PopupMenuItem<String>>[
-                          PopupMenuItem<String>(
-                            value: 'crop_info',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.center_focus_strong, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                    AppLocalizations.of(context)!.cropAnalysis),
-                              ],
-                            ),
-                          ),
                           PopupMenuItem<String>(
                             value: '/settings',
                             child: Row(
@@ -277,29 +248,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               builder: (context, state) {
                 bool isSetting = false;
                 bool isSuccess = false;
-                bool isCropProcessing = false;
-                bool isSourceLoading = false;
 
                 state.mapOrNull(loaded: (loadedState) {
                   isSetting = loadedState.isSettingWallpaper;
                   isSuccess = loadedState.wallpaperMessage != null &&
                       (loadedState.wallpaperMessage == 'wallpaperSetSuccess');
-                  isCropProcessing = loadedState.isCropProcessing;
-                  isSourceLoading = loadedState.isSourceLoading;
                 });
 
                 return WallpaperButton(
-                  onPressed: isSourceLoading
+                  onPressed: isSetting
                       ? null
-                      : () {
-                          context
-                              .read<HomeBloc>()
-                              .add(const HomeEvent.wallpaperUpdateRequested());
-                        },
+                      : () => context
+                          .read<HomeBloc>()
+                          .add(const HomeEvent.wallpaperUpdateRequested()),
                   isSettingWallpaper: isSetting,
                   isSuccess: isSuccess,
-                  isCropProcessing: isCropProcessing,
-                  isSourceLoading: isSourceLoading,
                 );
               },
             ),
